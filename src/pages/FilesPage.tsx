@@ -1,13 +1,12 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { Card, Title, Text } from '@tremor/react'
-import { Loader2, FileText, ChevronDown, ChevronRight, Download, FolderOpen, Upload, X, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Loader2, FileText, ChevronDown, ChevronRight, Download, FolderOpen, Upload, CheckCircle2, AlertCircle, User } from 'lucide-react'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
-// Extract token from URL like https://rivertam.denis.me/dash/TOKEN
 const TOKEN = API_BASE_URL.split('/dash/')[1]?.split('/')[0] || ''
 
 interface WorkspaceFile { name: string; size: number; mtime: number }
-interface ProfileFile { file: string; content: string; modified: string | null }
 interface UploadStatus { name: string; status: 'uploading' | 'done' | 'error'; error?: string }
 
 function formatSize(bytes: number): string {
@@ -16,15 +15,12 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function formatDate(ts: number | string | null): string {
-  if (!ts) return 'N/A'
-  const d = typeof ts === 'string' ? new Date(ts) : new Date(ts)
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+function formatDate(ts: number): string {
+  return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 export default function FilesPage() {
   const [files, setFiles] = useState<WorkspaceFile[]>([])
-  const [profileFiles, setProfileFiles] = useState<ProfileFile[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedFile, setExpandedFile] = useState<string | null>(null)
   const [fileContent, setFileContent] = useState<Record<string, string>>({})
@@ -34,11 +30,8 @@ export default function FilesPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const loadFiles = () => {
-    Promise.all([
-      fetch(`${API_BASE_URL}/api/files`).then(r => r.ok ? r.json() : []),
-      fetch(`${API_BASE_URL}/api/profile`).then(r => r.ok ? r.json() : []),
-    ])
-      .then(([filesData, profileData]) => { setFiles(filesData); setProfileFiles(profileData) })
+    fetch(`${API_BASE_URL}/api/files`).then(r => r.ok ? r.json() : [])
+      .then(setFiles)
       .catch(err => console.error('FilesPage error:', err))
       .finally(() => setLoading(false))
   }
@@ -63,17 +56,13 @@ export default function FilesPage() {
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault(); setDragOver(false)
-    const droppedFiles = Array.from(e.dataTransfer.files)
-    droppedFiles.forEach(uploadFile)
+    Array.from(e.dataTransfer.files).forEach(uploadFile)
   }, [])
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = Array.from(e.target.files || [])
-    selected.forEach(uploadFile)
+    Array.from(e.target.files || []).forEach(uploadFile)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
-
-  const clearUploads = () => setUploads([])
 
   const toggleFile = async (name: string) => {
     if (expandedFile === name) { setExpandedFile(null); return }
@@ -117,7 +106,7 @@ export default function FilesPage() {
         <Card className="bg-card">
           <div className="flex items-center justify-between mb-3">
             <Title>Uploads</Title>
-            <button onClick={clearUploads} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
+            <button onClick={() => setUploads([])} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
           </div>
           <div className="space-y-2">
             {uploads.map((u, i) => (
@@ -133,21 +122,19 @@ export default function FilesPage() {
         </Card>
       )}
 
-      {/* Knowledge Files */}
-      <Card className="bg-card">
-        <div className="flex items-center gap-2 mb-4"><FolderOpen className="h-5 w-5 text-violet-500" /><Title>Knowledge Files</Title></div>
-        <div className="space-y-2">
-          {profileFiles.map((pf) => (
-            <div key={pf.file} className="border rounded-lg overflow-hidden">
-              <button onClick={() => setExpandedFile(expandedFile === `profile:${pf.file}` ? null : `profile:${pf.file}`)} className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors text-left">
-                <div className="flex items-center gap-3"><FileText className="h-4 w-4 text-violet-500 shrink-0" /><span className="font-medium text-sm">{pf.file}</span></div>
-                <div className="flex items-center gap-3"><span className="text-xs text-muted-foreground">{formatDate(pf.modified)}</span>{expandedFile === `profile:${pf.file}` ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}</div>
-              </button>
-              {expandedFile === `profile:${pf.file}` && <div className="border-t p-4 bg-muted/30"><pre className="text-sm whitespace-pre-wrap font-mono leading-relaxed max-h-96 overflow-y-auto">{pf.content}</pre></div>}
+      {/* Link to Profile for knowledge files */}
+      <Link to="/profile" className="block">
+        <Card className="bg-card hover:bg-muted/50 transition-colors cursor-pointer">
+          <div className="flex items-center gap-3">
+            <User className="h-5 w-5 text-violet-500" />
+            <div>
+              <Title>Knowledge Files</Title>
+              <Text>USER.md, SOUL.md, MEMORY.md and more — view in Profile</Text>
             </div>
-          ))}
-        </div>
-      </Card>
+            <ChevronRight className="h-5 w-5 text-muted-foreground ml-auto" />
+          </div>
+        </Card>
+      </Link>
 
       {/* Workspace Files */}
       <Card className="bg-card">
