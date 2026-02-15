@@ -10,7 +10,7 @@ import ProfilePage from './pages/ProfilePage'
 function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="dashboard-theme">
-      <BrowserRouter basename="/dash/6f0a1efff4e5f275d82c9f7d39c60e8ce0c8c2b7b5c987fc">
+      <BrowserRouter>
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<Navigate to="/ops" replace />} />
