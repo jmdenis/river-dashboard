@@ -1,4 +1,5 @@
-const API_BASE = '/api/finance'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+const API_BASE = `${API_BASE_URL}/api/finance`
 
 export interface Transaction {
   date: string
