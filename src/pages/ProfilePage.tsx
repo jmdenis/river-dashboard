@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
-import { Card, Title, Text } from '@tremor/react'
+import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
+import ReactMarkdown from 'react-markdown'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
@@ -51,15 +53,40 @@ export default function ProfilePage() {
         <h1 className="text-3xl font-semibold">Profile</h1>
         <p className="text-muted-foreground">Knowledge files editor</p>
       </div>
-      <div className="space-y-4">
-        {profileFiles.map((fileData) => (
-          <Card key={fileData.file} className="bg-card">
-            <Title>{fileData.file}</Title>
-            <Text className="mt-2 text-muted-foreground">Last Modified: {fileData.modified ? new Date(fileData.modified).toLocaleString() : 'N/A'}</Text>
-            <div className="mt-4 p-4 bg-muted rounded-md font-mono text-sm whitespace-pre-wrap">{fileData.content}</div>
-          </Card>
-        ))}
-      </div>
+
+      {profileFiles.length > 0 ? (
+        <Card>
+          <CardContent className="pt-6">
+            <Tabs defaultValue={profileFiles[0]?.file}>
+              <TabsList className="w-full justify-start overflow-x-auto">
+                {profileFiles.map((f) => (
+                  <TabsTrigger key={f.file} value={f.file} className="text-xs">
+                    {f.file}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {profileFiles.map((fileData) => (
+                <TabsContent key={fileData.file} value={fileData.file}>
+                  {fileData.modified && (
+                    <p className="text-xs text-muted-foreground mb-4">
+                      Last modified: {new Date(fileData.modified).toLocaleString()}
+                    </p>
+                  )}
+                  <div className="prose prose-invert prose-sm max-w-none prose-headings:text-foreground prose-a:text-violet-400 prose-strong:text-foreground prose-code:text-violet-400">
+                    <ReactMarkdown>{fileData.content}</ReactMarkdown>
+                  </div>
+                </TabsContent>
+              ))}
+            </Tabs>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground py-8">No profile files found</p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

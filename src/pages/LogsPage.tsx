@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { Card, Title, Text } from '@tremor/react'
+import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card'
 import { Loader2, ChevronDown, ChevronRight, Clock, Zap, DollarSign } from 'lucide-react'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
@@ -62,46 +62,66 @@ export default function LogsPage() {
       <div><h1 className="text-3xl font-semibold">Logs</h1><p className="text-muted-foreground">Activity timeline and usage history</p></div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="bg-card"><Text>Total Tasks</Text><Title>{tasks.length}</Title></Card>
-        <Card className="bg-card"><Text>Total Cost</Text><Title className="text-amber-600 dark:text-amber-400">${totalCost.toFixed(2)}</Title></Card>
-        <Card className="bg-card"><Text>Tokens In</Text><Title>{(totalTokensIn / 1000).toFixed(0)}K</Title></Card>
-        <Card className="bg-card"><Text>Tokens Out</Text><Title>{(totalTokensOut / 1000).toFixed(0)}K</Title></Card>
+        <Card>
+          <CardHeader className="pb-2"><p className="text-sm text-muted-foreground">Total Tasks</p></CardHeader>
+          <CardContent><p className="text-2xl font-semibold">{tasks.length}</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><p className="text-sm text-muted-foreground">Total Cost</p></CardHeader>
+          <CardContent><p className="text-2xl font-semibold text-amber-600 dark:text-amber-400">${totalCost.toFixed(2)}</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><p className="text-sm text-muted-foreground">Tokens In</p></CardHeader>
+          <CardContent><p className="text-2xl font-semibold">{(totalTokensIn / 1000).toFixed(0)}K</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><p className="text-sm text-muted-foreground">Tokens Out</p></CardHeader>
+          <CardContent><p className="text-2xl font-semibold">{(totalTokensOut / 1000).toFixed(0)}K</p></CardContent>
+        </Card>
       </div>
 
-      <Card className="bg-card">
-        <Title>Activity (last 12 weeks)</Title>
-        <div className="mt-4"><Heatmap tasks={tasks} /></div>
-        <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground"><span>Less</span><div className="w-3 h-3 rounded-sm bg-muted/40" /><div className="w-3 h-3 rounded-sm bg-emerald-900/60" /><div className="w-3 h-3 rounded-sm bg-emerald-700/70" /><div className="w-3 h-3 rounded-sm bg-emerald-500/80" /><div className="w-3 h-3 rounded-sm bg-emerald-400" /><span>More</span></div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Activity (last 12 weeks)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Heatmap tasks={tasks} />
+          <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground"><span>Less</span><div className="w-3 h-3 rounded-sm bg-muted/40" /><div className="w-3 h-3 rounded-sm bg-emerald-900/60" /><div className="w-3 h-3 rounded-sm bg-emerald-700/70" /><div className="w-3 h-3 rounded-sm bg-emerald-500/80" /><div className="w-3 h-3 rounded-sm bg-emerald-400" /><span>More</span></div>
+        </CardContent>
       </Card>
 
-      <Card className="bg-card">
-        <Title>Timeline</Title>
-        <div className="mt-4 space-y-2">
-          {dayGroups.length === 0 ? <div className="text-center text-muted-foreground py-8">No activity logged</div> : dayGroups.map((group) => (
-            <div key={group.date} className="border rounded-lg overflow-hidden">
-              <button onClick={() => toggleDay(group.date)} className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors text-left">
-                <div className="flex items-center gap-3">{expandedDays.has(group.date) ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}<span className="font-medium">{group.label}</span><span className="text-xs text-muted-foreground">{group.date}</span></div>
-                <div className="flex items-center gap-4 text-xs text-muted-foreground"><span className="flex items-center gap-1"><Zap className="h-3 w-3" />{group.tasks.length} tasks</span>{group.totalCost > 0 && <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400"><DollarSign className="h-3 w-3" />{group.totalCost.toFixed(4)}</span>}</div>
-              </button>
-              {expandedDays.has(group.date) && <div className="border-t">{group.tasks.map((task) => (
-                <div key={task.id} className="flex items-start gap-3 p-3 border-b last:border-b-0 hover:bg-muted/30">
-                  <div className="mt-0.5"><Clock className="h-3.5 w-3.5 text-muted-foreground" /></div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs text-muted-foreground font-mono">{formatTime(task.created)}</span>
-                      <span className="text-sm font-medium truncate">{task.title}</span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${task.status === 'running' ? 'bg-violet-500/20 text-violet-600 dark:text-violet-400' : task.status === 'done' ? 'bg-green-500/20 text-green-600 dark:text-green-400' : task.status === 'failed' ? 'bg-red-500/20 text-red-600 dark:text-red-400' : 'bg-gray-500/20 text-gray-600 dark:text-gray-400'}`}>{task.status}</span>
+      <Card>
+        <CardHeader>
+          <CardTitle>Timeline</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {dayGroups.length === 0 ? <div className="text-center text-muted-foreground py-8">No activity logged</div> : dayGroups.map((group) => (
+              <div key={group.date} className="border rounded-lg overflow-hidden">
+                <button onClick={() => toggleDay(group.date)} className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors text-left">
+                  <div className="flex items-center gap-3">{expandedDays.has(group.date) ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}<span className="font-medium">{group.label}</span><span className="text-xs text-muted-foreground">{group.date}</span></div>
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground"><span className="flex items-center gap-1"><Zap className="h-3 w-3" />{group.tasks.length} tasks</span>{group.totalCost > 0 && <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400"><DollarSign className="h-3 w-3" />{group.totalCost.toFixed(4)}</span>}</div>
+                </button>
+                {expandedDays.has(group.date) && <div className="border-t">{group.tasks.map((task) => (
+                  <div key={task.id} className="flex items-start gap-3 p-3 border-b last:border-b-0 hover:bg-muted/30">
+                    <div className="mt-0.5"><Clock className="h-3.5 w-3.5 text-muted-foreground" /></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-muted-foreground font-mono">{formatTime(task.created)}</span>
+                        <span className="text-sm font-medium truncate">{task.title}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${task.status === 'running' ? 'bg-violet-500/20 text-violet-600 dark:text-violet-400' : task.status === 'done' ? 'bg-green-500/20 text-green-600 dark:text-green-400' : task.status === 'failed' ? 'bg-red-500/20 text-red-600 dark:text-red-400' : 'bg-gray-500/20 text-gray-600 dark:text-gray-400'}`}>{task.status}</span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                        {task.service && <span>{task.service}</span>}{task.model && <span>{task.model.split('/').pop()}</span>}{task.cost && <span className="text-amber-600 dark:text-amber-400">${parseFloat(task.cost).toFixed(4)}</span>}{(task.tokensIn || task.tokensOut) && <span>↗{((task.tokensIn || 0) / 1000).toFixed(1)}K ↙{((task.tokensOut || 0) / 1000).toFixed(1)}K</span>}
+                      </div>
+                      {task.result && <p className="text-xs text-muted-foreground mt-1 truncate">{task.result}</p>}
                     </div>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                      {task.service && <span>{task.service}</span>}{task.model && <span>{task.model.split('/').pop()}</span>}{task.cost && <span className="text-amber-600 dark:text-amber-400">${parseFloat(task.cost).toFixed(4)}</span>}{(task.tokensIn || task.tokensOut) && <span>↗{((task.tokensIn || 0) / 1000).toFixed(1)}K ↙{((task.tokensOut || 0) / 1000).toFixed(1)}K</span>}
-                    </div>
-                    {task.result && <p className="text-xs text-muted-foreground mt-1 truncate">{task.result}</p>}
                   </div>
-                </div>
-              ))}</div>}
-            </div>
-          ))}
-        </div>
+                ))}</div>}
+              </div>
+            ))}
+          </div>
+        </CardContent>
       </Card>
     </div>
   )

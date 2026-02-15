@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { Card, Title } from '@tremor/react'
+import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card'
 import { Loader2, FileText, Download, Upload, CheckCircle2, AlertCircle, Trash2 } from 'lucide-react'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
@@ -95,24 +95,28 @@ export default function FilesPage() {
         </div>
       )}
 
-      <Card className="bg-card">
-        <Title>{files.length} file{files.length !== 1 ? 's' : ''}</Title>
-        <div className="mt-4 divide-y">
-          {files.map((f) => (
-            <div key={f.name} className="flex items-center justify-between py-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{f.name}</p>
-                  <p className="text-xs text-muted-foreground">{formatSize(f.size)} · {formatDate(f.mtime)}</p>
+      <Card>
+        <CardHeader>
+          <CardTitle>{files.length} file{files.length !== 1 ? 's' : ''}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="divide-y">
+            {files.map((f) => (
+              <div key={f.name} className="flex items-center justify-between py-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{f.name}</p>
+                    <p className="text-xs text-muted-foreground">{formatSize(f.size)} · {formatDate(f.mtime)}</p>
+                  </div>
                 </div>
+                <a href={`${API_BASE_URL}/api/files/${encodeURIComponent(f.name)}`} target="_blank" rel="noopener noreferrer" className="p-2 text-muted-foreground hover:text-foreground transition-colors" title="Download">
+                  <Download className="h-4 w-4" />
+                </a>
               </div>
-              <a href={`${API_BASE_URL}/api/files/${encodeURIComponent(f.name)}`} target="_blank" rel="noopener noreferrer" className="p-2 text-muted-foreground hover:text-foreground transition-colors" title="Download">
-                <Download className="h-4 w-4" />
-              </a>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </CardContent>
       </Card>
     </div>
   )

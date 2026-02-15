@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ThemeProvider } from './components/ThemeProvider'
 import Layout from './components/Layout'
+import AnimatedPage from './components/AnimatedPage'
 import OpsPage from './pages/OpsPage'
 import FilesPage from './pages/FilesPage'
 import FinancePage from './pages/FinancePage'
@@ -14,11 +15,11 @@ function App() {
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<Navigate to="/ops" replace />} />
-            <Route path="ops" element={<OpsPage />} />
-            <Route path="files" element={<FilesPage />} />
-            <Route path="finance" element={<FinancePage />} />
-            <Route path="logs" element={<LogsPage />} />
-            <Route path="profile" element={<ProfilePage />} />
+            <Route path="ops" element={<AnimatedPage><OpsPage /></AnimatedPage>} />
+            <Route path="files" element={<AnimatedPage><FilesPage /></AnimatedPage>} />
+            <Route path="finance" element={<AnimatedPage><FinancePage /></AnimatedPage>} />
+            <Route path="logs" element={<AnimatedPage><LogsPage /></AnimatedPage>} />
+            <Route path="profile" element={<AnimatedPage><ProfilePage /></AnimatedPage>} />
           </Route>
         </Routes>
       </BrowserRouter>
