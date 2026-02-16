@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { Outlet, NavLink, useLocation } from 'react-router-dom'
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { Activity, Heart, User, Upload } from 'lucide-react'
 import UploadModal from './UploadModal'
@@ -10,10 +10,10 @@ export default function Layout() {
   const [globalDrag, setGlobalDrag] = useState(false)
   const [droppedFiles, setDroppedFiles] = useState<File[]>()
 
+  const navigate = useNavigate()
   const navigation = [
     { name: 'Ops', href: '/ops', icon: Activity },
     { name: 'Life', href: '/life', icon: Heart },
-    { name: 'Profile', href: '/profile', icon: User },
   ]
 
   const handleGlobalDragOver = useCallback((e: React.DragEvent) => {
@@ -83,13 +83,22 @@ export default function Layout() {
             ))}
           </nav>
 
-          <button
-            onClick={() => setUploadOpen(true)}
-            className="p-2 text-white/40 hover:text-white/70 transition-colors duration-150"
-            title="Upload files"
-          >
-            <Upload className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setUploadOpen(true)}
+              className="p-2 text-white/40 hover:text-white/70 transition-colors duration-150"
+              title="Upload files"
+            >
+              <Upload className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => navigate('/profile')}
+              className={`p-2 transition-colors duration-150 ${location.pathname === '/profile' ? 'text-white' : 'text-white/40 hover:text-white/70'}`}
+              title="Profile"
+            >
+              <User className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </header>
 
