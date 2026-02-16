@@ -5,7 +5,7 @@ import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Badge } from '../components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '../components/ui/dialog'
-import { Loader2, Plus, Trash2, Check, Clock, Calendar as CalendarIcon } from 'lucide-react'
+import { Loader2, Plus, Trash2, Check, Clock, Calendar as CalendarIcon, MessageCircle, Gift, Copy, ExternalLink } from 'lucide-react'
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -185,24 +185,29 @@ function CronJobsSection({ cronJobs, onAdd, onDelete }: {
         ) : (
           <div className="space-y-2">
             {cronJobs.map((job) => {
-              const parts = job.raw.split(/\s+/)
-              const schedule = parts.slice(0, 5).join(' ')
-              const command = parts.slice(5).join(' ')
+              const rawSchedule = job.raw.split(/\s+/).slice(0, 5).join(' ')
               return (
                 <div key={job.id} className="group flex items-center justify-between p-3 rounded-lg hover:bg-white/[0.03] transition-colors duration-150">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500/80 shrink-0" />
-                    <code className="text-xs text-violet-400/80 font-mono">{schedule}</code>
-                    <span className="text-sm text-white/60 truncate">{command}</span>
+                  <div className="flex flex-col gap-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`h-2 w-2 rounded-full shrink-0 ${job.source === 'server' ? 'bg-violet-500/80' : 'bg-emerald-500/80'}`} />
+                      <span className="text-sm text-white/80">{job.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2 ml-4">
+                      <span className="text-xs text-white/40">{job.schedule}</span>
+                      <code className="text-[10px] text-violet-400/60 font-mono">{rawSchedule}</code>
+                    </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onDelete(job.raw)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-white/20 hover:text-rose-400/80"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                  {job.source === 'crontab' && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onDelete(job.raw)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-white/20 hover:text-rose-400/80"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                 </div>
               )
             })}
@@ -294,6 +299,39 @@ function WeeklyPlannerSection({ planner, onUpdate }: {
   )
 }
 
+// --- Birthday Message Generator ---
+function generateBirthdayMessage(b: Birthday): string {
+  const firstName = b.name.split(' ')[0]
+  const note = b.note || b.notes || ''
+  const messages = [
+    `Joyeux anniversaire ${firstName} ! J'espère que tu passes une belle journée entouré(e) de ceux que tu aimes. Gros bisous 🎂`,
+    `Bon anniversaire ${firstName} ! Je te souhaite une journée remplie de bonheur et de belles surprises. À très vite ! 🎉`,
+    `${firstName}, joyeux anniversaire ! Que cette nouvelle année t'apporte tout ce que tu mérites. Je pense bien à toi 🥳`,
+    `Happy birthday ${firstName} ! J'espère que tu vas passer un super moment aujourd'hui. On se voit bientôt j'espère ! 🎂`,
+  ]
+  const msg = messages[Math.abs(firstName.charCodeAt(0)) % messages.length]
+  if (note.includes('org:')) {
+    return msg
+  }
+  return msg
+}
+
+// --- Gift Ideas Generator ---
+function generateGiftIdeas(b: Birthday): { idea: string; searchQuery: string }[] {
+  const note = b.note || b.notes || ''
+  const defaults = [
+    { idea: '📚 Un beau livre (roman, art, cuisine...)', searchQuery: 'idée cadeau livre Toulouse' },
+    { idea: '🍷 Une bonne bouteille de vin du Sud-Ouest', searchQuery: 'cave vin cadeau Toulouse' },
+    { idea: '🎟️ Un bon cadeau expérience (spa, restaurant, vol en montgolfière...)', searchQuery: 'bon cadeau expérience Toulouse' },
+    { idea: '🧴 Un coffret bien-être / cosmétiques', searchQuery: 'coffret cadeau bien-être Toulouse' },
+    { idea: '🎨 Un objet artisanal local', searchQuery: 'artisan cadeau Toulouse' },
+  ]
+  if (note.toLowerCase().includes('facebook') || note.toLowerCase().includes('meta') || note.toLowerCase().includes('google') || note.toLowerCase().includes('apple')) {
+    defaults[0] = { idea: '🖥️ Un accessoire tech / gadget', searchQuery: 'accessoire tech cadeau Toulouse' }
+  }
+  return defaults
+}
+
 // --- Birthdays Section ---
 function BirthdaysSection({ birthdays, onUpdate }: {
   birthdays: Birthday[]
@@ -304,19 +342,23 @@ function BirthdaysSection({ birthdays, onUpdate }: {
   const [name, setName] = useState('')
   const [date, setDate] = useState('')
   const [note, setNote] = useState('')
+  const [messageModal, setMessageModal] = useState<Birthday | null>(null)
+  const [giftModal, setGiftModal] = useState<Birthday | null>(null)
+  const [copied, setCopied] = useState(false)
 
-  // Sort by upcoming date (nearest first)
-  const sorted = [...birthdays]
-    .sort((a, b) => daysUntilBirthday(a.date) - daysUntilBirthday(b.date))
-  const upcoming = sorted.filter(b => daysUntilBirthday(b.date) <= 30)
-  const displayed = showAll ? sorted : upcoming
-  
+  // Separate living and deceased, sort living by upcoming date
+  const living = birthdays.filter(b => !b.deceased)
+  const deceased = birthdays.filter(b => b.deceased)
+  const sortedLiving = [...living].sort((a, b) => daysUntilBirthday(a.date) - daysUntilBirthday(b.date))
+  const upcoming = sortedLiving.filter(b => daysUntilBirthday(b.date) <= 30)
+  const displayedLiving = showAll ? sortedLiving : upcoming
+
   const getCountdown = (days: number): string => {
     if (days === 0) return 'Today! 🎂'
     if (days === 1) return 'Tomorrow'
     return `in ${days} days`
   }
-  
+
   const getAge = (dateStr: string, yearStr?: string): string | null => {
     if (!yearStr) return null
     const birthYear = parseInt(yearStr)
@@ -340,6 +382,12 @@ function BirthdaysSection({ birthdays, onUpdate }: {
 
   const removeBirthday = (id: string) => {
     onUpdate(birthdays.filter((b) => b.id !== id))
+  }
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   return (
@@ -371,7 +419,7 @@ function BirthdaysSection({ birthdays, onUpdate }: {
         </div>
         {birthdays.length === 0 ? (
           <p className="text-sm text-white/20 text-center py-8">No birthdays added</p>
-        ) : displayed.length === 0 ? (
+        ) : displayedLiving.length === 0 && deceased.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-sm text-white/20 mb-2">No birthdays in the next 30 days</p>
             <button onClick={() => setShowAll(true)} className="text-xs text-violet-400 hover:text-violet-300">Show all {birthdays.length} birthdays</button>
@@ -379,7 +427,7 @@ function BirthdaysSection({ birthdays, onUpdate }: {
         ) : (
           <>
             <div className="space-y-1">
-              {displayed.map((b) => {
+              {displayedLiving.map((b) => {
                 const days = daysUntilBirthday(b.date)
                 const isToday = days === 0
                 const countdown = getCountdown(days)
@@ -399,20 +447,48 @@ function BirthdaysSection({ birthdays, onUpdate }: {
                         {age && <span className="text-white/30">· {age}</span>}
                       </div>
                     </div>
-                    <Button
-                      variant="ghost" size="icon"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-white/20 hover:text-rose-400/80 h-7 w-7"
-                      onClick={() => removeBirthday(b.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost" size="icon"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-white/30 hover:text-violet-400 h-7 w-7"
+                        onClick={() => setMessageModal(b)}
+                        title="Birthday message"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost" size="icon"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-white/30 hover:text-violet-400 h-7 w-7"
+                        onClick={() => setGiftModal(b)}
+                        title="Gift ideas"
+                      >
+                        <Gift className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost" size="icon"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-white/20 hover:text-rose-400/80 h-7 w-7"
+                        onClick={() => removeBirthday(b.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 )
               })}
             </div>
-            {!showAll && sorted.length > upcoming.length && (
+            {/* Deceased entries — dimmed, at bottom */}
+            {(showAll || displayedLiving.length > 0) && deceased.length > 0 && (
+              <div className="pt-3 mt-3 border-t border-white/[0.04]">
+                {deceased.map((b) => (
+                  <div key={b.id} className="flex items-center p-3 rounded-lg">
+                    <span className="text-sm text-white/20">🕊️ {b.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {!showAll && sortedLiving.length > upcoming.length && (
               <button onClick={() => setShowAll(true)} className="text-xs text-white/30 hover:text-white/50 mt-3 w-full text-center">
-                Show all {sorted.length} birthdays
+                Show all {sortedLiving.length} birthdays
               </button>
             )}
             {showAll && (
@@ -423,6 +499,60 @@ function BirthdaysSection({ birthdays, onUpdate }: {
           </>
         )}
       </CardContent>
+
+      {/* Message Modal */}
+      <Dialog open={!!messageModal} onOpenChange={(v) => { if (!v) setMessageModal(null) }}>
+        <DialogContent className="bg-[#161616] border-white/[0.06]">
+          <DialogHeader>
+            <DialogTitle className="text-white/90 font-medium">
+              💬 Message pour {messageModal?.name.split(' ')[0]}
+            </DialogTitle>
+          </DialogHeader>
+          {messageModal && (
+            <div className="space-y-4">
+              <p className="text-sm text-white/70 bg-[#0A0A0A] rounded-lg p-4 leading-relaxed">
+                {generateBirthdayMessage(messageModal)}
+              </p>
+              <Button
+                onClick={() => copyToClipboard(generateBirthdayMessage(messageModal))}
+                className="w-full bg-violet-500 hover:bg-violet-600 text-white"
+              >
+                <Copy className="h-3.5 w-3.5 mr-2" />
+                {copied ? 'Copié !' : 'Copier le message'}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Gift Ideas Modal */}
+      <Dialog open={!!giftModal} onOpenChange={(v) => { if (!v) setGiftModal(null) }}>
+        <DialogContent className="bg-[#161616] border-white/[0.06]">
+          <DialogHeader>
+            <DialogTitle className="text-white/90 font-medium">
+              🎁 Idées cadeaux pour {giftModal?.name.split(' ')[0]}
+            </DialogTitle>
+          </DialogHeader>
+          {giftModal && (
+            <div className="space-y-2">
+              {generateGiftIdeas(giftModal).map((gift, i) => (
+                <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-[#0A0A0A]">
+                  <span className="text-sm text-white/70">{gift.idea}</span>
+                  <a
+                    href={`https://www.google.com/search?q=${encodeURIComponent(gift.searchQuery)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-violet-400 hover:text-violet-300 shrink-0 ml-2"
+                    title="Chercher près de Toulouse"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }
@@ -579,10 +709,11 @@ export default function LifePage() {
   useEffect(() => {
     Promise.all([
       lifeApi.getData(),
-      lifeApi.getCalendar(7) // Get next 7 days
+      lifeApi.getCalendar(7), // Get next 7 days
+      lifeApi.getReminders()
     ])
-      .then(([lifeData, calendarData]) => {
-        setData(lifeData)
+      .then(([lifeData, calendarData, remindersData]) => {
+        setData({ ...lifeData, reminders: remindersData.length > 0 ? remindersData : lifeData.reminders })
         setCalendar(calendarData)
       })
       .catch((e) => console.error('LifePage: Error loading data:', e))
@@ -635,20 +766,11 @@ export default function LifePage() {
 
       <CalendarSection events={calendar} />
 
-      <div>
-        <h2 className="text-xs uppercase tracking-widest text-white/40 mb-3">Reminders</h2>
-        <RemindersSection reminders={data.reminders} onUpdate={updateReminders} />
-      </div>
+      <RemindersSection reminders={data.reminders} onUpdate={updateReminders} />
 
-      <div>
-        <h2 className="text-xs uppercase tracking-widest text-white/40 mb-3">Birthdays</h2>
-        <BirthdaysSection birthdays={data.birthdays} onUpdate={updateBirthdays} />
-      </div>
+      <BirthdaysSection birthdays={data.birthdays} onUpdate={updateBirthdays} />
 
-      <div>
-        <h2 className="text-xs uppercase tracking-widest text-white/40 mb-3">Cron Jobs</h2>
-        <CronJobsSection cronJobs={data.cronJobs} onAdd={addCron} onDelete={deleteCron} />
-      </div>
+      <CronJobsSection cronJobs={data.cronJobs} onAdd={addCron} onDelete={deleteCron} />
     </div>
   )
 }

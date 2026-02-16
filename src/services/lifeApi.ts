@@ -14,7 +14,10 @@ export interface CalendarEvent {
 
 export interface CronJob {
   id: string
+  name: string
+  schedule: string
   raw: string
+  source: 'crontab' | 'server'
 }
 
 export interface Birthday {
@@ -24,6 +27,7 @@ export interface Birthday {
   year?: string // Birth year (YYYY)
   note: string
   notes?: string // Alias for note (from birthdays.json)
+  deceased?: boolean
 }
 
 export interface Reminder {
