@@ -1038,19 +1038,22 @@ export default function LifePage() {
   }
 
   const sendBirthdayEmail = async (b: Birthday) => {
+    console.log('[LifePage] sendBirthdayEmail called for', b.id, b.name)
     try {
       const result = await lifeApi.sendBirthdayEmail(b.id)
+      console.log('[LifePage] sendBirthdayEmail result', result)
       if (result.success || result.alreadySent) {
-        addToast('Email envoyé')
+        addToast(result.alreadySent ? 'Déjà envoyé cette année' : 'Email envoyé')
         // Reload birthdays to get updated emailSentYear
         const lifeData = await lifeApi.getData()
         setData(prev => prev ? { ...prev, birthdays: lifeData.birthdays } : prev)
       } else {
         addToast('Erreur: ' + (result.error || 'Unknown'))
       }
-    } catch (err) {
-      console.error('sendBirthdayEmail error:', err)
-      addToast('Erreur envoi email')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[LifePage] sendBirthdayEmail error for', b.id, b.name, ':', msg, err)
+      addToast('Erreur envoi email: ' + msg)
     }
   }
 

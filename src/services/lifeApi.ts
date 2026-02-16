@@ -138,13 +138,14 @@ export const lifeApi = {
   },
 
   async sendBirthdayEmail(id: string): Promise<{ success?: boolean; alreadySent?: boolean; error?: string }> {
-    const res = await fetch(`${API_BASE_URL}/api/birthdays/${id}/email`, {
-      method: 'POST',
-    })
+    const url = `${API_BASE_URL}/api/birthdays/${encodeURIComponent(id)}/email`
+    console.log('[lifeApi] sendBirthdayEmail POST', url)
+    const res = await fetch(url, { method: 'POST' })
+    console.log('[lifeApi] sendBirthdayEmail response', res.status, res.statusText)
     if (!res.ok) {
       const text = await res.text()
       console.error(`sendBirthdayEmail failed: ${res.status} ${res.statusText}`, text)
-      return { error: `HTTP ${res.status}: ${res.statusText}` }
+      return { error: `HTTP ${res.status}: ${text || res.statusText}` }
     }
     return res.json()
   },

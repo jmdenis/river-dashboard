@@ -79,9 +79,10 @@ function DeployBadge({ result }: { result?: string }) {
 
 // --- Model badge ---
 function ModelBadge({ name }: { name: string }) {
+  const isManual = name === 'jm-direct'
   return (
-    <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/50">
-      {name}
+    <span className={`text-[10px] px-2 py-0.5 rounded-full ${isManual ? 'bg-violet-500/15 text-violet-400/90' : 'bg-white/5 text-white/50'}`}>
+      {isManual ? 'manual' : name}
     </span>
   )
 }
