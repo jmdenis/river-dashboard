@@ -47,7 +47,18 @@ export interface LifeData {
   cronJobs: CronJob[]
 }
 
+export interface Activities {
+  weekend: { content: string; lastUpdated: string | null }
+  date: { content: string; lastUpdated: string | null }
+}
+
 export const lifeApi = {
+  async getActivities(): Promise<Activities> {
+    const res = await fetch(`${API_BASE_URL}/api/activities`)
+    if (!res.ok) return { weekend: { content: '', lastUpdated: null }, date: { content: '', lastUpdated: null } }
+    return res.json()
+  },
+
   async getCalendar(days: number = 14): Promise<CalendarEvent[]> {
     const res = await fetch(`${API_BASE_URL}/api/calendar?days=${days}`)
     if (!res.ok) return []

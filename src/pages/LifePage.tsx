@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { lifeApi, type LifeData, type Birthday, type Reminder, type CronJob, type CalendarEvent } from '../services/lifeApi'
+import { lifeApi, type LifeData, type Birthday, type Reminder, type CronJob, type CalendarEvent, type Activities } from '../services/lifeApi'
+import ReactMarkdown from 'react-markdown'
 import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Badge } from '../components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '../components/ui/dialog'
-import { Loader2, Plus, Trash2, Check, Clock, Calendar as CalendarIcon, MessageCircle, Gift, Copy, ExternalLink } from 'lucide-react'
+import { Loader2, Plus, Trash2, Check, Clock, Calendar as CalendarIcon, MessageCircle, Gift, Copy, ExternalLink, Sparkles, Heart } from 'lucide-react'
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -700,21 +701,108 @@ function RemindersSection({ reminders, onUpdate }: {
   )
 }
 
+// --- Weekend Ideas Section ---
+function WeekendIdeasSection({ content, lastUpdated }: { content: string; lastUpdated: string | null }) {
+  // Extract the latest suggestions section from the markdown
+  function getLatestSuggestions(md: string): string {
+    if (!md.trim()) return ''
+    // Find the last "### " heading (latest date entry) and everything after it until the next "## " heading
+    const sections = md.split(/^## /m).filter(Boolean)
+    // Find the "Weekend Ideas Archive" section which contains date-based suggestions
+    const archiveSection = sections.find(s => s.startsWith('Weekend Ideas Archive'))
+    if (archiveSection) {
+      // Get the last ### entry (most recent suggestions)
+      const entries = archiveSection.split(/^### /m).filter(Boolean)
+      if (entries.length > 1) {
+        // Last entry is the most recent
+        const latest = entries[entries.length - 1]
+        return '### ' + latest.trim()
+      }
+    }
+    // Fallback: return everything after the first ## heading with suggestions
+    return md
+  }
+
+  const latestContent = getLatestSuggestions(content)
+
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles className="h-4 w-4 text-white/40" />
+          <p className="text-xs uppercase tracking-widest text-white/40">Weekend Ideas</p>
+          {lastUpdated && (
+            <span className="text-[10px] text-white/20 ml-auto">Updated {lastUpdated}</span>
+          )}
+        </div>
+        {latestContent ? (
+          <div className="prose prose-invert prose-sm max-w-none
+            prose-headings:text-white/80 prose-headings:text-sm prose-headings:font-medium prose-headings:mb-2 prose-headings:mt-0
+            prose-p:text-white/50 prose-p:text-sm prose-p:leading-relaxed prose-p:my-1
+            prose-li:text-white/50 prose-li:text-sm prose-li:my-0
+            prose-strong:text-white/70 prose-strong:font-medium
+            prose-ul:my-1 prose-ol:my-1">
+            <ReactMarkdown>{latestContent}</ReactMarkdown>
+          </div>
+        ) : (
+          <p className="text-sm text-white/20 text-center py-8">
+            No suggestions yet. Next update: Thursday 7pm.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+// --- Date Ideas Section ---
+function DateIdeasSection({ content, lastUpdated }: { content: string; lastUpdated: string | null }) {
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Heart className="h-4 w-4 text-white/40" />
+          <p className="text-xs uppercase tracking-widest text-white/40">Date Ideas</p>
+          {lastUpdated && (
+            <span className="text-[10px] text-white/20 ml-auto">Updated {lastUpdated}</span>
+          )}
+        </div>
+        {content.trim() ? (
+          <div className="prose prose-invert prose-sm max-w-none
+            prose-headings:text-white/80 prose-headings:text-sm prose-headings:font-medium prose-headings:mb-2 prose-headings:mt-0
+            prose-p:text-white/50 prose-p:text-sm prose-p:leading-relaxed prose-p:my-1
+            prose-li:text-white/50 prose-li:text-sm prose-li:my-0
+            prose-strong:text-white/70 prose-strong:font-medium
+            prose-ul:my-1 prose-ol:my-1">
+            <ReactMarkdown>{content}</ReactMarkdown>
+          </div>
+        ) : (
+          <p className="text-sm text-white/20 text-center py-8">
+            No suggestions yet. Next update: Monday 9am.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 // --- Main Life Page ---
 export default function LifePage() {
   const [data, setData] = useState<LifeData | null>(null)
   const [calendar, setCalendar] = useState<CalendarEvent[]>([])
+  const [activities, setActivities] = useState<Activities>({ weekend: { content: '', lastUpdated: null }, date: { content: '', lastUpdated: null } })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     Promise.all([
       lifeApi.getData(),
       lifeApi.getCalendar(7), // Get next 7 days
-      lifeApi.getReminders()
+      lifeApi.getReminders(),
+      lifeApi.getActivities()
     ])
-      .then(([lifeData, calendarData, remindersData]) => {
+      .then(([lifeData, calendarData, remindersData, activitiesData]) => {
         setData({ ...lifeData, reminders: remindersData.length > 0 ? remindersData : lifeData.reminders })
         setCalendar(calendarData)
+        setActivities(activitiesData)
       })
       .catch((e) => console.error('LifePage: Error loading data:', e))
       .finally(() => setLoading(false))
@@ -765,6 +853,10 @@ export default function LifePage() {
       </div>
 
       <CalendarSection events={calendar} />
+
+      <WeekendIdeasSection content={activities.weekend.content} lastUpdated={activities.weekend.lastUpdated} />
+
+      <DateIdeasSection content={activities.date.content} lastUpdated={activities.date.lastUpdated} />
 
       <RemindersSection reminders={data.reminders} onUpdate={updateReminders} />
 
