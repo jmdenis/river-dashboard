@@ -47,4 +47,17 @@ export const opsApi = {
     })
     return res.json()
   },
+
+  async resetCosts(): Promise<Task[]> {
+    const res = await fetch(`${API_BASE}/tasks/reset-costs`, {
+      method: 'POST',
+    })
+    return res.json()
+  },
+
+  async getTaskLog(taskId: string): Promise<{ content: string } | null> {
+    const res = await fetch(`${API_BASE}/task-logs/${taskId}`)
+    if (!res.ok) return null
+    return res.json()
+  },
 }

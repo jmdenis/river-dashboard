@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card'
-import { Loader2, FileText, Download, Upload, CheckCircle2, AlertCircle, Trash2 } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { Card, CardContent } from '../components/ui/card'
+import { Loader2, FileText, Download, Upload, CheckCircle2, AlertCircle } from 'lucide-react'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 const TOKEN = API_BASE_URL.split('/dash/')[1]?.split('/')[0] || ''
@@ -16,6 +17,14 @@ function formatSize(bytes: number): string {
 
 function formatDate(ts: number): string {
   return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 8 },
+  visible: (i: number) => ({
+    opacity: 1, y: 0,
+    transition: { delay: i * 0.05, duration: 0.25, ease: 'easeOut' },
+  }),
 }
 
 export default function FilesPage() {
@@ -59,13 +68,17 @@ export default function FilesPage() {
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  if (loading) return <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+  if (loading) return (
+    <div className="flex items-center justify-center py-20">
+      <Loader2 className="h-6 w-6 animate-spin text-white/20" />
+    </div>
+  )
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-semibold">Files</h1>
-        <p className="text-muted-foreground">Share files with River</p>
+        <h1 className="text-2xl font-semibold text-white">Files</h1>
+        <p className="text-sm text-white/60 mt-1">Share files with River</p>
       </div>
 
       <div
@@ -73,11 +86,15 @@ export default function FilesPage() {
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`border-2 border-dashed rounded-lg p-10 text-center cursor-pointer transition-colors ${dragOver ? 'border-violet-500 bg-violet-500/10' : 'border-muted-foreground/30 hover:border-muted-foreground/50'}`}
+        className={`rounded-xl border-2 border-dashed p-12 text-center cursor-pointer transition-colors duration-150 ${
+          dragOver
+            ? 'border-violet-500 bg-violet-500/5'
+            : 'border-white/[0.08] hover:border-white/[0.15]'
+        }`}
       >
-        <Upload className={`h-8 w-8 mx-auto mb-3 ${dragOver ? 'text-violet-500' : 'text-muted-foreground'}`} />
-        <p className="font-medium">{dragOver ? 'Drop files here' : 'Drag & drop files, or click to browse'}</p>
-        <p className="text-sm text-muted-foreground mt-1">Up to 200 MB per file</p>
+        <Upload className={`h-6 w-6 mx-auto mb-3 ${dragOver ? 'text-violet-400' : 'text-white/20'}`} />
+        <p className="text-sm text-white/60">{dragOver ? 'Drop files here' : 'Drag & drop files, or click to browse'}</p>
+        <p className="text-xs text-white/25 mt-1">Up to 200 MB per file</p>
         <input ref={fileInputRef} type="file" multiple onChange={handleFileSelect} className="hidden" />
       </div>
 
@@ -85,39 +102,50 @@ export default function FilesPage() {
         <div className="space-y-2">
           {uploads.map((u, i) => (
             <div key={i} className="flex items-center gap-3 text-sm p-2">
-              {u.status === 'uploading' && <Loader2 className="h-4 w-4 animate-spin text-violet-500 shrink-0" />}
-              {u.status === 'done' && <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />}
-              {u.status === 'error' && <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />}
-              <span className="truncate">{u.name}</span>
-              {u.error && <span className="text-xs text-red-500">Error {u.error}</span>}
+              {u.status === 'uploading' && <Loader2 className="h-4 w-4 animate-spin text-violet-400 shrink-0" />}
+              {u.status === 'done' && <CheckCircle2 className="h-4 w-4 text-emerald-400/80 shrink-0" />}
+              {u.status === 'error' && <AlertCircle className="h-4 w-4 text-rose-400/80 shrink-0" />}
+              <span className="truncate text-white/60">{u.name}</span>
+              {u.error && <span className="text-xs text-rose-400/80">Error {u.error}</span>}
             </div>
           ))}
         </div>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{files.length} file{files.length !== 1 ? 's' : ''}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="divide-y">
-            {files.map((f) => (
-              <div key={f.name} className="flex items-center justify-between py-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{f.name}</p>
-                    <p className="text-xs text-muted-foreground">{formatSize(f.size)} · {formatDate(f.mtime)}</p>
-                  </div>
-                </div>
-                <a href={`${API_BASE_URL}/api/files/${encodeURIComponent(f.name)}`} target="_blank" rel="noopener noreferrer" className="p-2 text-muted-foreground hover:text-foreground transition-colors" title="Download">
-                  <Download className="h-4 w-4" />
-                </a>
+      <div>
+        <p className="text-xs uppercase tracking-widest text-white/40 mb-4">{files.length} file{files.length !== 1 ? 's' : ''}</p>
+        <Card>
+          <CardContent className="p-0">
+            {files.length === 0 ? (
+              <p className="text-sm text-white/20 text-center py-12">No files uploaded yet</p>
+            ) : (
+              <div>
+                {files.map((f, i) => (
+                  <motion.div
+                    key={f.name}
+                    custom={i}
+                    variants={cardVariants}
+                    initial="hidden"
+                    animate="visible"
+                    className="flex items-center justify-between px-6 py-4 border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.03] transition-colors duration-150"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <FileText className="h-4 w-4 text-white/20 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-sm text-white/80 truncate">{f.name}</p>
+                        <p className="text-xs text-white/25">{formatSize(f.size)} · {formatDate(f.mtime)}</p>
+                      </div>
+                    </div>
+                    <a href={`${API_BASE_URL}/api/files/${encodeURIComponent(f.name)}`} target="_blank" rel="noopener noreferrer" className="p-2 text-white/20 hover:text-white/60 transition-colors duration-150" title="Download">
+                      <Download className="h-4 w-4" />
+                    </a>
+                  </motion.div>
+                ))}
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

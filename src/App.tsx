@@ -4,8 +4,8 @@ import Layout from './components/Layout'
 import AnimatedPage from './components/AnimatedPage'
 import OpsPage from './pages/OpsPage'
 import FilesPage from './pages/FilesPage'
-import FinancePage from './pages/FinancePage'
-import LogsPage from './pages/LogsPage'
+import LifePage from './pages/LifePage'
+
 import ProfilePage from './pages/ProfilePage'
 
 function App() {
@@ -17,8 +17,8 @@ function App() {
             <Route index element={<Navigate to="/ops" replace />} />
             <Route path="ops" element={<AnimatedPage><OpsPage /></AnimatedPage>} />
             <Route path="files" element={<AnimatedPage><FilesPage /></AnimatedPage>} />
-            <Route path="finance" element={<AnimatedPage><FinancePage /></AnimatedPage>} />
-            <Route path="logs" element={<AnimatedPage><LogsPage /></AnimatedPage>} />
+            <Route path="life" element={<AnimatedPage><LifePage /></AnimatedPage>} />
+
             <Route path="profile" element={<AnimatedPage><ProfilePage /></AnimatedPage>} />
           </Route>
         </Routes>
