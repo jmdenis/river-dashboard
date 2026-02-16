@@ -1,19 +1,56 @@
+import { useState, useCallback } from 'react'
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
-import { Activity, Upload, Heart, User } from 'lucide-react'
+import { Activity, Heart, User, Upload } from 'lucide-react'
+import UploadModal from './UploadModal'
 
 export default function Layout() {
   const location = useLocation()
+  const [uploadOpen, setUploadOpen] = useState(false)
+  const [globalDrag, setGlobalDrag] = useState(false)
+  const [droppedFiles, setDroppedFiles] = useState<File[]>()
 
   const navigation = [
     { name: 'Ops', href: '/ops', icon: Activity },
-    { name: 'Files', href: '/files', icon: Upload },
     { name: 'Life', href: '/life', icon: Heart },
     { name: 'Profile', href: '/profile', icon: User },
   ]
 
+  const handleGlobalDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    if (e.dataTransfer.types.includes('Files')) {
+      setGlobalDrag(true)
+    }
+  }, [])
+
+  const handleGlobalDragLeave = useCallback((e: React.DragEvent) => {
+    if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget as Node)) {
+      setGlobalDrag(false)
+    }
+  }, [])
+
+  const handleGlobalDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setGlobalDrag(false)
+    if (e.dataTransfer.files.length > 0) {
+      const files = Array.from(e.dataTransfer.files)
+      setDroppedFiles(files)
+      setUploadOpen(true)
+    }
+  }, [])
+
+  const handleOpenChange = useCallback((open: boolean) => {
+    setUploadOpen(open)
+    if (!open) setDroppedFiles(undefined)
+  }, [])
+
   return (
-    <div className="min-h-screen bg-[#0A0A0A]">
+    <div
+      className="min-h-screen bg-[#0A0A0A]"
+      onDragOver={handleGlobalDragOver}
+      onDragLeave={handleGlobalDragLeave}
+      onDrop={handleGlobalDrop}
+    >
       <header className="sticky top-0 z-50 w-full bg-transparent border-b border-white/[0.06]">
         <div className="container flex h-12 items-center justify-between px-4 md:px-8">
           <span className="text-sm font-medium text-white/60">River</span>
@@ -43,7 +80,13 @@ export default function Layout() {
             ))}
           </nav>
 
-          <div className="w-12" />
+          <button
+            onClick={() => setUploadOpen(true)}
+            className="p-2 text-white/40 hover:text-white/70 transition-colors duration-150"
+            title="Upload files"
+          >
+            <Upload className="h-4 w-4" />
+          </button>
         </div>
       </header>
 
@@ -74,6 +117,18 @@ export default function Layout() {
           })}
         </div>
       </nav>
+
+      <UploadModal open={uploadOpen} onOpenChange={handleOpenChange} initialFiles={droppedFiles} />
+
+      {/* Global drag overlay */}
+      {globalDrag && (
+        <div className="fixed inset-0 z-[60] bg-violet-500/5 border-2 border-dashed border-violet-500/40 pointer-events-none flex items-center justify-center">
+          <div className="bg-[#0D0D0D]/90 backdrop-blur-sm rounded-xl px-6 py-4 border border-violet-500/20">
+            <Upload className="h-6 w-6 text-violet-400 mx-auto mb-2" />
+            <p className="text-sm text-white/60">Drop files to upload</p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
