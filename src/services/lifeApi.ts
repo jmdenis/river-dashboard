@@ -138,10 +138,22 @@ export const lifeApi = {
   },
 
   async sendBirthdayEmail(id: string): Promise<{ success?: boolean; alreadySent?: boolean; error?: string }> {
-    const res = await fetch(`${API_BASE_URL}/api/birthdays/${id}/email`, {
+    const res = await fetch(`/api/birthdays/${id}/email`, {
       method: 'POST',
     })
+    if (!res.ok) {
+      const text = await res.text()
+      console.error(`sendBirthdayEmail failed: ${res.status} ${res.statusText}`, text)
+      return { error: `HTTP ${res.status}: ${res.statusText}` }
+    }
     return res.json()
+  },
+
+  async getGiftIdeas(id: string): Promise<string[]> {
+    const res = await fetch(`${API_BASE_URL}/api/birthdays/${id}/gift-ideas`)
+    if (!res.ok) return []
+    const data = await res.json()
+    return data.ideas || []
   },
 
   async getFilesPaginated(page: number, limit: number): Promise<{ files: Array<{ name: string; size: number; sizeHuman: string; date: string }>; total: number; page: number; totalPages: number }> {

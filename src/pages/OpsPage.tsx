@@ -246,7 +246,7 @@ export default function OpsPage() {
             { label: 'MEMORY', value: systemInfo.mem, suffix: '%', color: 'bg-blue-500/80', bar: true },
             { label: 'DISK', value: systemInfo.disk, suffix: '%', color: 'bg-emerald-500/80', bar: true },
           ].map((sys, i) => (
-            <motion.div key={sys.label} custom={i + 3} variants={cardVariants} initial="hidden" animate="visible">
+            <motion.div key={sys.label} custom={i + 3} variants={cardVariants} initial="hidden" animate="visible" className="min-w-0 w-full">
               <Card className="bg-white/[0.03]">
                 <CardContent className="p-3">
                   <p className="text-[10px] uppercase tracking-widest text-white/25">{sys.label}</p>
@@ -258,15 +258,16 @@ export default function OpsPage() {
               </Card>
             </motion.div>
           ))}
-          <motion.div custom={6} variants={cardVariants} initial="hidden" animate="visible">
+          <motion.div custom={6} variants={cardVariants} initial="hidden" animate="visible" className="min-w-0 w-full">
             <Card className="bg-white/[0.03]">
               <CardContent className="p-3">
                 <p className="text-[10px] uppercase tracking-widest text-white/25">UPTIME</p>
                 <p className="text-xl font-light tracking-tight text-white/70 mt-0.5">{formatUptime(systemInfo.uptime)}</p>
+                <div className="mt-2 h-0.5" />
               </CardContent>
             </Card>
           </motion.div>
-          <motion.div custom={7} variants={cardVariants} initial="hidden" animate="visible">
+          <motion.div custom={7} variants={cardVariants} initial="hidden" animate="visible" className="min-w-0 w-full">
             <Card className="bg-white/[0.03]">
               <CardContent className="p-3">
                 <p className="text-[10px] uppercase tracking-widest text-white/25">TOTAL COST</p>
@@ -278,6 +279,7 @@ export default function OpsPage() {
                     <RotateCcw className="h-3 w-3" />
                   </button>
                 </div>
+                <div className="mt-2 h-0.5" />
               </CardContent>
             </Card>
           </motion.div>

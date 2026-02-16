@@ -355,100 +355,6 @@ function generateBirthdayMessage(b: Birthday): string {
   return messages[Math.abs(firstName.charCodeAt(0)) % messages.length]
 }
 
-// --- Smart Gift Ideas Generator (Fix 4) ---
-function generateGiftIdeas(b: Birthday): { idea: string; searchQuery: string }[] {
-  const firstName = b.name.split(' ')[0]
-  const note = (b.note || b.notes || '').toLowerCase()
-  const age = getAgeNumber(b.date, b.year)
-  const gender = inferGender(firstName)
-  const results: { idea: string; searchQuery: string }[] = []
-
-  // Notes-based suggestions (highest priority)
-  if (note.includes('vin') || note.includes('wine')) {
-    results.push({ idea: '🍷 Une sélection de vins du Sud-Ouest', searchQuery: 'idée+cadeau+vin+Toulouse' })
-  }
-  if (note.includes('jardin') || note.includes('garden')) {
-    results.push({ idea: '🌱 Kit de jardinage ou plantes', searchQuery: 'idée+cadeau+jardinage+Toulouse' })
-  }
-  if (note.includes('gamer') || note.includes('gaming') || note.includes('jeu')) {
-    results.push({ idea: '🎮 Jeu vidéo ou accessoire gaming', searchQuery: 'idée+cadeau+gaming+Toulouse' })
-  }
-  if (note.includes('cuisine') || note.includes('cook')) {
-    results.push({ idea: '👨‍🍳 Ustensile de cuisine ou livre de recettes', searchQuery: 'idée+cadeau+cuisine+Toulouse' })
-  }
-  if (note.includes('facebook') || note.includes('meta') || note.includes('google') || note.includes('apple')) {
-    results.push({ idea: '🖥️ Accessoire tech / gadget', searchQuery: 'idée+cadeau+tech+gadget+Toulouse' })
-  }
-  if (note.includes('sport') || note.includes('rugby') || note.includes('foot')) {
-    results.push({ idea: '⚽ Accessoire de sport', searchQuery: 'idée+cadeau+sport+Toulouse' })
-  }
-
-  // Age-based suggestions
-  if (age !== null) {
-    if (age <= 12) {
-      results.push(
-        { idea: '🧸 Jouet ou jeu éducatif', searchQuery: 'idée+cadeau+enfant+jouet+Toulouse' },
-        { idea: '📚 Livre illustré pour enfant', searchQuery: 'idée+cadeau+livre+enfant+Toulouse' },
-        { idea: '🎨 Kit de loisirs créatifs', searchQuery: 'idée+cadeau+loisir+créatif+enfant+Toulouse' },
-      )
-    } else if (age <= 17) {
-      results.push(
-        { idea: '🎧 Casque audio ou écouteurs', searchQuery: 'idée+cadeau+casque+audio+ado+Toulouse' },
-        { idea: '🎮 Carte cadeau Fnac / Amazon', searchQuery: 'carte+cadeau+fnac+ado+Toulouse' },
-        { idea: '👕 Vêtements tendance', searchQuery: 'idée+cadeau+vêtement+ado+Toulouse' },
-      )
-    } else if (age <= 30) {
-      results.push(
-        { idea: '🎟️ Expérience (escape room, restaurant...)', searchQuery: 'idée+cadeau+expérience+Toulouse' },
-        { idea: '🍷 Bon vin ou spiritueux', searchQuery: 'idée+cadeau+vin+spiritueux+Toulouse' },
-        { idea: '🧳 Accessoire de voyage', searchQuery: 'idée+cadeau+voyage+accessoire+Toulouse' },
-      )
-    } else if (age <= 60) {
-      results.push(
-        { idea: '🍷 Vin ou produit gastronomique', searchQuery: 'idée+cadeau+vin+gastronomie+Toulouse' },
-        { idea: '📚 Beau livre (art, cuisine, photo...)', searchQuery: 'idée+cadeau+livre+adulte+Toulouse' },
-        { idea: '💆 Bon cadeau spa / bien-être', searchQuery: 'idée+cadeau+spa+bien-être+Toulouse' },
-      )
-    } else {
-      results.push(
-        { idea: '🧺 Panier gourmand', searchQuery: 'idée+cadeau+panier+gourmand+Toulouse' },
-        { idea: '📸 Cadeau photo personnalisé', searchQuery: 'idée+cadeau+photo+personnalisé+Toulouse' },
-        { idea: '🎭 Places de spectacle ou restaurant', searchQuery: 'idée+cadeau+spectacle+restaurant+Toulouse' },
-      )
-    }
-  }
-
-  // Gender-based suggestions
-  if (gender === 'M') {
-    results.push(
-      { idea: '🥃 Whisky ou coffret dégustation', searchQuery: 'idée+cadeau+whisky+homme+Toulouse' },
-      { idea: '🔧 Outil ou gadget tech', searchQuery: 'idée+cadeau+tech+homme+Toulouse' },
-    )
-  } else if (gender === 'F') {
-    results.push(
-      { idea: '💐 Bouquet de fleurs ou plante', searchQuery: 'idée+cadeau+fleurs+femme+Toulouse' },
-      { idea: '🧴 Coffret soin / parfum', searchQuery: 'idée+cadeau+parfum+soin+femme+Toulouse' },
-    )
-  }
-
-  // Fallback defaults
-  if (results.length < 5) {
-    const defaults = [
-      { idea: '📚 Un beau livre (roman, art, cuisine...)', searchQuery: 'idée+cadeau+livre+Toulouse' },
-      { idea: '🍷 Une bonne bouteille de vin du Sud-Ouest', searchQuery: 'cave+vin+cadeau+Toulouse' },
-      { idea: '🎟️ Bon cadeau expérience (spa, restaurant...)', searchQuery: 'bon+cadeau+expérience+Toulouse' },
-      { idea: '🎨 Un objet artisanal local', searchQuery: 'artisan+cadeau+Toulouse' },
-      { idea: '🧴 Un coffret bien-être', searchQuery: 'coffret+cadeau+bien-être+Toulouse' },
-    ]
-    for (const d of defaults) {
-      if (results.length >= 5) break
-      if (!results.some(r => r.idea === d.idea)) results.push(d)
-    }
-  }
-
-  return results.slice(0, 5)
-}
-
 // --- Birthdays Section (Fix 3: hide, Fix 4: smart gifts, Fix 5: email) ---
 function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, toast }: {
   birthdays: Birthday[]
@@ -465,7 +371,22 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
   const [note, setNote] = useState('')
   const [messageModal, setMessageModal] = useState<Birthday | null>(null)
   const [giftModal, setGiftModal] = useState<Birthday | null>(null)
+  const [giftIdeas, setGiftIdeas] = useState<string[]>([])
+  const [giftLoading, setGiftLoading] = useState(false)
   const [copied, setCopied] = useState(false)
+
+  // Fetch gift ideas from API when modal opens
+  useEffect(() => {
+    if (!giftModal) { setGiftIdeas([]); return }
+    let cancelled = false
+    setGiftLoading(true)
+    lifeApi.getGiftIdeas(giftModal.id).then(ideas => {
+      if (!cancelled) { setGiftIdeas(ideas); setGiftLoading(false) }
+    }).catch(() => {
+      if (!cancelled) { setGiftIdeas([]); setGiftLoading(false) }
+    })
+    return () => { cancelled = true }
+  }, [giftModal])
 
   // Separate categories
   const hidden = birthdays.filter(b => b.hidden && !b.deceased)
@@ -474,8 +395,6 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
   const sortedLiving = [...living].sort((a, b) => daysUntilBirthday(a.date) - daysUntilBirthday(b.date))
   const upcoming = sortedLiving.filter(b => daysUntilBirthday(b.date) <= 30)
   const displayedLiving = showAll ? sortedLiving : upcoming
-
-  const currentYear = new Date().getFullYear()
 
   const getCountdown = (days: number): string => {
     if (days === 0) return 'Today!'
@@ -568,7 +487,6 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
                 const isToday = days === 0
                 const countdown = getCountdown(days)
                 const age = getAge(b.date, b.year)
-                const emailSent = b.emailSentYear === currentYear
                 return (
                   <div
                     key={b.id}
@@ -603,10 +521,9 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
                       </Button>
                       <Button
                         variant="ghost" size="icon"
-                        className={`opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 ${emailSent ? 'text-white/15 cursor-default' : 'text-white/30 hover:text-violet-400'}`}
-                        onClick={() => !emailSent && onSendEmail(b)}
-                        title={emailSent ? 'Déjà envoyé cette année' : 'Send email reminder'}
-                        disabled={emailSent}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-white/30 hover:text-violet-400 h-7 w-7"
+                        onClick={() => onSendEmail(b)}
+                        title="Send email reminder"
                       >
                         <Mail className="h-3.5 w-3.5" />
                       </Button>
@@ -711,13 +628,18 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
               Idées cadeaux pour {giftModalTitle}
             </DialogTitle>
           </DialogHeader>
-          {giftModal && (
+          {giftLoading ? (
+            <div className="flex items-center justify-center py-8 gap-2 text-white/40">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm">Génération en cours...</span>
+            </div>
+          ) : (
             <div className="space-y-2">
-              {generateGiftIdeas(giftModal).map((gift, i) => (
+              {giftIdeas.map((idea, i) => (
                 <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03]">
-                  <span className="text-sm text-white/70">{gift.idea}</span>
+                  <span className="text-sm text-white/70">{idea}</span>
                   <a
-                    href={`https://www.google.com/search?q=${encodeURIComponent(gift.searchQuery)}`}
+                    href={`https://www.google.com/search?q=${encodeURIComponent(idea.replace(/^\S+\s/, '') + ' cadeau Toulouse')}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-violet-400 hover:text-violet-300 shrink-0 ml-2"
@@ -727,6 +649,9 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
                   </a>
                 </div>
               ))}
+              {giftIdeas.length === 0 && (
+                <p className="text-sm text-white/30 text-center py-4">Aucune suggestion disponible</p>
+              )}
             </div>
           )}
         </DialogContent>
@@ -1115,9 +1040,7 @@ export default function LifePage() {
   const sendBirthdayEmail = async (b: Birthday) => {
     try {
       const result = await lifeApi.sendBirthdayEmail(b.id)
-      if (result.alreadySent) {
-        addToast('Déjà envoyé cette année')
-      } else if (result.success) {
+      if (result.success || result.alreadySent) {
         addToast('Email envoyé')
         // Reload birthdays to get updated emailSentYear
         const lifeData = await lifeApi.getData()
@@ -1125,7 +1048,8 @@ export default function LifePage() {
       } else {
         addToast('Erreur: ' + (result.error || 'Unknown'))
       }
-    } catch {
+    } catch (err) {
+      console.error('sendBirthdayEmail error:', err)
       addToast('Erreur envoi email')
     }
   }
