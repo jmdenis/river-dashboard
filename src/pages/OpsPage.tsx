@@ -218,8 +218,8 @@ export default function OpsPage() {
         )}
       </div>
 
-      {/* Stats cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      {/* Hero row — primary stats */}
+      <div className="grid gap-4 md:grid-cols-3">
         {[
           { label: 'RUNNING', value: runningCount, color: 'text-violet-400' },
           { label: 'QUEUED', value: queuedCount, color: 'text-white/40' },
@@ -227,58 +227,57 @@ export default function OpsPage() {
         ].map((stat, i) => (
           <motion.div key={stat.label} custom={i} variants={cardVariants} initial="hidden" animate="visible">
             <Card className={stat.label === 'RUNNING' && stat.value > 0 ? 'animate-pulse-glow' : ''}>
-              <CardContent className="p-6">
+              <CardContent className="p-5">
                 <p className="text-xs uppercase tracking-widest text-white/30">{stat.label}</p>
-                <p className={`text-5xl font-light tracking-tight mt-1 ${stat.color}`}>
+                <p className={`text-4xl font-light tracking-tight mt-1 ${stat.color}`}>
                   <AnimatedNumber value={stat.value} />
                 </p>
               </CardContent>
             </Card>
           </motion.div>
         ))}
-        <motion.div custom={3} variants={cardVariants} initial="hidden" animate="visible">
-          <Card>
-            <CardContent className="p-6">
-              <p className="text-xs uppercase tracking-widest text-white/30">TOTAL COST</p>
-              <div className="flex items-center gap-2 mt-1">
-                <p className="text-5xl font-light tracking-tight text-amber-400/80">
-                  <AnimatedNumber value={totalCost} prefix="$" decimals={2} />
-                </p>
-                <button onClick={handleResetCosts} title="Reset all costs" className="text-white/20 hover:text-amber-400/80 transition-colors duration-150 p-1">
-                  <RotateCcw className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
       </div>
 
-      {/* System info */}
+      {/* Secondary row — compact system metrics */}
       {systemInfo && (
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-3 grid-cols-5">
           {[
-            { label: 'CPU', value: systemInfo.cpu, color: 'bg-violet-500/80' },
-            { label: 'MEMORY', value: systemInfo.mem, color: 'bg-blue-500/80' },
-            { label: 'DISK', value: systemInfo.disk, color: 'bg-emerald-500/80' },
+            { label: 'CPU', value: systemInfo.cpu, suffix: '%', color: 'bg-violet-500/80', bar: true },
+            { label: 'MEMORY', value: systemInfo.mem, suffix: '%', color: 'bg-blue-500/80', bar: true },
+            { label: 'DISK', value: systemInfo.disk, suffix: '%', color: 'bg-emerald-500/80', bar: true },
           ].map((sys, i) => (
-            <motion.div key={sys.label} custom={i + 4} variants={cardVariants} initial="hidden" animate="visible">
-              <Card>
-                <CardContent className="p-6">
-                  <p className="text-xs uppercase tracking-widest text-white/30">{sys.label}</p>
-                  <p className="text-5xl font-light tracking-tight text-white/90 mt-1">
-                    <AnimatedNumber value={sys.value} suffix="%" />
+            <motion.div key={sys.label} custom={i + 3} variants={cardVariants} initial="hidden" animate="visible">
+              <Card className="bg-white/[0.03]">
+                <CardContent className="p-3">
+                  <p className="text-[10px] uppercase tracking-widest text-white/25">{sys.label}</p>
+                  <p className="text-xl font-light tracking-tight text-white/70 mt-0.5">
+                    <AnimatedNumber value={sys.value} suffix={sys.suffix} />
                   </p>
-                  <Progress value={sys.value} color={sys.color} className="mt-3 h-1" />
+                  <Progress value={sys.value} color={sys.color} className="mt-2 h-0.5" />
                 </CardContent>
               </Card>
             </motion.div>
           ))}
+          <motion.div custom={6} variants={cardVariants} initial="hidden" animate="visible">
+            <Card className="bg-white/[0.03]">
+              <CardContent className="p-3">
+                <p className="text-[10px] uppercase tracking-widest text-white/25">UPTIME</p>
+                <p className="text-xl font-light tracking-tight text-white/70 mt-0.5">{formatUptime(systemInfo.uptime)}</p>
+              </CardContent>
+            </Card>
+          </motion.div>
           <motion.div custom={7} variants={cardVariants} initial="hidden" animate="visible">
-            <Card>
-              <CardContent className="p-6">
-                <p className="text-xs uppercase tracking-widest text-white/30">UPTIME</p>
-                <p className="text-5xl font-light tracking-tight text-white/90 mt-1">{formatUptime(systemInfo.uptime)}</p>
-                <p className="text-xs text-white/30 mt-2">{systemInfo.hostname}</p>
+            <Card className="bg-white/[0.03]">
+              <CardContent className="p-3">
+                <p className="text-[10px] uppercase tracking-widest text-white/25">TOTAL COST</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <p className="text-xl font-light tracking-tight text-amber-400/80">
+                    <AnimatedNumber value={totalCost} prefix="$" decimals={2} />
+                  </p>
+                  <button onClick={handleResetCosts} title="Reset all costs" className="text-white/15 hover:text-amber-400/80 transition-colors duration-150 p-0.5">
+                    <RotateCcw className="h-3 w-3" />
+                  </button>
+                </div>
               </CardContent>
             </Card>
           </motion.div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { lifeApi, type LifeData, type Birthday, type Reminder, type CronJob, type CalendarEvent, type Activities } from '../services/lifeApi'
 import ReactMarkdown from 'react-markdown'
@@ -7,7 +7,7 @@ import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Badge } from '../components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '../components/ui/dialog'
-import { Loader2, Plus, Trash2, Check, Clock, Calendar as CalendarIcon, MessageCircle, Gift, Copy, ExternalLink, Sparkles, Heart } from 'lucide-react'
+import { Loader2, Plus, Trash2, Check, Clock, Calendar as CalendarIcon, MessageCircle, Gift, Copy, ExternalLink, Sparkles, Heart, Pencil, X, Eye, EyeOff, Mail } from 'lucide-react'
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -32,12 +32,12 @@ function getDayLabel(date: Date): string {
   today.setHours(0, 0, 0, 0)
   const eventDate = new Date(date)
   eventDate.setHours(0, 0, 0, 0)
-  
+
   const diffDays = Math.floor((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-  
+
   if (diffDays === 0) return 'Today'
   if (diffDays === 1) return 'Tomorrow'
-  
+
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
   return dayNames[eventDate.getDay()]
 }
@@ -63,11 +63,54 @@ const CATEGORY_COLORS: Record<string, { dot: string; text: string }> = {
 }
 
 function getCategoryStyle(event: CalendarEvent) {
-  // Anne's events get a special pink treatment regardless of category
   if (ANNE_EMAILS.includes(event.organizer)) {
     return CATEGORY_COLORS.family
   }
   return CATEGORY_COLORS[event.category] || CATEGORY_COLORS.personal
+}
+
+// --- French name gender mapping ---
+const FEMALE_NAMES = new Set([
+  'alexandra','alice','alison','amelie','amélie','amy','anais','anaïs','andrea','anne','aurelie','aurélie',
+  'brigitte','camille','carol','caroline','catherine','charlotte','christelle','christine','claire','claudine',
+  'colette','corinne','danièle','delphine','dominique','edith','elise','emilie','emma','estelle','eve',
+  'fabienne','florence','francine','françoise','gabrielle','genevieve','geneviève','hélène','isabelle',
+  'jacqueline','jeanne','jeanine','jennifer','josiane','judith','julie','juliette','justine',
+  'laëtitia','laetitia','laure','laurence','lea','léa','liliane','louise','lucie','lydia',
+  'madeleine','magalie','manon','marguerite','marie','marilou','marine','martine','mathilde','michele','michèle','monique',
+  'nathalie','nicole','odette','patricia','pauline','raphaelle','roxane','sandrine','sarah','simone',
+  'sophie','stéphanie','stephanie','sylvie','thérèse','valérie','valerie','véronique','virginie','yvette','yvonne',
+])
+const MALE_NAMES = new Set([
+  'alain','alexandre','alexis','anthony','antoine','arnaud','aurelien','aurélien','bart','benjamin','benoit','benoît',
+  'bernard','bruno','charles','christophe','claude','daniel','david','denis','didier','dominique',
+  'edouard','emmanuel','eric','étienne','fabien','fabrice','florian','francois','françois','frederic','frédéric',
+  'gabriel','geoffrey','georges','gérard','guillaume','guy','henri','hervé','hoa','hugo',
+  'jacques','jean','jean-baptiste','jean-claude','jean-marc','jean-yves','jérôme','jeroen',
+  'laurent','louis','luc','marc','marcel','mathieu','maxime','michel','mozam','nicolas',
+  'oliver','olivier','pascal','patrice','patrick','paul','philippe','pierre',
+  'raphael','raphaël','raymond','robert','robin','roger','roland','ronald','roy',
+  'samuel','sébastien','sebastien','serge','stéphane','stephane','sylvain','thierry','thomas','vincent','xavier','yves',
+])
+
+function inferGender(firstName: string): 'M' | 'F' | null {
+  const lower = firstName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  const lowerRaw = firstName.toLowerCase()
+  if (FEMALE_NAMES.has(lower) || FEMALE_NAMES.has(lowerRaw)) return 'F'
+  if (MALE_NAMES.has(lower) || MALE_NAMES.has(lowerRaw)) return 'M'
+  return null
+}
+
+function getAgeNumber(dateStr: string, yearStr?: string): number | null {
+  if (!yearStr) return null
+  const birthYear = parseInt(yearStr)
+  const currentYear = new Date().getFullYear()
+  const [mm, dd] = dateStr.split('-').map(Number)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  let nextBirthday = new Date(currentYear, mm - 1, dd)
+  if (nextBirthday < today) nextBirthday = new Date(currentYear + 1, mm - 1, dd)
+  return nextBirthday.getFullYear() - birthYear
 }
 
 // --- Calendar Section ---
@@ -86,7 +129,6 @@ function CalendarSection({ events }: { events: CalendarEvent[] }) {
     )
   }
 
-  // Group events by day
   const eventsByDay: Record<string, CalendarEvent[]> = {}
   events.forEach(event => {
     const date = new Date(event.start)
@@ -304,43 +346,120 @@ function WeeklyPlannerSection({ planner, onUpdate }: {
 // --- Birthday Message Generator ---
 function generateBirthdayMessage(b: Birthday): string {
   const firstName = b.name.split(' ')[0]
-  const note = b.note || b.notes || ''
   const messages = [
-    `Joyeux anniversaire ${firstName} ! J'espère que tu passes une belle journée entouré(e) de ceux que tu aimes. Gros bisous 🎂`,
-    `Bon anniversaire ${firstName} ! Je te souhaite une journée remplie de bonheur et de belles surprises. À très vite ! 🎉`,
-    `${firstName}, joyeux anniversaire ! Que cette nouvelle année t'apporte tout ce que tu mérites. Je pense bien à toi 🥳`,
-    `Happy birthday ${firstName} ! J'espère que tu vas passer un super moment aujourd'hui. On se voit bientôt j'espère ! 🎂`,
+    `Joyeux anniversaire ${firstName} ! J'espère que tu passes une belle journée entouré(e) de ceux que tu aimes. Gros bisous`,
+    `Bon anniversaire ${firstName} ! Je te souhaite une journée remplie de bonheur et de belles surprises. À très vite !`,
+    `${firstName}, joyeux anniversaire ! Que cette nouvelle année t'apporte tout ce que tu mérites. Je pense bien à toi`,
+    `Happy birthday ${firstName} ! J'espère que tu vas passer un super moment aujourd'hui. On se voit bientôt j'espère !`,
   ]
-  const msg = messages[Math.abs(firstName.charCodeAt(0)) % messages.length]
-  if (note.includes('org:')) {
-    return msg
-  }
-  return msg
+  return messages[Math.abs(firstName.charCodeAt(0)) % messages.length]
 }
 
-// --- Gift Ideas Generator ---
+// --- Smart Gift Ideas Generator (Fix 4) ---
 function generateGiftIdeas(b: Birthday): { idea: string; searchQuery: string }[] {
-  const note = b.note || b.notes || ''
-  const defaults = [
-    { idea: '📚 Un beau livre (roman, art, cuisine...)', searchQuery: 'idée cadeau livre Toulouse' },
-    { idea: '🍷 Une bonne bouteille de vin du Sud-Ouest', searchQuery: 'cave vin cadeau Toulouse' },
-    { idea: '🎟️ Un bon cadeau expérience (spa, restaurant, vol en montgolfière...)', searchQuery: 'bon cadeau expérience Toulouse' },
-    { idea: '🧴 Un coffret bien-être / cosmétiques', searchQuery: 'coffret cadeau bien-être Toulouse' },
-    { idea: '🎨 Un objet artisanal local', searchQuery: 'artisan cadeau Toulouse' },
-  ]
-  if (note.toLowerCase().includes('facebook') || note.toLowerCase().includes('meta') || note.toLowerCase().includes('google') || note.toLowerCase().includes('apple')) {
-    defaults[0] = { idea: '🖥️ Un accessoire tech / gadget', searchQuery: 'accessoire tech cadeau Toulouse' }
+  const firstName = b.name.split(' ')[0]
+  const note = (b.note || b.notes || '').toLowerCase()
+  const age = getAgeNumber(b.date, b.year)
+  const gender = inferGender(firstName)
+  const results: { idea: string; searchQuery: string }[] = []
+
+  // Notes-based suggestions (highest priority)
+  if (note.includes('vin') || note.includes('wine')) {
+    results.push({ idea: '🍷 Une sélection de vins du Sud-Ouest', searchQuery: 'idée+cadeau+vin+Toulouse' })
   }
-  return defaults
+  if (note.includes('jardin') || note.includes('garden')) {
+    results.push({ idea: '🌱 Kit de jardinage ou plantes', searchQuery: 'idée+cadeau+jardinage+Toulouse' })
+  }
+  if (note.includes('gamer') || note.includes('gaming') || note.includes('jeu')) {
+    results.push({ idea: '🎮 Jeu vidéo ou accessoire gaming', searchQuery: 'idée+cadeau+gaming+Toulouse' })
+  }
+  if (note.includes('cuisine') || note.includes('cook')) {
+    results.push({ idea: '👨‍🍳 Ustensile de cuisine ou livre de recettes', searchQuery: 'idée+cadeau+cuisine+Toulouse' })
+  }
+  if (note.includes('facebook') || note.includes('meta') || note.includes('google') || note.includes('apple')) {
+    results.push({ idea: '🖥️ Accessoire tech / gadget', searchQuery: 'idée+cadeau+tech+gadget+Toulouse' })
+  }
+  if (note.includes('sport') || note.includes('rugby') || note.includes('foot')) {
+    results.push({ idea: '⚽ Accessoire de sport', searchQuery: 'idée+cadeau+sport+Toulouse' })
+  }
+
+  // Age-based suggestions
+  if (age !== null) {
+    if (age <= 12) {
+      results.push(
+        { idea: '🧸 Jouet ou jeu éducatif', searchQuery: 'idée+cadeau+enfant+jouet+Toulouse' },
+        { idea: '📚 Livre illustré pour enfant', searchQuery: 'idée+cadeau+livre+enfant+Toulouse' },
+        { idea: '🎨 Kit de loisirs créatifs', searchQuery: 'idée+cadeau+loisir+créatif+enfant+Toulouse' },
+      )
+    } else if (age <= 17) {
+      results.push(
+        { idea: '🎧 Casque audio ou écouteurs', searchQuery: 'idée+cadeau+casque+audio+ado+Toulouse' },
+        { idea: '🎮 Carte cadeau Fnac / Amazon', searchQuery: 'carte+cadeau+fnac+ado+Toulouse' },
+        { idea: '👕 Vêtements tendance', searchQuery: 'idée+cadeau+vêtement+ado+Toulouse' },
+      )
+    } else if (age <= 30) {
+      results.push(
+        { idea: '🎟️ Expérience (escape room, restaurant...)', searchQuery: 'idée+cadeau+expérience+Toulouse' },
+        { idea: '🍷 Bon vin ou spiritueux', searchQuery: 'idée+cadeau+vin+spiritueux+Toulouse' },
+        { idea: '🧳 Accessoire de voyage', searchQuery: 'idée+cadeau+voyage+accessoire+Toulouse' },
+      )
+    } else if (age <= 60) {
+      results.push(
+        { idea: '🍷 Vin ou produit gastronomique', searchQuery: 'idée+cadeau+vin+gastronomie+Toulouse' },
+        { idea: '📚 Beau livre (art, cuisine, photo...)', searchQuery: 'idée+cadeau+livre+adulte+Toulouse' },
+        { idea: '💆 Bon cadeau spa / bien-être', searchQuery: 'idée+cadeau+spa+bien-être+Toulouse' },
+      )
+    } else {
+      results.push(
+        { idea: '🧺 Panier gourmand', searchQuery: 'idée+cadeau+panier+gourmand+Toulouse' },
+        { idea: '📸 Cadeau photo personnalisé', searchQuery: 'idée+cadeau+photo+personnalisé+Toulouse' },
+        { idea: '🎭 Places de spectacle ou restaurant', searchQuery: 'idée+cadeau+spectacle+restaurant+Toulouse' },
+      )
+    }
+  }
+
+  // Gender-based suggestions
+  if (gender === 'M') {
+    results.push(
+      { idea: '🥃 Whisky ou coffret dégustation', searchQuery: 'idée+cadeau+whisky+homme+Toulouse' },
+      { idea: '🔧 Outil ou gadget tech', searchQuery: 'idée+cadeau+tech+homme+Toulouse' },
+    )
+  } else if (gender === 'F') {
+    results.push(
+      { idea: '💐 Bouquet de fleurs ou plante', searchQuery: 'idée+cadeau+fleurs+femme+Toulouse' },
+      { idea: '🧴 Coffret soin / parfum', searchQuery: 'idée+cadeau+parfum+soin+femme+Toulouse' },
+    )
+  }
+
+  // Fallback defaults
+  if (results.length < 5) {
+    const defaults = [
+      { idea: '📚 Un beau livre (roman, art, cuisine...)', searchQuery: 'idée+cadeau+livre+Toulouse' },
+      { idea: '🍷 Une bonne bouteille de vin du Sud-Ouest', searchQuery: 'cave+vin+cadeau+Toulouse' },
+      { idea: '🎟️ Bon cadeau expérience (spa, restaurant...)', searchQuery: 'bon+cadeau+expérience+Toulouse' },
+      { idea: '🎨 Un objet artisanal local', searchQuery: 'artisan+cadeau+Toulouse' },
+      { idea: '🧴 Un coffret bien-être', searchQuery: 'coffret+cadeau+bien-être+Toulouse' },
+    ]
+    for (const d of defaults) {
+      if (results.length >= 5) break
+      if (!results.some(r => r.idea === d.idea)) results.push(d)
+    }
+  }
+
+  return results.slice(0, 5)
 }
 
-// --- Birthdays Section ---
-function BirthdaysSection({ birthdays, onUpdate }: {
+// --- Birthdays Section (Fix 3: hide, Fix 4: smart gifts, Fix 5: email) ---
+function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, toast }: {
   birthdays: Birthday[]
   onUpdate: (birthdays: Birthday[]) => void
+  onPatchBirthday: (id: string, updates: Partial<Birthday>) => Promise<void>
+  onSendEmail: (b: Birthday) => void
+  toast: (msg: string) => void
 }) {
   const [open, setOpen] = useState(false)
   const [showAll, setShowAll] = useState(false)
+  const [showHidden, setShowHidden] = useState(false)
   const [name, setName] = useState('')
   const [date, setDate] = useState('')
   const [note, setNote] = useState('')
@@ -348,29 +467,25 @@ function BirthdaysSection({ birthdays, onUpdate }: {
   const [giftModal, setGiftModal] = useState<Birthday | null>(null)
   const [copied, setCopied] = useState(false)
 
-  // Separate living and deceased, sort living by upcoming date
-  const living = birthdays.filter(b => !b.deceased)
+  // Separate categories
+  const hidden = birthdays.filter(b => b.hidden && !b.deceased)
+  const living = birthdays.filter(b => !b.deceased && !b.hidden)
   const deceased = birthdays.filter(b => b.deceased)
   const sortedLiving = [...living].sort((a, b) => daysUntilBirthday(a.date) - daysUntilBirthday(b.date))
   const upcoming = sortedLiving.filter(b => daysUntilBirthday(b.date) <= 30)
   const displayedLiving = showAll ? sortedLiving : upcoming
 
+  const currentYear = new Date().getFullYear()
+
   const getCountdown = (days: number): string => {
-    if (days === 0) return 'Today! 🎂'
+    if (days === 0) return 'Today!'
     if (days === 1) return 'Tomorrow'
     return `in ${days} days`
   }
 
   const getAge = (dateStr: string, yearStr?: string): string | null => {
-    if (!yearStr) return null
-    const birthYear = parseInt(yearStr)
-    const currentYear = new Date().getFullYear()
-    const [mm, dd] = dateStr.split('-').map(Number)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    let nextBirthday = new Date(currentYear, mm - 1, dd)
-    if (nextBirthday < today) nextBirthday = new Date(currentYear + 1, mm - 1, dd)
-    const age = nextBirthday.getFullYear() - birthYear
+    const age = getAgeNumber(dateStr, yearStr)
+    if (age === null) return null
     return `Turns ${age}`
   }
 
@@ -386,11 +501,30 @@ function BirthdaysSection({ birthdays, onUpdate }: {
     onUpdate(birthdays.filter((b) => b.id !== id))
   }
 
+  const hideBirthday = async (id: string) => {
+    await onPatchBirthday(id, { hidden: true })
+  }
+
+  const unhideBirthday = async (id: string) => {
+    await onPatchBirthday(id, { hidden: false })
+  }
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+
+  const giftModalTitle = giftModal ? (() => {
+    const firstName = giftModal.name.split(' ')[0]
+    const age = getAgeNumber(giftModal.date, giftModal.year)
+    const gender = inferGender(firstName)
+    const genderLabel = gender === 'M' ? 'H' : gender === 'F' ? 'F' : '?'
+    const parts = [firstName]
+    if (age !== null) parts.push(`${age} ans`)
+    parts.push(genderLabel)
+    return parts.join(', ')
+  })() : ''
 
   return (
     <Card>
@@ -398,7 +532,7 @@ function BirthdaysSection({ birthdays, onUpdate }: {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <p className="text-xs uppercase tracking-widest text-white/40">Birthdays</p>
-            {birthdays.length > 0 && <Badge variant="secondary" className="bg-white/5 text-white/50 border-0 text-[10px]">{birthdays.length}</Badge>}
+            {living.length > 0 && <Badge variant="secondary" className="bg-white/5 text-white/50 border-0 text-[10px]">{living.length}</Badge>}
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -419,12 +553,12 @@ function BirthdaysSection({ birthdays, onUpdate }: {
             </DialogContent>
           </Dialog>
         </div>
-        {birthdays.length === 0 ? (
+        {living.length === 0 && deceased.length === 0 && hidden.length === 0 ? (
           <p className="text-sm text-white/20 text-center py-8">No birthdays added</p>
         ) : displayedLiving.length === 0 && deceased.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-sm text-white/20 mb-2">No birthdays in the next 30 days</p>
-            <button onClick={() => setShowAll(true)} className="text-xs text-violet-400 hover:text-violet-300">Show all {birthdays.length} birthdays</button>
+            <button onClick={() => setShowAll(true)} className="text-xs text-violet-400 hover:text-violet-300">Show all {living.length} birthdays</button>
           </div>
         ) : (
           <>
@@ -434,6 +568,7 @@ function BirthdaysSection({ birthdays, onUpdate }: {
                 const isToday = days === 0
                 const countdown = getCountdown(days)
                 const age = getAge(b.date, b.year)
+                const emailSent = b.emailSentYear === currentYear
                 return (
                   <div
                     key={b.id}
@@ -446,7 +581,7 @@ function BirthdaysSection({ birthdays, onUpdate }: {
                       </div>
                       <div className="flex items-center gap-2 text-xs">
                         <span className={isToday ? 'text-violet-300 animate-bounce-in' : 'text-white/50'}>{countdown}</span>
-                        {age && <span className="text-white/30">· {age}</span>}
+                        {age && <span className="text-white/30">&middot; {age}</span>}
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
@@ -468,22 +603,31 @@ function BirthdaysSection({ birthdays, onUpdate }: {
                       </Button>
                       <Button
                         variant="ghost" size="icon"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-white/20 hover:text-rose-400/80 h-7 w-7"
-                        onClick={() => removeBirthday(b.id)}
+                        className={`opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 ${emailSent ? 'text-white/15 cursor-default' : 'text-white/30 hover:text-violet-400'}`}
+                        onClick={() => !emailSent && onSendEmail(b)}
+                        title={emailSent ? 'Déjà envoyé cette année' : 'Send email reminder'}
+                        disabled={emailSent}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Mail className="h-3.5 w-3.5" />
                       </Button>
+                      <button
+                        onClick={() => hideBirthday(b.id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-white/20 hover:text-white/50 h-7 w-7 flex items-center justify-center"
+                        title="Hide"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
                     </div>
                   </div>
                 )
               })}
             </div>
-            {/* Deceased entries — dimmed, at bottom */}
+            {/* Deceased entries */}
             {(showAll || displayedLiving.length > 0) && deceased.length > 0 && (
               <div className="pt-3 mt-3 border-t border-white/[0.04]">
                 {deceased.map((b) => (
                   <div key={b.id} className="flex items-center p-3 rounded-xl">
-                    <span className="text-sm text-white/20">🕊️ {b.name}</span>
+                    <span className="text-sm text-white/20">&#x1F54A;&#xFE0F; {b.name}</span>
                   </div>
                 ))}
               </div>
@@ -500,6 +644,38 @@ function BirthdaysSection({ birthdays, onUpdate }: {
             )}
           </>
         )}
+        {/* Hidden entries toggle */}
+        {hidden.length > 0 && (
+          <div className="pt-3 mt-3 border-t border-white/[0.04]">
+            <button
+              onClick={() => setShowHidden(!showHidden)}
+              className="text-xs text-white/30 hover:text-white/50 flex items-center gap-1.5"
+            >
+              {showHidden ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+              {showHidden ? 'Hide' : 'Show'} hidden ({hidden.length})
+            </button>
+            {showHidden && (
+              <div className="space-y-1 mt-2">
+                {hidden.map((b) => (
+                  <div key={b.id} className="group flex items-center justify-between p-3 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-white/20">{b.name}</span>
+                      <span className="text-xs text-white/10">{formatBirthdayDate(b.date)}</span>
+                    </div>
+                    <Button
+                      variant="ghost" size="icon"
+                      className="text-white/20 hover:text-white/50 h-7 w-7"
+                      onClick={() => unhideBirthday(b.id)}
+                      title="Unhide"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </CardContent>
 
       {/* Message Modal */}
@@ -507,7 +683,7 @@ function BirthdaysSection({ birthdays, onUpdate }: {
         <DialogContent className="bg-white/5 backdrop-blur-xl border-white/10">
           <DialogHeader>
             <DialogTitle className="text-white/90 font-medium">
-              💬 Message pour {messageModal?.name.split(' ')[0]}
+              Message pour {messageModal?.name.split(' ')[0]}
             </DialogTitle>
           </DialogHeader>
           {messageModal && (
@@ -532,7 +708,7 @@ function BirthdaysSection({ birthdays, onUpdate }: {
         <DialogContent className="bg-white/5 backdrop-blur-xl border-white/10">
           <DialogHeader>
             <DialogTitle className="text-white/90 font-medium">
-              🎁 Idées cadeaux pour {giftModal?.name.split(' ')[0]}
+              Idées cadeaux pour {giftModalTitle}
             </DialogTitle>
           </DialogHeader>
           {giftModal && (
@@ -559,34 +735,62 @@ function BirthdaysSection({ birthdays, onUpdate }: {
   )
 }
 
-// --- Reminders Section ---
-function RemindersSection({ reminders, onUpdate }: {
+// --- Reminders Section (Fix 2: editable) ---
+function RemindersSection({ reminders, onUpdate, onRefresh }: {
   reminders: Reminder[]
   onUpdate: (reminders: Reminder[]) => void
+  onRefresh: () => void
 }) {
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [due, setDue] = useState('')
+  const [editModal, setEditModal] = useState<Reminder | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editDue, setEditDue] = useState('')
+  const [editRecurring, setEditRecurring] = useState<string>('none')
+  const [editStatus, setEditStatus] = useState<string>('active')
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
 
-  const addReminder = () => {
+  const addReminder = async () => {
     if (!title.trim()) return
-    const newReminder: Reminder = { 
-      id: `reminder-${Date.now()}`, 
-      title: title.trim(), 
-      due, 
-      recurring: null,
-      status: 'active' 
-    }
-    onUpdate([...reminders, newReminder])
+    await lifeApi.addReminder(title.trim(), due, null)
     setTitle(''); setDue(''); setOpen(false)
+    onRefresh()
   }
 
-  const toggleDone = (id: string) => {
-    onUpdate(reminders.map((r) => r.id === id ? { ...r, status: r.status === 'done' ? 'active' : 'done' } : r))
+  const toggleDone = async (id: string) => {
+    const r = reminders.find(r => r.id === id)
+    if (!r) return
+    await lifeApi.updateReminder(id, { status: r.status === 'done' ? 'active' : 'done' })
+    onRefresh()
   }
 
-  const removeReminder = (id: string) => {
-    onUpdate(reminders.filter((r) => r.id !== id))
+  const openEdit = (r: Reminder) => {
+    setEditModal(r)
+    setEditTitle(r.title)
+    setEditDue(r.due)
+    setEditRecurring(r.recurring || 'none')
+    setEditStatus(r.status)
+    setDeleteConfirm(false)
+  }
+
+  const saveEdit = async () => {
+    if (!editModal) return
+    await lifeApi.updateReminder(editModal.id, {
+      title: editTitle,
+      due: editDue,
+      recurring: editRecurring === 'none' ? null : editRecurring,
+      status: editStatus as 'active' | 'done',
+    })
+    setEditModal(null)
+    onRefresh()
+  }
+
+  const deleteReminder = async () => {
+    if (!editModal) return
+    await lifeApi.deleteReminder(editModal.id)
+    setEditModal(null)
+    onRefresh()
   }
 
   const active = reminders.filter((r) => r.status === 'active').sort((a, b) => a.due.localeCompare(b.due))
@@ -646,32 +850,35 @@ function RemindersSection({ reminders, onUpdate }: {
               const overdue = isOverdue(r.due)
               const countdown = getCountdown(r.due)
               return (
-                <div 
-                  key={r.id} 
+                <div
+                  key={r.id}
                   className={`group flex items-center justify-between p-3 rounded-xl hover:bg-white/[0.03] transition-colors duration-150 ${overdue ? 'bg-rose-500/5 border border-rose-500/20' : ''}`}
                 >
                   <div className="flex items-center gap-3">
                     <button onClick={() => toggleDone(r.id)} className="h-4 w-4 rounded border border-white/[0.15] flex items-center justify-center hover:border-violet-400 transition-colors duration-150 shrink-0">
                     </button>
                     <div>
-                      <p className={`text-sm ${overdue ? 'text-rose-400' : 'text-white/60'}`}>{r.title}</p>
+                      <div className="flex items-center gap-2">
+                        <p className={`text-sm ${overdue ? 'text-rose-400' : 'text-white/60'}`}>{r.title}</p>
+                        {r.recurring && <span className="text-[10px] text-violet-400/60 px-1.5 py-0.5 rounded bg-violet-500/10">{r.recurring}</span>}
+                      </div>
                       {r.due && (
                         <p className={`text-xs flex items-center gap-1 mt-0.5 ${overdue ? 'text-rose-400/80' : 'text-white/25'}`}>
                           <Clock className="h-3 w-3" />
-                          {countdown} · {new Date(r.due).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          {countdown} &middot; {new Date(r.due).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </p>
                       )}
                     </div>
                   </div>
                   <Button
                     variant="ghost" size="icon"
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-white/20 hover:text-rose-400/80 h-7 w-7"
-                    onClick={() => removeReminder(r.id)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-white/20 hover:text-violet-400 h-7 w-7"
+                    onClick={() => openEdit(r)}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Pencil className="h-3.5 w-3.5" />
                   </Button>
-              </div>
-            )
+                </div>
+              )
             })}
             {done.length > 0 && (
               <div className="pt-3 mt-3 border-t border-white/[0.04]">
@@ -686,10 +893,10 @@ function RemindersSection({ reminders, onUpdate }: {
                     </div>
                     <Button
                       variant="ghost" size="icon"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-white/20 hover:text-rose-400/80 h-7 w-7"
-                      onClick={() => removeReminder(r.id)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-white/20 hover:text-violet-400 h-7 w-7"
+                      onClick={() => openEdit(r)}
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Pencil className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 ))}
@@ -698,29 +905,77 @@ function RemindersSection({ reminders, onUpdate }: {
           </div>
         )}
       </CardContent>
+
+      {/* Edit Reminder Modal */}
+      <Dialog open={!!editModal} onOpenChange={(v) => { if (!v) setEditModal(null) }}>
+        <DialogContent className="bg-white/5 backdrop-blur-xl border-white/10">
+          <DialogHeader><DialogTitle className="text-white/90 font-medium">Edit Reminder</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-white/40 mb-1 block">Title</label>
+              <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="bg-white/[0.03] border-white/10 text-white/80" />
+            </div>
+            <div>
+              <label className="text-xs text-white/40 mb-1 block">Due date</label>
+              <Input type="date" value={editDue} onChange={(e) => setEditDue(e.target.value)} className="bg-white/[0.03] border-white/10 text-white/80" />
+            </div>
+            <div>
+              <label className="text-xs text-white/40 mb-1 block">Recurring</label>
+              <select
+                value={editRecurring}
+                onChange={(e) => setEditRecurring(e.target.value)}
+                className="w-full h-9 rounded-md border border-white/10 bg-white/[0.03] text-white/80 text-sm px-3"
+              >
+                <option value="none">None</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-white/40 mb-1 block">Status</label>
+              <select
+                value={editStatus}
+                onChange={(e) => setEditStatus(e.target.value)}
+                className="w-full h-9 rounded-md border border-white/10 bg-white/[0.03] text-white/80 text-sm px-3"
+              >
+                <option value="active">Active</option>
+                <option value="done">Done</option>
+              </select>
+            </div>
+          </div>
+          <DialogFooter className="flex justify-between">
+            {!deleteConfirm ? (
+              <Button variant="ghost" onClick={() => setDeleteConfirm(true)} className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10">
+                <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+              </Button>
+            ) : (
+              <Button variant="ghost" onClick={deleteReminder} className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10">
+                <Trash2 className="h-3.5 w-3.5 mr-1" /> Confirm delete
+              </Button>
+            )}
+            <Button onClick={saveEdit} className="bg-violet-500 hover:bg-violet-600 text-white">Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }
 
 // --- Weekend Ideas Section ---
 function WeekendIdeasSection({ content, lastUpdated }: { content: string; lastUpdated: string | null }) {
-  // Extract the latest suggestions section from the markdown
   function getLatestSuggestions(md: string): string {
     if (!md.trim()) return ''
-    // Find the last "### " heading (latest date entry) and everything after it until the next "## " heading
     const sections = md.split(/^## /m).filter(Boolean)
-    // Find the "Weekend Ideas Archive" section which contains date-based suggestions
     const archiveSection = sections.find(s => s.startsWith('Weekend Ideas Archive'))
     if (archiveSection) {
-      // Get the last ### entry (most recent suggestions)
       const entries = archiveSection.split(/^### /m).filter(Boolean)
       if (entries.length > 1) {
-        // Last entry is the most recent
         const latest = entries[entries.length - 1]
         return '### ' + latest.trim()
       }
     }
-    // Fallback: return everything after the first ## heading with suggestions
     return md
   }
 
@@ -786,28 +1041,52 @@ function DateIdeasSection({ content, lastUpdated }: { content: string; lastUpdat
   )
 }
 
+// --- Toast component ---
+function ToastContainer({ toasts }: { toasts: { id: number; message: string }[] }) {
+  return (
+    <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
+      {toasts.map(t => (
+        <div key={t.id} className="pointer-events-auto px-4 py-2.5 rounded-2xl text-sm shadow-lg shadow-black/20 backdrop-blur-xl animate-in slide-in-from-right-5 fade-in duration-200 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
+          {t.message}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // --- Main Life Page ---
 export default function LifePage() {
   const [data, setData] = useState<LifeData | null>(null)
   const [calendar, setCalendar] = useState<CalendarEvent[]>([])
   const [activities, setActivities] = useState<Activities>({ weekend: { content: '', lastUpdated: null }, date: { content: '', lastUpdated: null } })
   const [loading, setLoading] = useState(true)
+  const [toasts, setToasts] = useState<{ id: number; message: string }[]>([])
 
-  useEffect(() => {
-    Promise.all([
-      lifeApi.getData(),
-      lifeApi.getCalendar(7), // Get next 7 days
-      lifeApi.getReminders(),
-      lifeApi.getActivities()
-    ])
-      .then(([lifeData, calendarData, remindersData, activitiesData]) => {
-        setData({ ...lifeData, reminders: remindersData.length > 0 ? remindersData : lifeData.reminders })
-        setCalendar(calendarData)
-        setActivities(activitiesData)
-      })
-      .catch((e) => console.error('LifePage: Error loading data:', e))
-      .finally(() => setLoading(false))
+  const addToast = useCallback((message: string) => {
+    const id = Date.now()
+    setToasts(prev => [...prev, { id, message }])
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000)
   }, [])
+
+  const loadData = useCallback(async () => {
+    try {
+      const [lifeData, calendarData, remindersData, activitiesData] = await Promise.all([
+        lifeApi.getData(),
+        lifeApi.getCalendar(7),
+        lifeApi.getReminders(),
+        lifeApi.getActivities()
+      ])
+      setData({ ...lifeData, reminders: remindersData.length > 0 ? remindersData : lifeData.reminders })
+      setCalendar(calendarData)
+      setActivities(activitiesData)
+    } catch (e) {
+      console.error('LifePage: Error loading data:', e)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { loadData() }, [loadData])
 
   if (loading) {
     return (
@@ -826,9 +1105,39 @@ export default function LifePage() {
     await lifeApi.update({ birthdays })
   }
 
+  const patchBirthday = async (id: string, updates: Partial<Birthday>) => {
+    await lifeApi.patchBirthday(id, updates)
+    // Reload to get fresh data
+    const lifeData = await lifeApi.getData()
+    setData(prev => prev ? { ...prev, birthdays: lifeData.birthdays } : prev)
+  }
+
+  const sendBirthdayEmail = async (b: Birthday) => {
+    try {
+      const result = await lifeApi.sendBirthdayEmail(b.id)
+      if (result.alreadySent) {
+        addToast('Déjà envoyé cette année')
+      } else if (result.success) {
+        addToast('Email envoyé')
+        // Reload birthdays to get updated emailSentYear
+        const lifeData = await lifeApi.getData()
+        setData(prev => prev ? { ...prev, birthdays: lifeData.birthdays } : prev)
+      } else {
+        addToast('Erreur: ' + (result.error || 'Unknown'))
+      }
+    } catch {
+      addToast('Erreur envoi email')
+    }
+  }
+
   const updateReminders = async (reminders: Reminder[]) => {
     setData({ ...data, reminders })
     await lifeApi.update({ reminders })
+  }
+
+  const refreshReminders = async () => {
+    const remindersData = await lifeApi.getReminders()
+    setData(prev => prev ? { ...prev, reminders: remindersData } : prev)
   }
 
   const updatePlanner = async (weeklyPlanner: Record<string, string[]>) => {
@@ -852,40 +1161,43 @@ export default function LifePage() {
   }
 
   return (
-    <motion.div
-      className="space-y-8"
-      initial="hidden"
-      animate="visible"
-      variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.05 } } }}
-    >
-      <motion.div variants={sectionVariants}>
-        <h1 className="text-2xl font-semibold text-white/90">Life</h1>
-        <p className="text-sm text-white/50 mt-1">Schedule, reminders, and personal admin</p>
-      </motion.div>
+    <>
+      <motion.div
+        className="space-y-8"
+        initial="hidden"
+        animate="visible"
+        variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.05 } } }}
+      >
+        <motion.div variants={sectionVariants}>
+          <h1 className="text-2xl font-semibold text-white/90">Life</h1>
+          <p className="text-sm text-white/50 mt-1">Schedule, reminders, and personal admin</p>
+        </motion.div>
 
-      <motion.div variants={sectionVariants}>
-        <CalendarSection events={calendar} />
-      </motion.div>
+        <motion.div variants={sectionVariants}>
+          <CalendarSection events={calendar} />
+        </motion.div>
 
-      <motion.div variants={sectionVariants}>
-        <WeekendIdeasSection content={activities.weekend.content} lastUpdated={activities.weekend.lastUpdated} />
-      </motion.div>
+        <motion.div variants={sectionVariants}>
+          <WeekendIdeasSection content={activities.weekend.content} lastUpdated={activities.weekend.lastUpdated} />
+        </motion.div>
 
-      <motion.div variants={sectionVariants}>
-        <DateIdeasSection content={activities.date.content} lastUpdated={activities.date.lastUpdated} />
-      </motion.div>
+        <motion.div variants={sectionVariants}>
+          <DateIdeasSection content={activities.date.content} lastUpdated={activities.date.lastUpdated} />
+        </motion.div>
 
-      <motion.div variants={sectionVariants}>
-        <RemindersSection reminders={data.reminders} onUpdate={updateReminders} />
-      </motion.div>
+        <motion.div variants={sectionVariants}>
+          <RemindersSection reminders={data.reminders} onUpdate={updateReminders} onRefresh={refreshReminders} />
+        </motion.div>
 
-      <motion.div variants={sectionVariants}>
-        <BirthdaysSection birthdays={data.birthdays} onUpdate={updateBirthdays} />
-      </motion.div>
+        <motion.div variants={sectionVariants}>
+          <BirthdaysSection birthdays={data.birthdays} onUpdate={updateBirthdays} onPatchBirthday={patchBirthday} onSendEmail={sendBirthdayEmail} toast={addToast} />
+        </motion.div>
 
-      <motion.div variants={sectionVariants}>
-        <CronJobsSection cronJobs={data.cronJobs} onAdd={addCron} onDelete={deleteCron} />
+        <motion.div variants={sectionVariants}>
+          <CronJobsSection cronJobs={data.cronJobs} onAdd={addCron} onDelete={deleteCron} />
+        </motion.div>
       </motion.div>
-    </motion.div>
+      <ToastContainer toasts={toasts} />
+    </>
   )
 }

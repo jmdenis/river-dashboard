@@ -28,6 +28,8 @@ export interface Birthday {
   note: string
   notes?: string // Alias for note (from birthdays.json)
   deceased?: boolean
+  hidden?: boolean
+  emailSentYear?: number
 }
 
 export interface Reminder {
@@ -114,6 +116,37 @@ export const lifeApi = {
       body: JSON.stringify(updates),
     })
     if (!res.ok) throw new Error('Failed to update reminder')
+    return res.json()
+  },
+
+  async deleteReminder(id: string): Promise<Reminder[]> {
+    const res = await fetch(`${API_BASE_URL}/api/reminders/${id}`, {
+      method: 'DELETE',
+    })
+    if (!res.ok) throw new Error('Failed to delete reminder')
+    return res.json()
+  },
+
+  async patchBirthday(id: string, updates: Partial<Birthday>): Promise<Birthday> {
+    const res = await fetch(`${API_BASE_URL}/api/birthdays/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    })
+    if (!res.ok) throw new Error('Failed to update birthday')
+    return res.json()
+  },
+
+  async sendBirthdayEmail(id: string): Promise<{ success?: boolean; alreadySent?: boolean; error?: string }> {
+    const res = await fetch(`${API_BASE_URL}/api/birthdays/${id}/email`, {
+      method: 'POST',
+    })
+    return res.json()
+  },
+
+  async getFilesPaginated(page: number, limit: number): Promise<{ files: Array<{ name: string; size: number; sizeHuman: string; date: string }>; total: number; page: number; totalPages: number }> {
+    const res = await fetch(`${API_BASE_URL}/api/files?page=${page}&limit=${limit}`)
+    if (!res.ok) return { files: [], total: 0, page: 1, totalPages: 0 }
     return res.json()
   },
 }
