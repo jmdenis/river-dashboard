@@ -52,8 +52,8 @@ function AnimatedNumber({ value, prefix = '', suffix = '', decimals = 0 }: { val
 // --- Status badge ---
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    running: 'bg-violet-500/10 text-violet-400/80',
-    done: 'bg-emerald-500/10 text-emerald-400/80',
+    running: 'bg-violet-500/10 text-violet-400/80 animate-status-pulse',
+    done: 'bg-emerald-500/10 text-emerald-400/80 animate-fade-in-fast',
     failed: 'bg-rose-500/10 text-rose-400/80',
     queued: 'bg-white/5 text-white/50',
     cancelled: 'bg-gray-500/10 text-gray-400/80',
@@ -147,8 +147,38 @@ export default function OpsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-white/20" />
+      <div className="space-y-8">
+        <div>
+          <div className="skeleton h-8 w-24 rounded-xl" />
+          <div className="skeleton h-4 w-56 mt-2 rounded-xl" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <div className="skeleton h-3 w-16 mb-3 rounded-xl" />
+                <div className="skeleton h-12 w-24 rounded-xl" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="grid gap-4 md:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <div className="skeleton h-3 w-16 mb-3 rounded-xl" />
+                <div className="skeleton h-12 w-24 rounded-xl" />
+                <div className="skeleton h-1 w-full mt-3 rounded-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div>
+          <div className="skeleton h-5 w-20 mb-4 rounded-xl" />
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="skeleton h-16 w-full mb-2 rounded-2xl" />
+          ))}
+        </div>
       </div>
     )
   }
@@ -174,8 +204,8 @@ export default function OpsPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-white">Ops</h1>
-          <p className="text-sm text-white/60 mt-1">Live task tracking and system overview</p>
+          <h1 className="text-2xl font-semibold text-white/90">Ops</h1>
+          <p className="text-sm text-white/50 mt-1">Live task tracking and system overview</p>
         </div>
         {gitStatus && (
           <div className="flex items-center gap-2 text-xs">
@@ -196,9 +226,9 @@ export default function OpsPage() {
           { label: 'DONE', value: doneCount, color: 'text-emerald-400/80' },
         ].map((stat, i) => (
           <motion.div key={stat.label} custom={i} variants={cardVariants} initial="hidden" animate="visible">
-            <Card>
+            <Card className={stat.label === 'RUNNING' && stat.value > 0 ? 'animate-pulse-glow' : ''}>
               <CardContent className="p-6">
-                <p className="text-xs uppercase tracking-widest text-white/40">{stat.label}</p>
+                <p className="text-xs uppercase tracking-widest text-white/30">{stat.label}</p>
                 <p className={`text-5xl font-light tracking-tight mt-1 ${stat.color}`}>
                   <AnimatedNumber value={stat.value} />
                 </p>
@@ -209,7 +239,7 @@ export default function OpsPage() {
         <motion.div custom={3} variants={cardVariants} initial="hidden" animate="visible">
           <Card>
             <CardContent className="p-6">
-              <p className="text-xs uppercase tracking-widest text-white/40">TOTAL COST</p>
+              <p className="text-xs uppercase tracking-widest text-white/30">TOTAL COST</p>
               <div className="flex items-center gap-2 mt-1">
                 <p className="text-5xl font-light tracking-tight text-amber-400/80">
                   <AnimatedNumber value={totalCost} prefix="$" decimals={2} />
@@ -234,7 +264,7 @@ export default function OpsPage() {
             <motion.div key={sys.label} custom={i + 4} variants={cardVariants} initial="hidden" animate="visible">
               <Card>
                 <CardContent className="p-6">
-                  <p className="text-xs uppercase tracking-widest text-white/40">{sys.label}</p>
+                  <p className="text-xs uppercase tracking-widest text-white/30">{sys.label}</p>
                   <p className="text-5xl font-light tracking-tight text-white/90 mt-1">
                     <AnimatedNumber value={sys.value} suffix="%" />
                   </p>
@@ -246,7 +276,7 @@ export default function OpsPage() {
           <motion.div custom={7} variants={cardVariants} initial="hidden" animate="visible">
             <Card>
               <CardContent className="p-6">
-                <p className="text-xs uppercase tracking-widest text-white/40">UPTIME</p>
+                <p className="text-xs uppercase tracking-widest text-white/30">UPTIME</p>
                 <p className="text-5xl font-light tracking-tight text-white/90 mt-1">{formatUptime(systemInfo.uptime)}</p>
                 <p className="text-xs text-white/30 mt-2">{systemInfo.hostname}</p>
               </CardContent>
@@ -263,7 +293,7 @@ export default function OpsPage() {
             <p className="text-sm text-white/20 text-center py-12">No tasks yet</p>
           ) : (
             dayGroups.map((group) => (
-              <div key={group.date} className="rounded-xl border border-white/[0.06] overflow-hidden bg-[#111111]">
+              <div key={group.date} className="rounded-2xl border border-white/10 overflow-hidden bg-white/[0.03] backdrop-blur-lg">
                 <button onClick={() => toggleDay(group.date)} className="w-full flex items-center justify-between p-4 hover:bg-white/[0.03] transition-colors duration-150 text-left">
                   <div className="flex items-center gap-3">
                     {expandedDays.has(group.date) ? <ChevronDown className="h-4 w-4 text-white/20 shrink-0" /> : <ChevronRight className="h-4 w-4 text-white/20 shrink-0" />}
@@ -276,18 +306,24 @@ export default function OpsPage() {
                   </div>
                 </button>
                 {expandedDays.has(group.date) && (
-                  <div className="border-t border-white/[0.04]">
+                  <motion.div
+                    className="border-t border-white/[0.04]"
+                    initial="hidden"
+                    animate="visible"
+                    variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.05 } } }}
+                  >
                     {group.tasks.map((task) => {
                       const costVal = parseFloat(task.cost || '0')
                       const modelNames = task.model
                         ? task.model.split(',').map(m => m.trim()).filter(Boolean).map(m => m.split('/').pop() || m)
                         : []
                       return (
-                        <button
+                        <motion.button
                           key={task.id}
                           type="button"
                           className="flex items-start gap-3 p-4 border-l-2 border-white/[0.04] ml-4 hover:bg-white/[0.03] cursor-pointer w-[calc(100%-1rem)] text-left transition-colors duration-150"
                           onClick={() => { setSelectedTask(task); setLogPanelOpen(true) }}
+                          variants={{ hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0, transition: { duration: 0.25, ease: 'easeOut' } } }}
                         >
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -307,10 +343,10 @@ export default function OpsPage() {
                             </div>
                             {task.result && <p className="text-xs text-white/20 mt-1 truncate">{task.result}</p>}
                           </div>
-                        </button>
+                        </motion.button>
                       )
                     })}
-                  </div>
+                  </motion.div>
                 )}
               </div>
             ))

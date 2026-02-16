@@ -49,15 +49,15 @@ export default function ProfilePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-white">Profile</h1>
-        <p className="text-sm text-white/60 mt-1">Knowledge files editor</p>
+        <h1 className="text-2xl font-semibold text-white/90">Profile</h1>
+        <p className="text-sm text-white/50 mt-1">Knowledge files editor</p>
       </div>
 
       {profileFiles.length > 0 ? (
         <Card>
           <CardContent className="pt-6">
             <Tabs defaultValue={profileFiles[0]?.file}>
-              <TabsList className="w-full justify-start overflow-x-auto bg-white/[0.03] border border-white/[0.06]">
+              <TabsList className="w-full justify-start overflow-x-auto bg-white/5 border border-white/10">
                 {profileFiles.map((f) => (
                   <TabsTrigger key={f.file} value={f.file} className="text-xs text-white/40 data-[state=active]:text-white data-[state=active]:bg-white/[0.06]">
                     {f.file}

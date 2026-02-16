@@ -67,8 +67,8 @@ export default function TaskLogPanel({ task, open, onOpenChange }: TaskLogPanelP
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col bg-[#0D0D0D] border-l border-white/[0.06]">
-        <SheetHeader className="p-4 pb-3 border-b border-white/[0.06]">
+      <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col bg-white/5 backdrop-blur-xl border-l border-white/10">
+        <SheetHeader className="p-4 pb-3 border-b border-white/10">
           <div className="flex items-center gap-2">
             <SheetTitle className="text-sm font-medium text-white/80">
               {task?.title || 'Task Log'}
@@ -85,7 +85,7 @@ export default function TaskLogPanel({ task, open, onOpenChange }: TaskLogPanelP
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex-1 overflow-auto p-4 bg-[#0A0A0A]">
+        <div className="flex-1 overflow-auto p-4 bg-black/20">
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <Loader2 className="h-5 w-5 animate-spin text-white/20" />

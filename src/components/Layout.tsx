@@ -46,14 +46,17 @@ export default function Layout() {
 
   return (
     <div
-      className="min-h-screen bg-[#0A0A0A]"
+      className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 relative"
       onDragOver={handleGlobalDragOver}
       onDragLeave={handleGlobalDragLeave}
       onDrop={handleGlobalDrop}
     >
-      <header className="sticky top-0 z-50 w-full bg-transparent border-b border-white/[0.06]">
+      {/* Subtle violet radial glow */}
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(139,92,246,0.05)_0%,transparent_60%)] pointer-events-none" />
+
+      <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-white/5 border-b border-white/10">
         <div className="container flex h-12 items-center justify-between px-4 md:px-8">
-          <span className="text-sm font-medium text-white/60">River</span>
+          <span className="text-sm font-medium text-white/90">River</span>
 
           <nav className="hidden md:flex items-center gap-1">
             {navigation.map((item) => (
@@ -96,7 +99,7 @@ export default function Layout() {
         </AnimatePresence>
       </main>
 
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-white/[0.06] bg-[#0A0A0A]/95 backdrop-blur supports-[backdrop-filter]:bg-[#0A0A0A]/80">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-white/10 backdrop-blur-xl bg-white/5">
         <div className="flex items-center justify-around py-2">
           {navigation.map((item) => {
             const Icon = item.icon
@@ -123,7 +126,7 @@ export default function Layout() {
       {/* Global drag overlay */}
       {globalDrag && (
         <div className="fixed inset-0 z-[60] bg-violet-500/5 border-2 border-dashed border-violet-500/40 pointer-events-none flex items-center justify-center">
-          <div className="bg-[#0D0D0D]/90 backdrop-blur-sm rounded-xl px-6 py-4 border border-violet-500/20">
+          <div className="bg-white/5 backdrop-blur-xl rounded-2xl px-6 py-4 border border-violet-500/20 shadow-lg shadow-black/20">
             <Upload className="h-6 w-6 text-violet-400 mx-auto mb-2" />
             <p className="text-sm text-white/60">Drop files to upload</p>
           </div>

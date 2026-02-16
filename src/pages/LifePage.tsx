@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
 import { lifeApi, type LifeData, type Birthday, type Reminder, type CronJob, type CalendarEvent, type Activities } from '../services/lifeApi'
 import ReactMarkdown from 'react-markdown'
 import { Card, CardContent } from '../components/ui/card'
@@ -73,7 +74,7 @@ function getCategoryStyle(event: CalendarEvent) {
 function CalendarSection({ events }: { events: CalendarEvent[] }) {
   if (events.length === 0) {
     return (
-      <Card className="bg-[#161616] border-white/[0.06]">
+      <Card>
         <CardContent className="p-6">
           <div className="flex items-center gap-2 mb-4">
             <CalendarIcon className="h-4 w-4 text-white/40" />
@@ -95,7 +96,7 @@ function CalendarSection({ events }: { events: CalendarEvent[] }) {
   })
 
   return (
-    <Card className="bg-[#161616] border-white/[0.06]">
+    <Card>
       <CardContent className="p-6">
         <div className="flex items-center gap-2 mb-4">
           <CalendarIcon className="h-4 w-4 text-white/40" />
@@ -149,11 +150,11 @@ function CronJobsSection({ cronJobs, onAdd, onDelete }: {
           <p className="text-xs uppercase tracking-widest text-white/40">Cron Jobs</p>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="text-xs text-white/40 border-white/[0.06] hover:bg-white/[0.03]">
+              <Button variant="outline" size="sm" className="text-xs text-white/40 border-white/10 hover:bg-white/[0.03]">
                 <Plus className="h-3.5 w-3.5 mr-1" /> Add
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-[#161616] border-white/[0.06]">
+            <DialogContent className="bg-white/5 backdrop-blur-xl border-white/10">
               <DialogHeader><DialogTitle className="text-white/90 font-medium">Add Cron Job</DialogTitle></DialogHeader>
               <Input
                 placeholder="* * * * * /path/to/command"
@@ -166,7 +167,7 @@ function CronJobsSection({ cronJobs, onAdd, onDelete }: {
                     setOpen(false)
                   }
                 }}
-                className="bg-[#0A0A0A] border-white/[0.06] text-white/80 font-mono text-xs"
+                className="bg-white/[0.03] border-white/10 text-white/80 font-mono text-xs"
               />
               <p className="text-xs text-white/25">Format: minute hour day month weekday command</p>
               <DialogFooter>
@@ -188,7 +189,7 @@ function CronJobsSection({ cronJobs, onAdd, onDelete }: {
             {cronJobs.map((job) => {
               const rawSchedule = job.raw.split(/\s+/).slice(0, 5).join(' ')
               return (
-                <div key={job.id} className="group flex items-center justify-between p-3 rounded-lg hover:bg-white/[0.03] transition-colors duration-150">
+                <div key={job.id} className="group flex items-center justify-between p-3 rounded-xl hover:bg-white/[0.03] transition-colors duration-150">
                   <div className="flex flex-col gap-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className={`h-2 w-2 rounded-full shrink-0 ${job.source === 'server' ? 'bg-violet-500/80' : 'bg-emerald-500/80'}`} />
@@ -248,7 +249,7 @@ function WeeklyPlannerSection({ planner, onUpdate }: {
             const today = new Date().toLocaleDateString('en-US', { weekday: 'long' })
             const isToday = day === today
             return (
-              <div key={day} className={`rounded-xl border p-4 ${isToday ? 'border-violet-500/30 bg-violet-500/5' : 'border-white/[0.06]'}`}>
+              <div key={day} className={`rounded-xl border p-4 ${isToday ? 'border-violet-500/30 bg-violet-500/5' : 'border-white/10'}`}>
                 <div className="flex items-center justify-between mb-3">
                   <span className={`text-xs uppercase tracking-widest ${isToday ? 'text-violet-400' : 'text-white/30'}`}>
                     {day.slice(0, 3)}
@@ -280,7 +281,7 @@ function WeeklyPlannerSection({ planner, onUpdate }: {
                       }}
                       onBlur={() => { if (newItem.trim()) addItem(day); setEditDay(null); setNewItem('') }}
                       autoFocus
-                      className="h-7 text-xs bg-transparent border-white/[0.06]"
+                      className="h-7 text-xs bg-transparent border-white/10"
                     />
                   </div>
                 ) : (
@@ -401,16 +402,16 @@ function BirthdaysSection({ birthdays, onUpdate }: {
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="text-xs text-white/40 border-white/[0.06] hover:bg-white/[0.03]">
+              <Button variant="outline" size="sm" className="text-xs text-white/40 border-white/10 hover:bg-white/[0.03]">
                 <Plus className="h-3.5 w-3.5 mr-1" /> Add
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-[#161616] border-white/[0.06]">
+            <DialogContent className="bg-white/5 backdrop-blur-xl border-white/10">
               <DialogHeader><DialogTitle className="text-white/90 font-medium">Add Birthday</DialogTitle></DialogHeader>
               <div className="space-y-3">
-                <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} className="bg-[#0A0A0A] border-white/[0.06] text-white/80" />
-                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="bg-[#0A0A0A] border-white/[0.06] text-white/80" />
-                <Input placeholder="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} className="bg-[#0A0A0A] border-white/[0.06] text-white/80" />
+                <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} className="bg-white/[0.03] border-white/10 text-white/80" />
+                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="bg-white/[0.03] border-white/10 text-white/80" />
+                <Input placeholder="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} className="bg-white/[0.03] border-white/10 text-white/80" />
               </div>
               <DialogFooter>
                 <Button onClick={addBirthday} disabled={!name.trim() || !date} className="bg-violet-500 hover:bg-violet-600 text-white">Add</Button>
@@ -436,7 +437,7 @@ function BirthdaysSection({ birthdays, onUpdate }: {
                 return (
                   <div
                     key={b.id}
-                    className={`group flex items-center justify-between p-3 rounded-lg hover:bg-white/[0.03] transition-colors duration-150 ${isToday ? 'bg-violet-500/10 border border-violet-500/20' : ''}`}
+                    className={`group flex items-center justify-between p-3 rounded-xl hover:bg-white/[0.03] transition-colors duration-150 ${isToday ? 'bg-violet-500/10 border border-violet-500/20' : ''}`}
                   >
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-3">
@@ -444,7 +445,7 @@ function BirthdaysSection({ birthdays, onUpdate }: {
                         <span className="text-xs text-white/40">{formatBirthdayDate(b.date)}</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs">
-                        <span className={isToday ? 'text-violet-300' : 'text-white/50'}>{countdown}</span>
+                        <span className={isToday ? 'text-violet-300 animate-bounce-in' : 'text-white/50'}>{countdown}</span>
                         {age && <span className="text-white/30">· {age}</span>}
                       </div>
                     </div>
@@ -481,7 +482,7 @@ function BirthdaysSection({ birthdays, onUpdate }: {
             {(showAll || displayedLiving.length > 0) && deceased.length > 0 && (
               <div className="pt-3 mt-3 border-t border-white/[0.04]">
                 {deceased.map((b) => (
-                  <div key={b.id} className="flex items-center p-3 rounded-lg">
+                  <div key={b.id} className="flex items-center p-3 rounded-xl">
                     <span className="text-sm text-white/20">🕊️ {b.name}</span>
                   </div>
                 ))}
@@ -503,7 +504,7 @@ function BirthdaysSection({ birthdays, onUpdate }: {
 
       {/* Message Modal */}
       <Dialog open={!!messageModal} onOpenChange={(v) => { if (!v) setMessageModal(null) }}>
-        <DialogContent className="bg-[#161616] border-white/[0.06]">
+        <DialogContent className="bg-white/5 backdrop-blur-xl border-white/10">
           <DialogHeader>
             <DialogTitle className="text-white/90 font-medium">
               💬 Message pour {messageModal?.name.split(' ')[0]}
@@ -511,7 +512,7 @@ function BirthdaysSection({ birthdays, onUpdate }: {
           </DialogHeader>
           {messageModal && (
             <div className="space-y-4">
-              <p className="text-sm text-white/70 bg-[#0A0A0A] rounded-lg p-4 leading-relaxed">
+              <p className="text-sm text-white/70 bg-white/[0.03] rounded-xl p-4 leading-relaxed">
                 {generateBirthdayMessage(messageModal)}
               </p>
               <Button
@@ -528,7 +529,7 @@ function BirthdaysSection({ birthdays, onUpdate }: {
 
       {/* Gift Ideas Modal */}
       <Dialog open={!!giftModal} onOpenChange={(v) => { if (!v) setGiftModal(null) }}>
-        <DialogContent className="bg-[#161616] border-white/[0.06]">
+        <DialogContent className="bg-white/5 backdrop-blur-xl border-white/10">
           <DialogHeader>
             <DialogTitle className="text-white/90 font-medium">
               🎁 Idées cadeaux pour {giftModal?.name.split(' ')[0]}
@@ -537,7 +538,7 @@ function BirthdaysSection({ birthdays, onUpdate }: {
           {giftModal && (
             <div className="space-y-2">
               {generateGiftIdeas(giftModal).map((gift, i) => (
-                <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-[#0A0A0A]">
+                <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03]">
                   <span className="text-sm text-white/70">{gift.idea}</span>
                   <a
                     href={`https://www.google.com/search?q=${encodeURIComponent(gift.searchQuery)}`}
@@ -621,15 +622,15 @@ function RemindersSection({ reminders, onUpdate }: {
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="text-xs text-white/40 border-white/[0.06] hover:bg-white/[0.03]">
+              <Button variant="outline" size="sm" className="text-xs text-white/40 border-white/10 hover:bg-white/[0.03]">
                 <Plus className="h-3.5 w-3.5 mr-1" /> Add
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-[#161616] border-white/[0.06]">
+            <DialogContent className="bg-white/5 backdrop-blur-xl border-white/10">
               <DialogHeader><DialogTitle className="text-white/90 font-medium">Add Reminder</DialogTitle></DialogHeader>
               <div className="space-y-3">
-                <Input placeholder="Reminder title" value={title} onChange={(e) => setTitle(e.target.value)} className="bg-[#0A0A0A] border-white/[0.06] text-white/80" />
-                <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="bg-[#0A0A0A] border-white/[0.06] text-white/80" />
+                <Input placeholder="Reminder title" value={title} onChange={(e) => setTitle(e.target.value)} className="bg-white/[0.03] border-white/10 text-white/80" />
+                <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="bg-white/[0.03] border-white/10 text-white/80" />
               </div>
               <DialogFooter>
                 <Button onClick={addReminder} disabled={!title.trim()} className="bg-violet-500 hover:bg-violet-600 text-white">Add</Button>
@@ -647,7 +648,7 @@ function RemindersSection({ reminders, onUpdate }: {
               return (
                 <div 
                   key={r.id} 
-                  className={`group flex items-center justify-between p-3 rounded-lg hover:bg-white/[0.03] transition-colors duration-150 ${overdue ? 'bg-rose-500/5 border border-rose-500/20' : ''}`}
+                  className={`group flex items-center justify-between p-3 rounded-xl hover:bg-white/[0.03] transition-colors duration-150 ${overdue ? 'bg-rose-500/5 border border-rose-500/20' : ''}`}
                 >
                   <div className="flex items-center gap-3">
                     <button onClick={() => toggleDone(r.id)} className="h-4 w-4 rounded border border-white/[0.15] flex items-center justify-center hover:border-violet-400 transition-colors duration-150 shrink-0">
@@ -676,7 +677,7 @@ function RemindersSection({ reminders, onUpdate }: {
               <div className="pt-3 mt-3 border-t border-white/[0.04]">
                 <p className="text-xs text-white/20 mb-2 px-3">Completed</p>
                 {done.map((r) => (
-                  <div key={r.id} className="group flex items-center justify-between p-3 rounded-lg hover:bg-white/[0.03] transition-colors duration-150">
+                  <div key={r.id} className="group flex items-center justify-between p-3 rounded-xl hover:bg-white/[0.03] transition-colors duration-150">
                     <div className="flex items-center gap-3">
                       <button onClick={() => toggleDone(r.id)} className="h-4 w-4 rounded border border-violet-400/30 bg-violet-400/10 flex items-center justify-center shrink-0">
                         <Check className="h-2.5 w-2.5 text-violet-400" />
@@ -845,24 +846,46 @@ export default function LifePage() {
     setData({ ...data, cronJobs: result.cronJobs })
   }
 
+  const sectionVariants = {
+    hidden: { opacity: 0, y: 12 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.2, ease: 'easeOut' as const } },
+  }
+
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-white">Life</h1>
-        <p className="text-sm text-white/60 mt-1">Schedule, reminders, and personal admin</p>
-      </div>
+    <motion.div
+      className="space-y-8"
+      initial="hidden"
+      animate="visible"
+      variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.05 } } }}
+    >
+      <motion.div variants={sectionVariants}>
+        <h1 className="text-2xl font-semibold text-white/90">Life</h1>
+        <p className="text-sm text-white/50 mt-1">Schedule, reminders, and personal admin</p>
+      </motion.div>
 
-      <CalendarSection events={calendar} />
+      <motion.div variants={sectionVariants}>
+        <CalendarSection events={calendar} />
+      </motion.div>
 
-      <WeekendIdeasSection content={activities.weekend.content} lastUpdated={activities.weekend.lastUpdated} />
+      <motion.div variants={sectionVariants}>
+        <WeekendIdeasSection content={activities.weekend.content} lastUpdated={activities.weekend.lastUpdated} />
+      </motion.div>
 
-      <DateIdeasSection content={activities.date.content} lastUpdated={activities.date.lastUpdated} />
+      <motion.div variants={sectionVariants}>
+        <DateIdeasSection content={activities.date.content} lastUpdated={activities.date.lastUpdated} />
+      </motion.div>
 
-      <RemindersSection reminders={data.reminders} onUpdate={updateReminders} />
+      <motion.div variants={sectionVariants}>
+        <RemindersSection reminders={data.reminders} onUpdate={updateReminders} />
+      </motion.div>
 
-      <BirthdaysSection birthdays={data.birthdays} onUpdate={updateBirthdays} />
+      <motion.div variants={sectionVariants}>
+        <BirthdaysSection birthdays={data.birthdays} onUpdate={updateBirthdays} />
+      </motion.div>
 
-      <CronJobsSection cronJobs={data.cronJobs} onAdd={addCron} onDelete={deleteCron} />
-    </div>
+      <motion.div variants={sectionVariants}>
+        <CronJobsSection cronJobs={data.cronJobs} onAdd={addCron} onDelete={deleteCron} />
+      </motion.div>
+    </motion.div>
   )
 }

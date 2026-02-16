@@ -119,7 +119,7 @@ export default function UploadModal({
   return (
     <>
       <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) setUploads([]) }}>
-        <DialogContent className="sm:max-w-md bg-[#0D0D0D] border-white/[0.08]">
+        <DialogContent className="sm:max-w-md bg-white/5 backdrop-blur-xl border-white/10 rounded-2xl">
           <DialogHeader>
             <DialogTitle className="text-white/90">Upload Files</DialogTitle>
           </DialogHeader>
@@ -129,10 +129,10 @@ export default function UploadModal({
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`rounded-xl border-2 border-dashed p-10 text-center cursor-pointer transition-colors duration-150 ${
+            className={`rounded-2xl border-2 border-dashed p-10 text-center cursor-pointer transition-colors duration-150 ${
               dragOver
                 ? 'border-violet-500 bg-violet-500/5'
-                : 'border-white/[0.08] hover:border-white/[0.15]'
+                : 'border-white/10 hover:border-white/20'
             }`}
           >
             <Upload className={`h-6 w-6 mx-auto mb-3 ${dragOver ? 'text-violet-400' : 'text-white/20'}`} />
@@ -179,7 +179,7 @@ export default function UploadModal({
         {toasts.map(toast => (
           <div
             key={toast.id}
-            className={`pointer-events-auto px-4 py-2.5 rounded-xl text-sm shadow-lg animate-in slide-in-from-right-5 fade-in duration-200 ${
+            className={`pointer-events-auto px-4 py-2.5 rounded-2xl text-sm shadow-lg shadow-black/20 backdrop-blur-xl animate-in slide-in-from-right-5 fade-in duration-200 ${
               toast.type === 'success'
                 ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300'
                 : 'bg-rose-500/10 border border-rose-500/20 text-rose-300'
