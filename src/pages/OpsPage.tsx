@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { opsApi, type Task, type SystemInfo } from '../services/opsApi'
 import { Card, CardContent } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
-import { Loader2, RotateCcw, ChevronDown, ChevronRight, DollarSign } from 'lucide-react'
+import { Loader2, RotateCcw, ChevronDown, ChevronRight, DollarSign, GitBranch } from 'lucide-react'
 import TaskLogPanel from '../components/TaskLogPanel'
 
 // --- Helpers ---
@@ -56,12 +56,25 @@ function StatusBadge({ status }: { status: string }) {
     done: 'bg-emerald-500/10 text-emerald-400/80',
     failed: 'bg-rose-500/10 text-rose-400/80',
     queued: 'bg-white/5 text-white/50',
+    cancelled: 'bg-gray-500/10 text-gray-400/80',
   }
   return (
     <span className={`text-[10px] px-2 py-0.5 rounded-full ${styles[status] || styles.queued}`}>
       {status}
     </span>
   )
+}
+
+// --- Deploy status badge ---
+function DeployBadge({ result }: { result?: string }) {
+  if (!result) return null
+  if (result.includes('[deployed]')) {
+    return <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400/80">deployed</span>
+  }
+  if (result.includes('[not deployed]')) {
+    return <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400/80">not deployed</span>
+  }
+  return null
 }
 
 // --- Model badge ---
@@ -88,12 +101,14 @@ export default function OpsPage() {
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set())
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [logPanelOpen, setLogPanelOpen] = useState(false)
+  const [gitStatus, setGitStatus] = useState<{ changedFiles: number; clean: boolean } | null>(null)
 
   const loadData = () => {
-    Promise.all([opsApi.getTasks(), opsApi.getSystemInfo()])
-      .then(([tasksData, sysData]) => {
+    Promise.all([opsApi.getTasks(), opsApi.getSystemInfo(), opsApi.getGitStatus()])
+      .then(([tasksData, sysData, gitData]) => {
         setTasks(tasksData)
         setSystemInfo(sysData)
+        setGitStatus(gitData)
       })
       .catch((error) => console.error('Failed to load data:', error))
       .finally(() => setLoading(false))
@@ -157,9 +172,20 @@ export default function OpsPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-white">Ops</h1>
-        <p className="text-sm text-white/60 mt-1">Live task tracking and system overview</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-white">Ops</h1>
+          <p className="text-sm text-white/60 mt-1">Live task tracking and system overview</p>
+        </div>
+        {gitStatus && (
+          <div className="flex items-center gap-2 text-xs">
+            <span className={`h-2 w-2 rounded-full ${gitStatus.clean ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+            <GitBranch className="h-3.5 w-3.5 text-white/30" />
+            <span className={gitStatus.clean ? 'text-emerald-400/80' : 'text-amber-400/80'}>
+              {gitStatus.clean ? 'Git: Clean' : `Git: ${gitStatus.changedFiles} uncommitted file${gitStatus.changedFiles !== 1 ? 's' : ''}`}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Stats cards */}
@@ -268,6 +294,7 @@ export default function OpsPage() {
                               <span className="text-xs tabular-nums text-white/25">{formatTime(task.created)}</span>
                               <span className="text-sm font-medium text-white/80 truncate">{task.title}</span>
                               <StatusBadge status={task.status} />
+                              <DeployBadge result={task.result} />
                               {modelNames.map((name) => (
                                 <ModelBadge key={name} name={name} />
                               ))}

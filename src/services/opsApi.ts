@@ -6,7 +6,7 @@ export interface Task {
   title: string
   service?: string
   model?: string
-  status: 'queued' | 'running' | 'done' | 'failed'
+  status: 'queued' | 'running' | 'done' | 'failed' | 'cancelled'
   created: string
   startTime?: string
   endTime?: string
@@ -58,6 +58,12 @@ export const opsApi = {
   async getTaskLog(taskId: string): Promise<{ content: string } | null> {
     const res = await fetch(`${API_BASE}/task-logs/${taskId}`)
     if (!res.ok) return null
+    return res.json()
+  },
+
+  async getGitStatus(): Promise<{ changedFiles: number; clean: boolean }> {
+    const res = await fetch(`${API_BASE}/git-status`)
+    if (!res.ok) return { changedFiles: 0, clean: true }
     return res.json()
   },
 }
