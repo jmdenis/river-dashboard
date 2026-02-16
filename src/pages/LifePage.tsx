@@ -155,8 +155,9 @@ function CalendarSection({ events }: { events: CalendarEvent[] }) {
                 <div className="space-y-1">
                   {dayEvents.map((event, idx) => {
                     const style = getCategoryStyle(event)
+                    const isAnne = ANNE_EMAILS.includes(event.organizer)
                     return (
-                      <div key={idx} className={`flex items-start gap-3 py-1 ${isToday ? 'text-white' : 'text-white/40'}`}>
+                      <div key={idx} className={`flex items-start gap-3 py-1 ${isAnne ? 'opacity-40' : isToday ? 'text-white' : 'text-white/40'}`}>
                         <span className="text-xs font-mono shrink-0 w-12">{formatEventTime(event)}</span>
                         <span className={`shrink-0 mt-1.5 w-2 h-2 rounded-full ${style.dot}`} />
                         <span className={`text-sm flex-1 ${style.text}`}>{event.title}</span>
@@ -355,16 +356,17 @@ function generateBirthdayMessage(b: Birthday): string {
   return messages[Math.abs(firstName.charCodeAt(0)) % messages.length]
 }
 
-// --- Birthdays Section (Fix 3: hide, Fix 4: smart gifts, Fix 5: email) ---
+// --- Birthdays Section ---
 function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, toast }: {
   birthdays: Birthday[]
   onUpdate: (birthdays: Birthday[]) => void
   onPatchBirthday: (id: string, updates: Partial<Birthday>) => Promise<void>
-  onSendEmail: (b: Birthday) => void
+  onSendEmail: (b: Birthday) => Promise<void>
   toast: (msg: string) => void
 }) {
   const [open, setOpen] = useState(false)
   const [showAll, setShowAll] = useState(false)
+  const [sendingEmailId, setSendingEmailId] = useState<string | null>(null)
   const [showHidden, setShowHidden] = useState(false)
   const [name, setName] = useState('')
   const [date, setDate] = useState('')
@@ -521,11 +523,12 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
                       </Button>
                       <Button
                         variant="ghost" size="icon"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-white/30 hover:text-violet-400 h-7 w-7"
-                        onClick={() => onSendEmail(b)}
+                        className={`transition-opacity text-white/30 hover:text-violet-400 h-7 w-7 ${sendingEmailId === b.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                        disabled={sendingEmailId === b.id}
+                        onClick={async () => { setSendingEmailId(b.id); await onSendEmail(b); setSendingEmailId(null) }}
                         title="Send email reminder"
                       >
-                        <Mail className="h-3.5 w-3.5" />
+                        {sendingEmailId === b.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
                       </Button>
                       <button
                         onClick={() => hideBirthday(b.id)}
@@ -1038,22 +1041,17 @@ export default function LifePage() {
   }
 
   const sendBirthdayEmail = async (b: Birthday) => {
-    console.log('[LifePage] sendBirthdayEmail called for', b.id, b.name)
     try {
       const result = await lifeApi.sendBirthdayEmail(b.id)
-      console.log('[LifePage] sendBirthdayEmail result', result)
       if (result.success || result.alreadySent) {
         addToast(result.alreadySent ? 'Déjà envoyé cette année' : 'Email envoyé')
-        // Reload birthdays to get updated emailSentYear
         const lifeData = await lifeApi.getData()
         setData(prev => prev ? { ...prev, birthdays: lifeData.birthdays } : prev)
       } else {
         addToast('Erreur: ' + (result.error || 'Unknown'))
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err)
-      console.error('[LifePage] sendBirthdayEmail error for', b.id, b.name, ':', msg, err)
-      addToast('Erreur envoi email: ' + msg)
+      addToast('Erreur envoi email: ' + (err instanceof Error ? err.message : String(err)))
     }
   }
 

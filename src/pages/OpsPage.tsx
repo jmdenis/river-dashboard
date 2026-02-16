@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { opsApi, type Task, type SystemInfo } from '../services/opsApi'
 import { Card, CardContent } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
-import { Loader2, RotateCcw, ChevronDown, ChevronRight, DollarSign, GitBranch } from 'lucide-react'
+import { Loader2, RotateCcw, ChevronDown, ChevronRight, DollarSign, GitBranch, Trash2 } from 'lucide-react'
 import TaskLogPanel from '../components/TaskLogPanel'
 
 // --- Helpers ---
@@ -194,6 +194,13 @@ export default function OpsPage() {
     setTasks(updated)
   }
 
+  const handleDeleteTask = async (e: React.MouseEvent, taskId: string) => {
+    e.stopPropagation()
+    if (!window.confirm('Delete this task?')) return
+    const updated = await opsApi.deleteTask(taskId)
+    setTasks(updated)
+  }
+
   const formatUptime = (seconds: number) => {
     const d = Math.floor(seconds / 86400)
     const h = Math.floor((seconds % 86400) / 3600)
@@ -320,10 +327,9 @@ export default function OpsPage() {
                         ? task.model.split(',').map(m => m.trim()).filter(Boolean).map(m => m.split('/').pop() || m)
                         : []
                       return (
-                        <motion.button
+                        <motion.div
                           key={task.id}
-                          type="button"
-                          className="flex items-start gap-3 p-4 border-l-2 border-white/[0.04] ml-4 hover:bg-white/[0.03] cursor-pointer w-[calc(100%-1rem)] text-left transition-colors duration-150"
+                          className="group flex items-start gap-3 p-4 border-l-2 border-white/[0.04] ml-4 hover:bg-white/[0.03] cursor-pointer w-[calc(100%-1rem)] text-left transition-colors duration-150"
                           onClick={() => { setSelectedTask(task); setLogPanelOpen(true) }}
                           variants={{ hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0, transition: { duration: 0.25, ease: 'easeOut' } } }}
                         >
@@ -345,7 +351,14 @@ export default function OpsPage() {
                             </div>
                             {task.result && <p className="text-xs text-white/20 mt-1 truncate">{task.result}</p>}
                           </div>
-                        </motion.button>
+                          <button
+                            onClick={(e) => handleDeleteTask(e, task.id)}
+                            className="opacity-0 group-hover:opacity-100 text-white/20 hover:text-rose-400/80 transition-all duration-150 p-1 shrink-0 mt-0.5"
+                            title="Delete task"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </motion.div>
                       )
                     })}
                   </motion.div>
