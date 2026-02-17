@@ -49,15 +49,80 @@ export interface LifeData {
   cronJobs: CronJob[]
 }
 
+export interface Idea {
+  emoji: string
+  title: string
+  description: string
+  fullDescription: string
+  driveTime: string
+  parking: string
+  hotel: string
+  indoor?: boolean
+  mapQuery?: string
+  lunchSpot?: string
+  weatherIcon?: string
+  eventLinked?: boolean
+}
+
+export interface WeatherDay {
+  date: string
+  tempMax: number
+  tempMin: number
+  precipitation: number
+  weatherCode: number
+  condition: string
+  icon: string
+}
+
+export interface WeekendWeather {
+  saturday: WeatherDay
+  sunday: WeatherDay
+  fetchedAt: string
+}
+
+export interface LocalEvent {
+  title: string
+  location: string
+  date: string
+  type?: string
+  driveTime?: string
+}
+
+export interface Trip {
+  id: string
+  title: string
+  location: string
+  date: string
+  rating: number | null
+  notes: string
+  coordinates: { lat: number; lng: number } | null
+  createdAt: string
+}
+
+export interface ActivitySection {
+  content: string
+  ideas: Idea[]
+  lastUpdated: string | null
+}
+
 export interface Activities {
-  weekend: { content: string; lastUpdated: string | null }
-  date: { content: string; lastUpdated: string | null }
+  weekend: ActivitySection
+  date: ActivitySection
 }
 
 export const lifeApi = {
   async getActivities(): Promise<Activities> {
     const res = await fetch(`${API_BASE_URL}/api/activities`)
-    if (!res.ok) return { weekend: { content: '', lastUpdated: null }, date: { content: '', lastUpdated: null } }
+    if (!res.ok) return { weekend: { content: '', ideas: [], lastUpdated: null }, date: { content: '', ideas: [], lastUpdated: null } }
+    return res.json()
+  },
+
+  async shareIdea(idea: { type: 'weekend' | 'date'; title: string; description: string; driveTime?: string; emoji?: string }): Promise<{ success?: boolean; error?: string }> {
+    const res = await fetch(`${API_BASE_URL}/api/share-idea`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(idea),
+    })
     return res.json()
   },
 
@@ -182,6 +247,34 @@ export const lifeApi = {
   async getFilesPaginated(page: number, limit: number): Promise<{ files: Array<{ name: string; size: number; sizeHuman: string; date: string }>; total: number; page: number; totalPages: number }> {
     const res = await fetch(`${API_BASE_URL}/api/files?page=${page}&limit=${limit}`)
     if (!res.ok) return { files: [], total: 0, page: 1, totalPages: 0 }
+    return res.json()
+  },
+
+  async getWeekendWeather(): Promise<WeekendWeather | null> {
+    const res = await fetch(`${API_BASE_URL}/api/weather/weekend`)
+    if (!res.ok) return null
+    return res.json()
+  },
+
+  async getLocalEvents(): Promise<LocalEvent[]> {
+    const res = await fetch(`${API_BASE_URL}/api/events/local`)
+    if (!res.ok) return []
+    return res.json()
+  },
+
+  async getTrips(): Promise<Trip[]> {
+    const res = await fetch(`${API_BASE_URL}/api/trips`)
+    if (!res.ok) return []
+    return res.json()
+  },
+
+  async addTrip(trip: { title: string; location: string; date?: string; rating?: number; notes?: string }): Promise<Trip> {
+    const res = await fetch(`${API_BASE_URL}/api/trips`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(trip),
+    })
+    if (!res.ok) throw new Error('Failed to add trip')
     return res.json()
   },
 }

@@ -1,13 +1,13 @@
 import { useEffect, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { lifeApi, type LifeData, type Birthday, type Reminder, type CronJob, type CalendarEvent, type Activities } from '../services/lifeApi'
+import { lifeApi, type LifeData, type Birthday, type Reminder, type CronJob, type CalendarEvent, type Activities, type Idea, type WeekendWeather, type LocalEvent, type Trip } from '../services/lifeApi'
 import ReactMarkdown from 'react-markdown'
 import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Badge } from '../components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '../components/ui/dialog'
-import { Loader2, Plus, Trash2, Check, Clock, Calendar as CalendarIcon, MessageCircle, Gift, Copy, ExternalLink, Sparkles, Heart, Pencil, X, Eye, EyeOff, Mail, RefreshCw } from 'lucide-react'
+import { Loader2, Plus, Trash2, Check, Clock, Calendar as CalendarIcon, MessageCircle, Gift, Copy, ExternalLink, Sparkles, Heart, Pencil, X, Eye, EyeOff, Mail, RefreshCw, Car, Share2, MapPin, ParkingSquare, Hotel, Search, ChevronDown, Star, UtensilsCrossed, History, CloudRain, Sun, CloudSun, Cloud, Snowflake, CloudDrizzle, Zap, Wind } from 'lucide-react'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -834,66 +834,351 @@ function RemindersSection({ reminders, onUpdate, onRefresh }: {
   )
 }
 
-// --- Weekend Ideas Section ---
-function WeekendIdeasSection({ content, lastUpdated, refreshing }: { content: string; lastUpdated: string | null; refreshing: boolean }) {
-  function getLatestSuggestions(md: string): string {
-    if (!md.trim()) return ''
-    const sections = md.split(/^## /m).filter(Boolean)
-    const archiveSection = sections.find(s => s.startsWith('Weekend Ideas Archive'))
-    if (archiveSection) {
-      const entries = archiveSection.split(/^### /m).filter(Boolean)
-      if (entries.length > 1) {
-        const latest = entries[entries.length - 1]
-        return '### ' + latest.trim()
-      }
+// --- Idea Card (compact + expandable) ---
+function IdeaCard({ idea, type, toast, onDidThis }: { idea: Idea; type: 'weekend' | 'date'; toast: (msg: string) => void; onDidThis: (idea: Idea) => void }) {
+  const [expanded, setExpanded] = useState(false)
+  const [sharing, setSharing] = useState(false)
+
+  const query = idea.mapQuery || idea.title
+  const mapsQuery = encodeURIComponent(query.includes('Toulouse') ? query : `${query} Toulouse`)
+  const mapsLink = `https://www.google.com/maps/search/?api=1&query=${mapsQuery}`
+  const parkingLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`parking near ${query}`)}`
+  const hotelLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`hotels near ${query}`)}`
+  const lunchLink = idea.lunchSpot
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(idea.lunchSpot)}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`restaurants near ${query}`)}`
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setSharing(true)
+    try {
+      const result = await lifeApi.shareIdea({
+        type,
+        title: idea.title,
+        description: idea.fullDescription || idea.description,
+        driveTime: idea.driveTime,
+        emoji: idea.emoji,
+      })
+      toast(result.success ? 'Shared with Anne!' : 'Failed to share')
+    } catch {
+      toast('Failed to share')
+    } finally {
+      setSharing(false)
     }
-    return md
   }
 
-  const latestContent = getLatestSuggestions(content)
+  const handleDidThis = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onDidThis(idea)
+  }
 
   return (
-    <Card>
-      <CardContent className="p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Sparkles className={`h-4 w-4 text-white/40 ${refreshing ? 'animate-spin' : ''}`} />
-          <p className="text-xs uppercase tracking-widest text-white/40">Weekend Ideas</p>
-          {lastUpdated && (
-            <span className="text-[10px] text-white/20 ml-auto">Updated {lastUpdated}</span>
-          )}
-        </div>
-        {latestContent ? (
-          <div className="prose prose-invert prose-sm max-w-none
-            prose-headings:text-white/80 prose-headings:text-sm prose-headings:font-medium prose-headings:mb-2 prose-headings:mt-0
-            prose-p:text-white/50 prose-p:text-sm prose-p:leading-relaxed prose-p:my-1
-            prose-li:text-white/50 prose-li:text-sm prose-li:my-0
-            prose-strong:text-white/70 prose-strong:font-medium
-            prose-ul:my-1 prose-ol:my-1">
-            <ReactMarkdown>{latestContent}</ReactMarkdown>
+    <div
+      className="group rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-all duration-200 cursor-pointer overflow-hidden"
+      onClick={() => setExpanded(!expanded)}
+    >
+      {/* Compact view */}
+      <div className="flex items-center gap-3 p-3.5">
+        <span className="text-lg shrink-0">{idea.emoji}</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium text-white/80 truncate">{idea.title}</p>
+            {idea.indoor !== undefined && (
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${idea.indoor ? 'bg-blue-500/10 text-blue-400/60' : 'bg-emerald-500/10 text-emerald-400/60'}`}>
+                {idea.indoor ? 'Indoor' : 'Outdoor'}
+              </span>
+            )}
           </div>
-        ) : (
-          <p className="text-sm text-white/20 text-center py-8">
-            {refreshing ? 'Generating suggestions...' : 'No suggestions yet. Next update: Thursday 7pm.'}
-          </p>
-        )}
-      </CardContent>
-    </Card>
+          <p className="text-xs text-white/40 truncate mt-0.5">{idea.description}</p>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="flex items-center gap-1 text-[11px] text-white/30 bg-white/[0.04] px-2 py-0.5 rounded-full">
+            <Car className="h-3 w-3" />
+            {idea.driveTime}
+          </span>
+          <button
+            onClick={handleShare}
+            disabled={sharing}
+            className="p-1.5 rounded-lg text-white/20 hover:text-violet-400 hover:bg-white/[0.06] transition-colors"
+            title="Share with Anne"
+          >
+            {sharing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
+          </button>
+          <button
+            onClick={handleDidThis}
+            className="p-1.5 rounded-lg text-white/20 hover:text-emerald-400 hover:bg-emerald-500/[0.08] transition-colors"
+            title="We did this!"
+          >
+            <Check className="h-3.5 w-3.5" />
+          </button>
+          <ChevronDown className={`h-3.5 w-3.5 text-white/20 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
+        </div>
+      </div>
+
+      {/* Expanded detail panel */}
+      {expanded && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="border-t border-white/[0.06]"
+        >
+          <div className="p-4 space-y-3">
+            <p className="text-sm text-white/50 leading-relaxed">{idea.fullDescription}</p>
+
+            <div className="flex flex-wrap gap-2">
+              <a
+                href={mapsLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1.5 text-xs text-violet-400/80 hover:text-violet-300 bg-violet-500/[0.08] hover:bg-violet-500/[0.15] px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <MapPin className="h-3 w-3" /> Google Maps
+              </a>
+              <a
+                href={parkingLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1.5 text-xs text-white/40 hover:text-white/60 bg-white/[0.04] hover:bg-white/[0.08] px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <ParkingSquare className="h-3 w-3" /> Parking
+              </a>
+              <a
+                href={hotelLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1.5 text-xs text-white/40 hover:text-white/60 bg-white/[0.04] hover:bg-white/[0.08] px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <Hotel className="h-3 w-3" /> Hotels
+              </a>
+              <a
+                href={lunchLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1.5 text-xs text-white/40 hover:text-white/60 bg-white/[0.04] hover:bg-white/[0.08] px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <UtensilsCrossed className="h-3 w-3" /> Lunch
+              </a>
+            </div>
+
+            {(idea.parking || idea.hotel || idea.lunchSpot) && (
+              <div className="flex flex-col gap-1.5 pt-1">
+                {idea.lunchSpot && (
+                  <p className="text-[11px] text-white/25"><span className="text-white/35">Lunch:</span> {idea.lunchSpot}</p>
+                )}
+                {idea.parking && (
+                  <p className="text-[11px] text-white/25"><span className="text-white/35">Parking:</span> {idea.parking}</p>
+                )}
+                {idea.hotel && (
+                  <p className="text-[11px] text-white/25"><span className="text-white/35">Stay:</span> {idea.hotel}</p>
+                )}
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 pt-2 border-t border-white/[0.04]">
+              <button
+                onClick={handleShare}
+                disabled={sharing}
+                className="inline-flex items-center gap-1.5 text-xs text-white/40 hover:text-violet-400 bg-white/[0.04] hover:bg-violet-500/[0.1] px-3 py-1.5 rounded-lg transition-colors"
+              >
+                {sharing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Share2 className="h-3 w-3" />}
+                Share with Anne
+              </button>
+              <button
+                onClick={handleDidThis}
+                className="inline-flex items-center gap-1.5 text-xs text-white/40 hover:text-emerald-400 bg-white/[0.04] hover:bg-emerald-500/[0.1] px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <Check className="h-3 w-3" /> We did this!
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </div>
   )
 }
 
-// --- Date Ideas Section ---
-function DateIdeasSection({ content, lastUpdated, refreshing }: { content: string; lastUpdated: string | null; refreshing: boolean }) {
+// --- Weather Icon Helper ---
+function WeatherIcon({ code, className }: { code: number; className?: string }) {
+  // WMO weather codes: 0=clear, 1-3=partly cloudy, 45-48=fog, 51-57=drizzle, 61-67=rain, 71-77=snow, 80-82=showers, 95-99=thunderstorm
+  if (code === 0) return <Sun className={className} />
+  if (code <= 3) return <CloudSun className={className} />
+  if (code <= 48) return <Cloud className={className} />
+  if (code <= 57) return <CloudDrizzle className={className} />
+  if (code <= 67) return <CloudRain className={className} />
+  if (code <= 77) return <Snowflake className={className} />
+  if (code <= 82) return <CloudRain className={className} />
+  if (code <= 99) return <Zap className={className} />
+  return <Wind className={className} />
+}
+
+// --- Weather Bar (3C) ---
+function WeatherBar({ weather }: { weather: WeekendWeather | null }) {
+  if (!weather) return null
+
+  const { saturday, sunday } = weather
+
+  return (
+    <div className="flex items-center gap-4 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+      <span className="text-xs uppercase tracking-widest text-white/30 shrink-0">This weekend</span>
+      <div className="flex items-center gap-6 ml-auto">
+        <div className="flex items-center gap-2">
+          <WeatherIcon code={saturday.weatherCode} className="h-4 w-4 text-amber-400/80" />
+          <span className="text-sm text-white/60">Sat</span>
+          <span className="text-sm font-medium text-white/80">{Math.round(saturday.tempMax)}°</span>
+          <span className="text-xs text-white/30">{Math.round(saturday.tempMin)}°</span>
+          {saturday.precipitation > 0 && (
+            <span className="text-[10px] text-blue-400/60">{saturday.precipitation}mm</span>
+          )}
+        </div>
+        <div className="w-px h-4 bg-white/[0.08]" />
+        <div className="flex items-center gap-2">
+          <WeatherIcon code={sunday.weatherCode} className="h-4 w-4 text-amber-400/80" />
+          <span className="text-sm text-white/60">Sun</span>
+          <span className="text-sm font-medium text-white/80">{Math.round(sunday.tempMax)}°</span>
+          <span className="text-xs text-white/30">{Math.round(sunday.tempMin)}°</span>
+          {sunday.precipitation > 0 && (
+            <span className="text-[10px] text-blue-400/60">{sunday.precipitation}mm</span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// --- Local Events Horizontal Scroll (3D) ---
+function LocalEventsScroll({ events }: { events: LocalEvent[] }) {
+  if (events.length === 0) return null
+
+  return (
+    <div>
+      <p className="text-xs uppercase tracking-widest text-white/30 mb-2 px-1">Local Events</p>
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+        {events.map((event, i) => (
+          <a
+            key={i}
+            href={`https://www.google.com/search?q=${encodeURIComponent(event.title + ' ' + (event.location || 'Toulouse'))}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:border-white/[0.1] transition-colors group"
+          >
+            <span className="text-sm">🎭</span>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-white/60 group-hover:text-white/80 truncate max-w-[180px]">{event.title}</p>
+              <p className="text-[10px] text-white/30 truncate max-w-[180px]">
+                {event.location}{event.driveTime ? ` · ${event.driveTime}` : ''}
+              </p>
+            </div>
+            <ExternalLink className="h-3 w-3 text-white/20 group-hover:text-white/40 shrink-0" />
+          </a>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// --- Trip History Section (3E) ---
+function TripHistorySection({ trips, expanded, onToggle }: { trips: Trip[]; expanded: boolean; onToggle: () => void }) {
+  if (trips.length === 0 && !expanded) return null
+
+  const sortedTrips = [...trips].sort((a, b) => b.date.localeCompare(a.date))
+  const displayTrips = expanded ? sortedTrips : sortedTrips.slice(0, 3)
+
+  return (
+    <div className="mt-6">
+      <button
+        onClick={onToggle}
+        className="flex items-center gap-2 mb-3 group"
+      >
+        <History className="h-3.5 w-3.5 text-white/30" />
+        <span className="text-xs uppercase tracking-widest text-white/30 group-hover:text-white/50 transition-colors">
+          Trip History
+        </span>
+        {trips.length > 0 && (
+          <Badge variant="secondary" className="bg-white/5 text-white/40 border-0 text-[10px]">{trips.length}</Badge>
+        )}
+        <ChevronDown className={`h-3 w-3 text-white/20 transition-transform duration-200 ml-auto ${expanded ? 'rotate-180' : ''}`} />
+      </button>
+      {(expanded || trips.length > 0) && (
+        <div className="space-y-1">
+          {displayTrips.map((trip) => (
+            <div key={trip.id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/[0.03] transition-colors">
+              <span className="text-xs text-white/25 font-mono w-20 shrink-0">
+                {new Date(trip.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </span>
+              <span className="text-sm text-white/60 flex-1 truncate">{trip.title}</span>
+              {trip.location && (
+                <span className="text-xs text-white/25 truncate max-w-[120px]">{trip.location}</span>
+              )}
+              {trip.rating && (
+                <div className="flex items-center gap-0.5 shrink-0">
+                  {Array.from({ length: trip.rating }).map((_, j) => (
+                    <Star key={j} className="h-2.5 w-2.5 fill-amber-400/60 text-amber-400/60" />
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+          {!expanded && trips.length > 3 && (
+            <button onClick={onToggle} className="text-xs text-white/30 hover:text-white/50 w-full text-center py-1">
+              Show all {trips.length} trips
+            </button>
+          )}
+          {expanded && trips.length > 3 && (
+            <button onClick={onToggle} className="text-xs text-white/30 hover:text-white/50 w-full text-center py-1">
+              Show less
+            </button>
+          )}
+          {trips.length === 0 && (
+            <p className="text-xs text-white/20 text-center py-4">No trips recorded yet</p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// --- Ideas Section (weekend or date) ---
+function IdeasSection({ type, ideas, content, lastUpdated, refreshing, toast, onDidThis }: {
+  type: 'weekend' | 'date'
+  ideas: Idea[]
+  content: string
+  lastUpdated: string | null
+  refreshing: boolean
+  toast: (msg: string) => void
+  onDidThis: (idea: Idea) => void
+}) {
+  const isWeekend = type === 'weekend'
+  const Icon = isWeekend ? Sparkles : Heart
+  const label = isWeekend ? 'Weekend Ideas' : 'Date Ideas'
+  const fallbackMsg = isWeekend ? 'No suggestions yet. Next update: Thursday 7pm.' : 'No suggestions yet. Next update: Monday 9am.'
+
+  const hasIdeas = ideas.length > 0
+
   return (
     <Card>
       <CardContent className="p-6">
         <div className="flex items-center gap-2 mb-4">
-          <Heart className={`h-4 w-4 text-white/40 ${refreshing ? 'animate-spin' : ''}`} />
-          <p className="text-xs uppercase tracking-widest text-white/40">Date Ideas</p>
+          <Icon className={`h-4 w-4 text-white/40 ${refreshing ? 'animate-spin' : ''}`} />
+          <p className="text-xs uppercase tracking-widest text-white/40">{label}</p>
           {lastUpdated && (
             <span className="text-[10px] text-white/20 ml-auto">Updated {lastUpdated}</span>
           )}
         </div>
-        {content.trim() ? (
+        {refreshing ? (
+          <p className="text-sm text-white/20 text-center py-8">Generating suggestions...</p>
+        ) : hasIdeas ? (
+          <div className="space-y-2">
+            {ideas.map((idea, i) => (
+              <IdeaCard key={i} idea={idea} type={type} toast={toast} onDidThis={onDidThis} />
+            ))}
+          </div>
+        ) : content.trim() ? (
           <div className="prose prose-invert prose-sm max-w-none
             prose-headings:text-white/80 prose-headings:text-sm prose-headings:font-medium prose-headings:mb-2 prose-headings:mt-0
             prose-p:text-white/50 prose-p:text-sm prose-p:leading-relaxed prose-p:my-1
@@ -903,9 +1188,7 @@ function DateIdeasSection({ content, lastUpdated, refreshing }: { content: strin
             <ReactMarkdown>{content}</ReactMarkdown>
           </div>
         ) : (
-          <p className="text-sm text-white/20 text-center py-8">
-            {refreshing ? 'Generating suggestions...' : 'No suggestions yet. Next update: Monday 9am.'}
-          </p>
+          <p className="text-sm text-white/20 text-center py-8">{fallbackMsg}</p>
         )}
       </CardContent>
     </Card>
@@ -1126,7 +1409,11 @@ function ToastContainer({ toasts }: { toasts: { id: number; message: string }[] 
 export default function LifePage() {
   const [data, setData] = useState<LifeData | null>(null)
   const [calendar, setCalendar] = useState<CalendarEvent[]>([])
-  const [activities, setActivities] = useState<Activities>({ weekend: { content: '', lastUpdated: null }, date: { content: '', lastUpdated: null } })
+  const [activities, setActivities] = useState<Activities>({ weekend: { content: '', ideas: [], lastUpdated: null }, date: { content: '', ideas: [], lastUpdated: null } })
+  const [weather, setWeather] = useState<WeekendWeather | null>(null)
+  const [localEvents, setLocalEvents] = useState<LocalEvent[]>([])
+  const [trips, setTrips] = useState<Trip[]>([])
+  const [tripHistoryExpanded, setTripHistoryExpanded] = useState(false)
   const [loading, setLoading] = useState(true)
   const [refreshingActivities, setRefreshingActivities] = useState(false)
   const [toasts, setToasts] = useState<{ id: number; message: string }[]>([])
@@ -1140,15 +1427,21 @@ export default function LifePage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [lifeData, calendarData, remindersData, activitiesData] = await Promise.all([
+      const [lifeData, calendarData, remindersData, activitiesData, weatherData, eventsData, tripsData] = await Promise.all([
         lifeApi.getData(),
         lifeApi.getCalendar(7),
         lifeApi.getReminders(),
-        lifeApi.getActivities()
+        lifeApi.getActivities(),
+        lifeApi.getWeekendWeather(),
+        lifeApi.getLocalEvents(),
+        lifeApi.getTrips()
       ])
       setData({ ...lifeData, reminders: remindersData.length > 0 ? remindersData : lifeData.reminders })
       setCalendar(calendarData)
       setActivities(activitiesData)
+      setWeather(weatherData)
+      setLocalEvents(eventsData)
+      setTrips(tripsData)
     } catch (e) {
       console.error('LifePage: Error loading data:', e)
     } finally {
@@ -1200,10 +1493,14 @@ export default function LifePage() {
   }
 
   const sendBirthdayEmail = async (b: Birthday) => {
+    const currentYear = new Date().getFullYear()
+    if (b.emailSentYear === currentYear) {
+      if (!window.confirm('Already sent — resend?')) return
+    }
     try {
       const result = await lifeApi.sendBirthdayEmail(b.id)
-      if (result.success || result.alreadySent) {
-        addToast(result.alreadySent ? 'Déjà envoyé cette année' : 'Email envoyé')
+      if (result.success) {
+        addToast('Email envoyé')
         const lifeData = await lifeApi.getData()
         setData(prev => prev ? { ...prev, birthdays: lifeData.birthdays } : prev)
       } else {
@@ -1232,6 +1529,20 @@ export default function LifePage() {
   const deleteCron = async (line: string) => {
     const result = await lifeApi.cronAction('delete', line)
     setData({ ...data, cronJobs: result.cronJobs })
+  }
+
+  const handleDidThis = async (idea: Idea) => {
+    try {
+      const trip = await lifeApi.addTrip({
+        title: idea.title,
+        location: idea.mapQuery || idea.title,
+        notes: idea.description,
+      })
+      setTrips(prev => [...prev, trip])
+      addToast('Trip logged!')
+    } catch {
+      addToast('Failed to log trip')
+    }
   }
 
   return (
@@ -1274,8 +1585,16 @@ export default function LifePage() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.15 }}
+            className="space-y-4"
           >
-            <div className="flex items-center justify-end mb-4">
+            {/* Weather Bar */}
+            <WeatherBar weather={weather} />
+
+            {/* Local Events */}
+            <LocalEventsScroll events={localEvents} />
+
+            {/* Refresh button */}
+            <div className="flex items-center justify-end">
               <Button
                 variant="outline"
                 size="sm"
@@ -1287,10 +1606,15 @@ export default function LifePage() {
                 Refresh Ideas
               </Button>
             </div>
+
+            {/* Idea cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <WeekendIdeasSection content={activities.weekend.content} lastUpdated={activities.weekend.lastUpdated} refreshing={refreshingActivities} />
-              <DateIdeasSection content={activities.date.content} lastUpdated={activities.date.lastUpdated} refreshing={refreshingActivities} />
+              <IdeasSection type="weekend" ideas={activities.weekend.ideas} content={activities.weekend.content} lastUpdated={activities.weekend.lastUpdated} refreshing={refreshingActivities} toast={addToast} onDidThis={handleDidThis} />
+              <IdeasSection type="date" ideas={activities.date.ideas} content={activities.date.content} lastUpdated={activities.date.lastUpdated} refreshing={refreshingActivities} toast={addToast} onDidThis={handleDidThis} />
             </div>
+
+            {/* Trip History */}
+            <TripHistorySection trips={trips} expanded={tripHistoryExpanded} onToggle={() => setTripHistoryExpanded(!tripHistoryExpanded)} />
           </motion.div>
         )}
 
