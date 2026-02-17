@@ -7,9 +7,8 @@ import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Badge } from '../components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '../components/ui/dialog'
-import { Loader2, Plus, Trash2, Check, Clock, Calendar as CalendarIcon, MessageCircle, Gift, Copy, ExternalLink, Sparkles, Heart, Pencil, X, Eye, EyeOff, Mail } from 'lucide-react'
+import { Loader2, Plus, Trash2, Check, Clock, Calendar as CalendarIcon, MessageCircle, Gift, Copy, ExternalLink, Sparkles, Heart, Pencil, X, Eye, EyeOff, Mail, RefreshCw } from 'lucide-react'
 
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 function daysUntilBirthday(mmdd: string): number {
@@ -111,6 +110,35 @@ function getAgeNumber(dateStr: string, yearStr?: string): number | null {
   let nextBirthday = new Date(currentYear, mm - 1, dd)
   if (nextBirthday < today) nextBirthday = new Date(currentYear + 1, mm - 1, dd)
   return nextBirthday.getFullYear() - birthYear
+}
+
+// --- Segmented Tab Control ---
+type TabId = 'dashboard' | 'ideas' | 'settings'
+
+const TABS: { id: TabId; label: string }[] = [
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'ideas', label: 'Ideas' },
+  { id: 'settings', label: 'Settings' },
+]
+
+function TabControl({ active, onChange }: { active: TabId; onChange: (id: TabId) => void }) {
+  return (
+    <div className="inline-flex rounded-full bg-white/[0.06] p-1 border border-white/[0.06]">
+      {TABS.map(tab => (
+        <button
+          key={tab.id}
+          onClick={() => onChange(tab.id)}
+          className={`relative px-5 py-1.5 text-sm font-medium rounded-full transition-all duration-200 ${
+            active === tab.id
+              ? 'bg-white/[0.1] text-white shadow-sm'
+              : 'text-white/40 hover:text-white/60'
+          }`}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  )
 }
 
 // --- Calendar Section ---
@@ -263,87 +291,6 @@ function CronJobsSection({ cronJobs, onAdd, onDelete }: {
   )
 }
 
-// --- Weekly Planner Section ---
-function WeeklyPlannerSection({ planner, onUpdate }: {
-  planner: Record<string, string[]>
-  onUpdate: (planner: Record<string, string[]>) => void
-}) {
-  const [editDay, setEditDay] = useState<string | null>(null)
-  const [newItem, setNewItem] = useState('')
-
-  const addItem = (day: string) => {
-    if (!newItem.trim()) return
-    const updated = { ...planner, [day]: [...(planner[day] || []), newItem.trim()] }
-    onUpdate(updated)
-    setNewItem('')
-  }
-
-  const removeItem = (day: string, idx: number) => {
-    const updated = { ...planner, [day]: (planner[day] || []).filter((_, i) => i !== idx) }
-    onUpdate(updated)
-  }
-
-  return (
-    <Card>
-      <CardContent className="p-6">
-        <p className="text-xs uppercase tracking-widest text-white/40 mb-6">Weekly Planner</p>
-        <div className="grid gap-3 md:grid-cols-7">
-          {DAYS.map((day) => {
-            const today = new Date().toLocaleDateString('en-US', { weekday: 'long' })
-            const isToday = day === today
-            return (
-              <div key={day} className={`rounded-xl border p-4 ${isToday ? 'border-violet-500/30 bg-violet-500/5' : 'border-white/10'}`}>
-                <div className="flex items-center justify-between mb-3">
-                  <span className={`text-xs uppercase tracking-widest ${isToday ? 'text-violet-400' : 'text-white/30'}`}>
-                    {day.slice(0, 3)}
-                  </span>
-                  {isToday && <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />}
-                </div>
-                <div className="space-y-1.5 min-h-[60px]">
-                  {(planner[day] || []).map((item, idx) => (
-                    <div key={idx} className="group flex items-center justify-between text-sm">
-                      <span className="truncate text-white/60">{item}</span>
-                      <button
-                        onClick={() => removeItem(day, idx)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-white/20 hover:text-rose-400/80"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                {editDay === day ? (
-                  <div className="mt-2">
-                    <Input
-                      placeholder="Add item..."
-                      value={newItem}
-                      onChange={(e) => setNewItem(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') { addItem(day); setEditDay(null) }
-                        if (e.key === 'Escape') { setNewItem(''); setEditDay(null) }
-                      }}
-                      onBlur={() => { if (newItem.trim()) addItem(day); setEditDay(null); setNewItem('') }}
-                      autoFocus
-                      className="h-7 text-xs bg-transparent border-white/10"
-                    />
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setEditDay(day)}
-                    className="mt-2 text-xs text-white/20 hover:text-white/40 transition-colors duration-150"
-                  >
-                    <Plus className="h-3 w-3 inline mr-1" />add
-                  </button>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
 // --- Birthday Message Generator ---
 function generateBirthdayMessage(b: Birthday): string {
   const firstName = b.name.split(' ')[0]
@@ -356,7 +303,7 @@ function generateBirthdayMessage(b: Birthday): string {
   return messages[Math.abs(firstName.charCodeAt(0)) % messages.length]
 }
 
-// --- Birthdays Section ---
+// --- Birthdays Section (Full) ---
 function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, toast }: {
   birthdays: Birthday[]
   onUpdate: (birthdays: Birthday[]) => void
@@ -416,10 +363,6 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
     const newBday: Birthday = { id: Date.now().toString(), name: name.trim(), date: mmdd, note: note.trim() }
     onUpdate([...birthdays, newBday])
     setName(''); setDate(''); setNote(''); setOpen(false)
-  }
-
-  const removeBirthday = (id: string) => {
-    onUpdate(birthdays.filter((b) => b.id !== id))
   }
 
   const hideBirthday = async (id: string) => {
@@ -663,7 +606,7 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
   )
 }
 
-// --- Reminders Section (Fix 2: editable) ---
+// --- Reminders Section ---
 function RemindersSection({ reminders, onUpdate, onRefresh }: {
   reminders: Reminder[]
   onUpdate: (reminders: Reminder[]) => void
@@ -892,7 +835,7 @@ function RemindersSection({ reminders, onUpdate, onRefresh }: {
 }
 
 // --- Weekend Ideas Section ---
-function WeekendIdeasSection({ content, lastUpdated }: { content: string; lastUpdated: string | null }) {
+function WeekendIdeasSection({ content, lastUpdated, refreshing }: { content: string; lastUpdated: string | null; refreshing: boolean }) {
   function getLatestSuggestions(md: string): string {
     if (!md.trim()) return ''
     const sections = md.split(/^## /m).filter(Boolean)
@@ -913,7 +856,7 @@ function WeekendIdeasSection({ content, lastUpdated }: { content: string; lastUp
     <Card>
       <CardContent className="p-6">
         <div className="flex items-center gap-2 mb-4">
-          <Sparkles className="h-4 w-4 text-white/40" />
+          <Sparkles className={`h-4 w-4 text-white/40 ${refreshing ? 'animate-spin' : ''}`} />
           <p className="text-xs uppercase tracking-widest text-white/40">Weekend Ideas</p>
           {lastUpdated && (
             <span className="text-[10px] text-white/20 ml-auto">Updated {lastUpdated}</span>
@@ -930,7 +873,7 @@ function WeekendIdeasSection({ content, lastUpdated }: { content: string; lastUp
           </div>
         ) : (
           <p className="text-sm text-white/20 text-center py-8">
-            No suggestions yet. Next update: Thursday 7pm.
+            {refreshing ? 'Generating suggestions...' : 'No suggestions yet. Next update: Thursday 7pm.'}
           </p>
         )}
       </CardContent>
@@ -939,12 +882,12 @@ function WeekendIdeasSection({ content, lastUpdated }: { content: string; lastUp
 }
 
 // --- Date Ideas Section ---
-function DateIdeasSection({ content, lastUpdated }: { content: string; lastUpdated: string | null }) {
+function DateIdeasSection({ content, lastUpdated, refreshing }: { content: string; lastUpdated: string | null; refreshing: boolean }) {
   return (
     <Card>
       <CardContent className="p-6">
         <div className="flex items-center gap-2 mb-4">
-          <Heart className="h-4 w-4 text-white/40" />
+          <Heart className={`h-4 w-4 text-white/40 ${refreshing ? 'animate-spin' : ''}`} />
           <p className="text-xs uppercase tracking-widest text-white/40">Date Ideas</p>
           {lastUpdated && (
             <span className="text-[10px] text-white/20 ml-auto">Updated {lastUpdated}</span>
@@ -961,7 +904,7 @@ function DateIdeasSection({ content, lastUpdated }: { content: string; lastUpdat
           </div>
         ) : (
           <p className="text-sm text-white/20 text-center py-8">
-            No suggestions yet. Next update: Monday 9am.
+            {refreshing ? 'Generating suggestions...' : 'No suggestions yet. Next update: Monday 9am.'}
           </p>
         )}
       </CardContent>
@@ -978,11 +921,14 @@ const NOTIFICATION_LABELS: Record<string, string> = {
   'article-summaries': 'Article Summaries',
 }
 
+const TEST_TYPES = new Set(['birthday-reminders', 'weekend-family', 'midweek-date', 'morning-digest'])
+
 function EmailSettingsSection({ toast }: { toast: (msg: string) => void }) {
   const [config, setConfig] = useState<{ recipients: Record<string, string[]> } | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [newEmails, setNewEmails] = useState<Record<string, string>>({})
+  const [testState, setTestState] = useState<Record<string, 'idle' | 'sending' | 'sent'>>({})
 
   useEffect(() => {
     lifeApi.getEmailConfig().then(c => { setConfig(c); setLoading(false) }).catch(() => setLoading(false))
@@ -1018,6 +964,24 @@ function EmailSettingsSection({ toast }: { toast: (msg: string) => void }) {
     save(updated)
   }
 
+  const sendTest = async (type: string) => {
+    setTestState(prev => ({ ...prev, [type]: 'sending' }))
+    try {
+      const result = await lifeApi.sendTestEmail(type)
+      if (result.error) {
+        toast(`Test failed: ${result.error}`)
+        setTestState(prev => ({ ...prev, [type]: 'idle' }))
+      } else {
+        setTestState(prev => ({ ...prev, [type]: 'sent' }))
+        toast(`Test email sent!`)
+        setTimeout(() => setTestState(prev => ({ ...prev, [type]: 'idle' })), 2000)
+      }
+    } catch {
+      toast('Test failed')
+      setTestState(prev => ({ ...prev, [type]: 'idle' }))
+    }
+  }
+
   if (loading) return null
 
   return (
@@ -1031,7 +995,25 @@ function EmailSettingsSection({ toast }: { toast: (msg: string) => void }) {
         <div className="space-y-5">
           {Object.entries(NOTIFICATION_LABELS).map(([type, label]) => (
             <div key={type}>
-              <p className="text-sm text-white/70 mb-2">{label}</p>
+              <div className="flex items-center gap-2 mb-2">
+                <p className="text-sm text-white/70">{label}</p>
+                {TEST_TYPES.has(type) && (
+                  <button
+                    onClick={() => sendTest(type)}
+                    disabled={(testState[type] || 'idle') !== 'idle'}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all border border-white/10 hover:bg-white/[0.06] text-white/40 hover:text-white/60 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {testState[type] === 'sending' ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : testState[type] === 'sent' ? (
+                      <Check className="h-3 w-3 text-emerald-400" />
+                    ) : (
+                      <Mail className="h-3 w-3" />
+                    )}
+                    {testState[type] === 'sent' ? 'Sent' : 'Test'}
+                  </button>
+                )}
+              </div>
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {(config?.recipients[type] || []).map(email => (
                   <span key={email} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-white/[0.06] text-white/60 border border-white/[0.08]">
@@ -1062,6 +1044,71 @@ function EmailSettingsSection({ toast }: { toast: (msg: string) => void }) {
   )
 }
 
+// --- Email Test Buttons (compact for Settings tab) ---
+function EmailTestButtons({ toast }: { toast: (msg: string) => void }) {
+  const [testState, setTestState] = useState<Record<string, 'idle' | 'sending' | 'sent'>>({})
+
+  const tests = [
+    { id: 'morning-digest', label: 'Morning Digest' },
+    { id: 'weekend-family', label: 'Weekend Family' },
+    { id: 'midweek-date', label: 'Midweek Date' },
+    { id: 'birthday-reminders', label: 'Birthday Reminders' },
+  ]
+
+  const sendTest = async (type: string) => {
+    setTestState(prev => ({ ...prev, [type]: 'sending' }))
+    try {
+      const result = await lifeApi.sendTestEmail(type)
+      if (result.error) {
+        toast(`Test failed: ${result.error}`)
+        setTestState(prev => ({ ...prev, [type]: 'idle' }))
+      } else {
+        setTestState(prev => ({ ...prev, [type]: 'sent' }))
+        toast(`Test email sent!`)
+        setTimeout(() => setTestState(prev => ({ ...prev, [type]: 'idle' })), 2000)
+      }
+    } catch {
+      toast('Test failed')
+      setTestState(prev => ({ ...prev, [type]: 'idle' }))
+    }
+  }
+
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Mail className="h-4 w-4 text-white/40" />
+          <p className="text-xs uppercase tracking-widest text-white/40">Test Emails</p>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {tests.map(t => {
+            const state = testState[t.id] || 'idle'
+            return (
+              <Button
+                key={t.id}
+                variant="outline"
+                size="sm"
+                onClick={() => sendTest(t.id)}
+                disabled={state !== 'idle'}
+                className="text-xs text-white/50 border-white/10 hover:bg-white/[0.03] justify-start gap-2"
+              >
+                {state === 'sending' ? (
+                  <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+                ) : state === 'sent' ? (
+                  <Check className="h-3 w-3 text-emerald-400 shrink-0" />
+                ) : (
+                  <Mail className="h-3 w-3 shrink-0" />
+                )}
+                {t.label}
+              </Button>
+            )
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 // --- Toast component ---
 function ToastContainer({ toasts }: { toasts: { id: number; message: string }[] }) {
   return (
@@ -1081,7 +1128,9 @@ export default function LifePage() {
   const [calendar, setCalendar] = useState<CalendarEvent[]>([])
   const [activities, setActivities] = useState<Activities>({ weekend: { content: '', lastUpdated: null }, date: { content: '', lastUpdated: null } })
   const [loading, setLoading] = useState(true)
+  const [refreshingActivities, setRefreshingActivities] = useState(false)
   const [toasts, setToasts] = useState<{ id: number; message: string }[]>([])
+  const [activeTab, setActiveTab] = useState<TabId>('dashboard')
 
   const addToast = useCallback((message: string) => {
     const id = Date.now()
@@ -1109,6 +1158,24 @@ export default function LifePage() {
 
   useEffect(() => { loadData() }, [loadData])
 
+  const refreshActivities = async () => {
+    setRefreshingActivities(true)
+    try {
+      const result = await lifeApi.refreshActivities()
+      if (result.success) {
+        addToast('Activities refreshed')
+        const activitiesData = await lifeApi.getActivities()
+        setActivities(activitiesData)
+      } else {
+        addToast('Refresh failed: ' + (result.error || 'Unknown'))
+      }
+    } catch (err: unknown) {
+      addToast('Refresh failed: ' + (err instanceof Error ? err.message : String(err)))
+    } finally {
+      setRefreshingActivities(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -1128,7 +1195,6 @@ export default function LifePage() {
 
   const patchBirthday = async (id: string, updates: Partial<Birthday>) => {
     await lifeApi.patchBirthday(id, updates)
-    // Reload to get fresh data
     const lifeData = await lifeApi.getData()
     setData(prev => prev ? { ...prev, birthdays: lifeData.birthdays } : prev)
   }
@@ -1158,11 +1224,6 @@ export default function LifePage() {
     setData(prev => prev ? { ...prev, reminders: remindersData } : prev)
   }
 
-  const updatePlanner = async (weeklyPlanner: Record<string, string[]>) => {
-    setData({ ...data, weeklyPlanner })
-    await lifeApi.update({ weeklyPlanner })
-  }
-
   const addCron = async (line: string) => {
     const result = await lifeApi.cronAction('add', line)
     setData({ ...data, cronJobs: result.cronJobs })
@@ -1173,52 +1234,83 @@ export default function LifePage() {
     setData({ ...data, cronJobs: result.cronJobs })
   }
 
-  const sectionVariants = {
-    hidden: { opacity: 0, y: 12 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.2, ease: 'easeOut' as const } },
-  }
-
   return (
     <>
-      <motion.div
-        className="space-y-8"
-        initial="hidden"
-        animate="visible"
-        variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.05 } } }}
-      >
-        <motion.div variants={sectionVariants}>
-          <h1 className="text-2xl font-semibold text-white/90">Life</h1>
-          <p className="text-sm text-white/50 mt-1">Schedule, reminders, and personal admin</p>
-        </motion.div>
+      <div className="space-y-6">
+        {/* Header + Tabs */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-white/90">Life</h1>
+            <p className="text-sm text-white/50 mt-1">Schedule, reminders, and personal admin</p>
+          </div>
+          <TabControl active={activeTab} onChange={setActiveTab} />
+        </div>
 
-        <motion.div variants={sectionVariants}>
-          <CalendarSection events={calendar} />
-        </motion.div>
+        {/* TAB 1 — Dashboard */}
+        {activeTab === 'dashboard' && (
+          <motion.div
+            key="dashboard"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.15 }}
+            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+          >
+            {/* Left column: Calendar + Reminders */}
+            <div className="space-y-6">
+              <CalendarSection events={calendar} />
+              <RemindersSection reminders={data.reminders} onUpdate={updateReminders} onRefresh={refreshReminders} />
+            </div>
+            {/* Right column: Birthdays */}
+            <div className="space-y-6">
+              <BirthdaysSection birthdays={data.birthdays} onUpdate={updateBirthdays} onPatchBirthday={patchBirthday} onSendEmail={sendBirthdayEmail} toast={addToast} />
+            </div>
+          </motion.div>
+        )}
 
-        <motion.div variants={sectionVariants}>
-          <WeekendIdeasSection content={activities.weekend.content} lastUpdated={activities.weekend.lastUpdated} />
-        </motion.div>
+        {/* TAB 2 — Ideas */}
+        {activeTab === 'ideas' && (
+          <motion.div
+            key="ideas"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            <div className="flex items-center justify-end mb-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={refreshActivities}
+                disabled={refreshingActivities}
+                className="text-xs text-white/40 border-white/10 hover:bg-white/[0.03]"
+              >
+                {refreshingActivities ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+                Refresh Ideas
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <WeekendIdeasSection content={activities.weekend.content} lastUpdated={activities.weekend.lastUpdated} refreshing={refreshingActivities} />
+              <DateIdeasSection content={activities.date.content} lastUpdated={activities.date.lastUpdated} refreshing={refreshingActivities} />
+            </div>
+          </motion.div>
+        )}
 
-        <motion.div variants={sectionVariants}>
-          <DateIdeasSection content={activities.date.content} lastUpdated={activities.date.lastUpdated} />
-        </motion.div>
-
-        <motion.div variants={sectionVariants}>
-          <RemindersSection reminders={data.reminders} onUpdate={updateReminders} onRefresh={refreshReminders} />
-        </motion.div>
-
-        <motion.div variants={sectionVariants}>
-          <BirthdaysSection birthdays={data.birthdays} onUpdate={updateBirthdays} onPatchBirthday={patchBirthday} onSendEmail={sendBirthdayEmail} toast={addToast} />
-        </motion.div>
-
-        <motion.div variants={sectionVariants}>
-          <CronJobsSection cronJobs={data.cronJobs} onAdd={addCron} onDelete={deleteCron} />
-        </motion.div>
-
-        <motion.div variants={sectionVariants}>
-          <EmailSettingsSection toast={addToast} />
-        </motion.div>
-      </motion.div>
+        {/* TAB 3 — Settings */}
+        {activeTab === 'settings' && (
+          <motion.div
+            key="settings"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.15 }}
+            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+          >
+            <CronJobsSection cronJobs={data.cronJobs} onAdd={addCron} onDelete={deleteCron} />
+            <div className="space-y-6">
+              <EmailTestButtons toast={addToast} />
+              <EmailSettingsSection toast={addToast} />
+            </div>
+          </motion.div>
+        )}
+      </div>
       <ToastContainer toasts={toasts} />
     </>
   )

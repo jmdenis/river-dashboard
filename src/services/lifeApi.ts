@@ -61,6 +61,11 @@ export const lifeApi = {
     return res.json()
   },
 
+  async refreshActivities(): Promise<{ success?: boolean; refreshed?: { weekend: boolean; date: boolean }; error?: string }> {
+    const res = await fetch(`${API_BASE_URL}/api/activities/refresh`, { method: 'POST' })
+    return res.json()
+  },
+
   async getCalendar(days: number = 14): Promise<CalendarEvent[]> {
     const res = await fetch(`${API_BASE_URL}/api/calendar?days=${days}`)
     if (!res.ok) return []
@@ -165,6 +170,13 @@ export const lifeApi = {
     })
     if (!res.ok) throw new Error('Failed to update email config')
     return res.json()
+  },
+
+  async sendTestEmail(type: string): Promise<{ success?: boolean; error?: string }> {
+    const res = await fetch(`${API_BASE_URL}/api/email-test/${type}`, { method: 'POST' })
+    const data = await res.json()
+    if (!res.ok) return { error: data.error || res.statusText }
+    return data
   },
 
   async getFilesPaginated(page: number, limit: number): Promise<{ files: Array<{ name: string; size: number; sizeHuman: string; date: string }>; total: number; page: number; totalPages: number }> {
