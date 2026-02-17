@@ -151,6 +151,22 @@ export const lifeApi = {
     return data.ideas || []
   },
 
+  async getEmailConfig(): Promise<{ recipients: Record<string, string[]> }> {
+    const res = await fetch(`${API_BASE_URL}/api/email-config`)
+    if (!res.ok) return { recipients: {} }
+    return res.json()
+  },
+
+  async updateEmailConfig(config: { recipients: Record<string, string[]> }): Promise<{ recipients: Record<string, string[]> }> {
+    const res = await fetch(`${API_BASE_URL}/api/email-config`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config),
+    })
+    if (!res.ok) throw new Error('Failed to update email config')
+    return res.json()
+  },
+
   async getFilesPaginated(page: number, limit: number): Promise<{ files: Array<{ name: string; size: number; sizeHuman: string; date: string }>; total: number; page: number; totalPages: number }> {
     const res = await fetch(`${API_BASE_URL}/api/files?page=${page}&limit=${limit}`)
     if (!res.ok) return { files: [], total: 0, page: 1, totalPages: 0 }

@@ -969,6 +969,99 @@ function DateIdeasSection({ content, lastUpdated }: { content: string; lastUpdat
   )
 }
 
+// --- Email Settings Section ---
+const NOTIFICATION_LABELS: Record<string, string> = {
+  'birthday-reminders': 'Birthday Reminders',
+  'weekend-family': 'Weekend Family Ideas',
+  'midweek-date': 'Midweek Date Ideas',
+  'morning-digest': 'Morning Digest',
+  'article-summaries': 'Article Summaries',
+}
+
+function EmailSettingsSection({ toast }: { toast: (msg: string) => void }) {
+  const [config, setConfig] = useState<{ recipients: Record<string, string[]> } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [newEmails, setNewEmails] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    lifeApi.getEmailConfig().then(c => { setConfig(c); setLoading(false) }).catch(() => setLoading(false))
+  }, [])
+
+  const save = async (updated: { recipients: Record<string, string[]> }) => {
+    setSaving(true)
+    try {
+      const result = await lifeApi.updateEmailConfig(updated)
+      setConfig(result)
+      toast('Email settings saved')
+    } catch {
+      toast('Failed to save')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const removeRecipient = (type: string, email: string) => {
+    if (!config) return
+    const updated = { ...config, recipients: { ...config.recipients, [type]: config.recipients[type].filter(e => e !== email) } }
+    setConfig(updated)
+    save(updated)
+  }
+
+  const addRecipient = (type: string) => {
+    const email = (newEmails[type] || '').trim().toLowerCase()
+    if (!email || !email.includes('@') || !config) return
+    if (config.recipients[type]?.includes(email)) return
+    const updated = { ...config, recipients: { ...config.recipients, [type]: [...(config.recipients[type] || []), email] } }
+    setConfig(updated)
+    setNewEmails(prev => ({ ...prev, [type]: '' }))
+    save(updated)
+  }
+
+  if (loading) return null
+
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-center gap-2 mb-6">
+          <Mail className="h-4 w-4 text-white/40" />
+          <p className="text-xs uppercase tracking-widest text-white/40">Email Settings</p>
+          {saving && <Loader2 className="h-3 w-3 animate-spin text-violet-400 ml-auto" />}
+        </div>
+        <div className="space-y-5">
+          {Object.entries(NOTIFICATION_LABELS).map(([type, label]) => (
+            <div key={type}>
+              <p className="text-sm text-white/70 mb-2">{label}</p>
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {(config?.recipients[type] || []).map(email => (
+                  <span key={email} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-white/[0.06] text-white/60 border border-white/[0.08]">
+                    {email}
+                    <button onClick={() => removeRecipient(type, email)} className="text-white/30 hover:text-rose-400 transition-colors">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Add email..."
+                  value={newEmails[type] || ''}
+                  onChange={e => setNewEmails(prev => ({ ...prev, [type]: e.target.value }))}
+                  onKeyDown={e => e.key === 'Enter' && addRecipient(type)}
+                  className="h-8 text-xs bg-white/[0.03] border-white/[0.08] text-white/60 placeholder:text-white/20"
+                />
+                <Button variant="outline" size="sm" onClick={() => addRecipient(type)} className="h-8 px-3 text-xs text-white/40 border-white/10 hover:bg-white/[0.03]">
+                  <Plus className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 // --- Toast component ---
 function ToastContainer({ toasts }: { toasts: { id: number; message: string }[] }) {
   return (
@@ -1120,6 +1213,10 @@ export default function LifePage() {
 
         <motion.div variants={sectionVariants}>
           <CronJobsSection cronJobs={data.cronJobs} onAdd={addCron} onDelete={deleteCron} />
+        </motion.div>
+
+        <motion.div variants={sectionVariants}>
+          <EmailSettingsSection toast={addToast} />
         </motion.div>
       </motion.div>
       <ToastContainer toasts={toasts} />
