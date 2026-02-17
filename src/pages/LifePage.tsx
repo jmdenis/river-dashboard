@@ -115,13 +115,12 @@ function getAgeNumber(dateStr: string, yearStr?: string): number | null {
 }
 
 // --- Segmented Tab Control ---
-type TabId = 'dashboard' | 'ideas' | 'contacts' | 'settings'
+type TabId = 'dashboard' | 'ideas' | 'contacts'
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'ideas', label: 'Ideas' },
   { id: 'contacts', label: 'Contacts' },
-  { id: 'settings', label: 'Settings' },
 ]
 
 function TabControl({ active, onChange }: { active: TabId; onChange: (id: TabId) => void }) {
@@ -2699,20 +2698,6 @@ export default function LifePage() {
           </motion.div>
         )}
 
-        {/* TAB 4 — Settings */}
-        {activeTab === 'settings' && (
-          <motion.div
-            key="settings"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.15 }}
-            className="space-y-4"
-          >
-            <HomeLocationSection toast={addToast} />
-            <EmailNotificationsSection toast={addToast} />
-            <CronJobsSection cronJobs={data.cronJobs} onAdd={addCron} onDelete={deleteCron} />
-          </motion.div>
-        )}
       </div>
       {globalDayPlan && (
         <DayPlannerModal
