@@ -66,4 +66,25 @@ export const opsApi = {
     if (!res.ok) return { changedFiles: 0, clean: true }
     return res.json()
   },
+
+  async gitCommit(): Promise<{ ok: boolean; output?: string; error?: string }> {
+    const res = await fetch(`${API_BASE}/git/commit`, { method: 'POST' })
+    return res.json()
+  },
+
+  async getOpenClawVersion(): Promise<{ current: string; latest: string; upToDate: boolean }> {
+    const res = await fetch(`${API_BASE}/openclaw/version`)
+    if (!res.ok) return { current: 'error', latest: 'error', upToDate: true }
+    return res.json()
+  },
+
+  async updateOpenClaw(): Promise<{ ok: boolean; output?: string; error?: string }> {
+    const res = await fetch(`${API_BASE}/openclaw/update`, { method: 'POST' })
+    return res.json()
+  },
+
+  async cleanupTasks(): Promise<{ ok: boolean; cleaned: number }> {
+    const res = await fetch(`${API_BASE}/tasks/cleanup`, { method: 'POST' })
+    return res.json()
+  },
 }

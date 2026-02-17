@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { opsApi, type Task, type SystemInfo } from '../services/opsApi'
 import { Card, CardContent } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
-import { Loader2, RotateCcw, ChevronDown, ChevronRight, DollarSign, GitBranch, Trash2 } from 'lucide-react'
+import { Loader2, RotateCcw, ChevronDown, ChevronRight, DollarSign, GitBranch, Trash2, GitCommitHorizontal, Check, X, ArrowDownToLine, Sparkles } from 'lucide-react'
 import TaskLogPanel from '../components/TaskLogPanel'
 
 // --- Helpers ---
@@ -103,6 +103,11 @@ export default function OpsPage() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [logPanelOpen, setLogPanelOpen] = useState(false)
   const [gitStatus, setGitStatus] = useState<{ changedFiles: number; clean: boolean } | null>(null)
+  const [commitState, setCommitState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [oclawVersion, setOclawVersion] = useState<{ current: string; latest: string; upToDate: boolean } | null>(null)
+  const [oclawUpdateState, setOclawUpdateState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [cleanupState, setCleanupState] = useState<'idle' | 'loading'>('idle')
+  const [cleanupCount, setCleanupCount] = useState<number | null>(null)
 
   const loadData = () => {
     Promise.all([opsApi.getTasks(), opsApi.getSystemInfo(), opsApi.getGitStatus()])
@@ -114,6 +119,11 @@ export default function OpsPage() {
       .catch((error) => console.error('Failed to load data:', error))
       .finally(() => setLoading(false))
   }
+
+  // Load OpenClaw version on mount (not on interval — it's slow)
+  useEffect(() => {
+    opsApi.getOpenClawVersion().then(setOclawVersion).catch(() => {})
+  }, [])
 
   const [initialized, setInitialized] = useState(false)
   useEffect(() => {
@@ -201,6 +211,43 @@ export default function OpsPage() {
     setTasks(updated)
   }
 
+  const handleGitCommit = async () => {
+    setCommitState('loading')
+    try {
+      const result = await opsApi.gitCommit()
+      setCommitState(result.ok ? 'success' : 'error')
+      if (result.ok) loadData() // refresh git status
+    } catch {
+      setCommitState('error')
+    }
+    setTimeout(() => setCommitState('idle'), 3000)
+  }
+
+  const handleOclawUpdate = async () => {
+    setOclawUpdateState('loading')
+    try {
+      const result = await opsApi.updateOpenClaw()
+      setOclawUpdateState(result.ok ? 'success' : 'error')
+      if (result.ok) opsApi.getOpenClawVersion().then(setOclawVersion)
+    } catch {
+      setOclawUpdateState('error')
+    }
+    setTimeout(() => setOclawUpdateState('idle'), 3000)
+  }
+
+  const handleTaskCleanup = async () => {
+    setCleanupState('loading')
+    try {
+      const result = await opsApi.cleanupTasks()
+      setCleanupCount(result.cleaned)
+      if (result.ok) loadData()
+    } catch {
+      setCleanupCount(0)
+    }
+    setCleanupState('idle')
+    setTimeout(() => setCleanupCount(null), 3000)
+  }
+
   const formatUptime = (seconds: number) => {
     const d = Math.floor(seconds / 86400)
     const h = Math.floor((seconds % 86400) / 3600)
@@ -215,15 +262,52 @@ export default function OpsPage() {
           <h1 className="text-2xl font-semibold text-white/90">Ops</h1>
           <p className="text-sm text-white/50 mt-1">Live task tracking and system overview</p>
         </div>
-        {gitStatus && (
-          <div className="flex items-center gap-2 text-xs">
-            <span className={`h-2 w-2 rounded-full ${gitStatus.clean ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-            <GitBranch className="h-3.5 w-3.5 text-white/30" />
-            <span className={gitStatus.clean ? 'text-emerald-400/80' : 'text-amber-400/80'}>
-              {gitStatus.clean ? 'Git: Clean' : `Git: ${gitStatus.changedFiles} uncommitted file${gitStatus.changedFiles !== 1 ? 's' : ''}`}
-            </span>
-          </div>
-        )}
+        <div className="flex items-center gap-4">
+          {/* OpenClaw version indicator */}
+          {oclawVersion && (
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className={`h-2 w-2 rounded-full ${oclawVersion.upToDate ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
+              <span className="text-white/40">v{oclawVersion.current.replace(/^v/, '')}</span>
+              {!oclawVersion.upToDate && (
+                <button
+                  onClick={handleOclawUpdate}
+                  disabled={oclawUpdateState === 'loading'}
+                  title={`Update to ${oclawVersion.latest}`}
+                  className="text-amber-400/70 hover:text-amber-400 transition-colors duration-150 p-0.5 disabled:opacity-50"
+                >
+                  {oclawUpdateState === 'loading' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> :
+                   oclawUpdateState === 'success' ? <Check className="h-3.5 w-3.5 text-emerald-400" /> :
+                   oclawUpdateState === 'error' ? <X className="h-3.5 w-3.5 text-rose-400" /> :
+                   <ArrowDownToLine className="h-3.5 w-3.5" />}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Git status + commit button */}
+          {gitStatus && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className={`h-2 w-2 rounded-full ${gitStatus.clean ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+              <GitBranch className="h-3.5 w-3.5 text-white/30" />
+              <span className={gitStatus.clean ? 'text-emerald-400/80' : 'text-amber-400/80'}>
+                {gitStatus.clean ? 'Git: Clean' : `Git: ${gitStatus.changedFiles} uncommitted file${gitStatus.changedFiles !== 1 ? 's' : ''}`}
+              </span>
+              {!gitStatus.clean && (
+                <button
+                  onClick={handleGitCommit}
+                  disabled={commitState === 'loading'}
+                  title="Commit &amp; push"
+                  className="text-white/30 hover:text-violet-400 transition-colors duration-150 p-0.5 disabled:opacity-50"
+                >
+                  {commitState === 'loading' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> :
+                   commitState === 'success' ? <Check className="h-3.5 w-3.5 text-emerald-400" /> :
+                   commitState === 'error' ? <X className="h-3.5 w-3.5 text-rose-400" /> :
+                   <GitCommitHorizontal className="h-3.5 w-3.5" />}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Hero row — primary stats */}
@@ -296,7 +380,25 @@ export default function OpsPage() {
 
       {/* Timeline */}
       <div>
-        <h2 className="text-lg font-medium text-white/90 mb-4">Timeline</h2>
+        <div className="flex items-center gap-2 mb-4">
+          <h2 className="text-lg font-medium text-white/90">Timeline</h2>
+          <button
+            onClick={handleTaskCleanup}
+            disabled={cleanupState === 'loading'}
+            title="Clean up stale tasks"
+            className="relative text-white/20 hover:text-violet-400 transition-colors duration-150 p-1 disabled:opacity-50"
+          >
+            {cleanupState === 'loading' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            {cleanupCount !== null && cleanupCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 bg-violet-500 text-white text-[9px] font-medium rounded-full h-4 min-w-[16px] flex items-center justify-center px-1 animate-fade-in-fast">
+                {cleanupCount}
+              </span>
+            )}
+          </button>
+          {cleanupCount !== null && cleanupCount === 0 && (
+            <span className="text-xs text-white/30">No stale tasks</span>
+          )}
+        </div>
         <div className="space-y-2">
           {dayGroups.length === 0 ? (
             <p className="text-sm text-white/20 text-center py-12">No tasks yet</p>
