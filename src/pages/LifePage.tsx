@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { lifeApi, type LifeData, type Birthday, type Reminder, type CronJob, type CalendarEvent, type Activities, type Idea, type WeekendWeather, type LocalEvent, type Trip } from '../services/lifeApi'
 import ReactMarkdown from 'react-markdown'
@@ -1021,11 +1021,11 @@ function WeatherIcon({ code, className }: { code: number; className?: string }) 
 function WeatherBar({ weather }: { weather: WeekendWeather | null }) {
   if (!weather) return null
 
-  const { saturday, sunday } = weather
+  const { saturday, sunday, homeCity } = weather
 
   return (
     <div className="flex items-center gap-4 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-      <span className="text-xs uppercase tracking-widest text-white/30 shrink-0">This weekend</span>
+      <span className="text-xs uppercase tracking-widest text-white/30 shrink-0">This weekend{homeCity ? ` — ${homeCity}` : ''}</span>
       <div className="flex items-center gap-6 ml-auto">
         <div className="flex items-center gap-2">
           <WeatherIcon code={saturday.weatherCode} className="h-4 w-4 text-amber-400/80" />
@@ -1158,7 +1158,19 @@ function IdeasSection({ type, ideas, content, lastUpdated, refreshing, toast, on
   const label = isWeekend ? 'Weekend Ideas' : 'Date Ideas'
   const fallbackMsg = isWeekend ? 'No suggestions yet. Next update: Thursday 7pm.' : 'No suggestions yet. Next update: Monday 9am.'
 
-  const hasIdeas = ideas.length > 0
+  // Fallback: if backend returned ideas=[] but content is JSON, parse client-side
+  const parsedIdeas = useMemo(() => {
+    if (ideas.length > 0) return ideas
+    if (!content.trim()) return []
+    try {
+      const cleaned = content.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim()
+      const parsed = JSON.parse(cleaned)
+      if (Array.isArray(parsed)) return parsed as Idea[]
+    } catch { /* not valid JSON */ }
+    return []
+  }, [ideas, content])
+
+  const hasIdeas = parsedIdeas.length > 0
 
   return (
     <Card>
@@ -1174,7 +1186,7 @@ function IdeasSection({ type, ideas, content, lastUpdated, refreshing, toast, on
           <p className="text-sm text-white/20 text-center py-8">Generating suggestions...</p>
         ) : hasIdeas ? (
           <div className="space-y-2">
-            {ideas.map((idea, i) => (
+            {parsedIdeas.map((idea, i) => (
               <IdeaCard key={i} idea={idea} type={type} toast={toast} onDidThis={onDidThis} />
             ))}
           </div>
@@ -1202,9 +1214,12 @@ const NOTIFICATION_LABELS: Record<string, string> = {
   'midweek-date': 'Midweek Date Ideas',
   'morning-digest': 'Morning Digest',
   'article-summaries': 'Article Summaries',
+  'trip-packing': 'Trip Packing Checklist',
+  'trip-anne-notification': 'Trip Anne Notification',
+  'trip-connection-summary': 'Trip Connection Summary',
 }
 
-const TEST_TYPES = new Set(['birthday-reminders', 'weekend-family', 'midweek-date', 'morning-digest'])
+const TEST_TYPES = new Set(['birthday-reminders', 'weekend-family', 'midweek-date', 'morning-digest', 'trip-packing', 'trip-anne', 'trip-connection'])
 
 function EmailSettingsSection({ toast }: { toast: (msg: string) => void }) {
   const [config, setConfig] = useState<{ recipients: Record<string, string[]> } | null>(null)
@@ -1336,6 +1351,9 @@ function EmailTestButtons({ toast }: { toast: (msg: string) => void }) {
     { id: 'weekend-family', label: 'Weekend Family' },
     { id: 'midweek-date', label: 'Midweek Date' },
     { id: 'birthday-reminders', label: 'Birthday Reminders' },
+    { id: 'trip-packing', label: 'Trip Packing' },
+    { id: 'trip-anne', label: 'Trip Anne' },
+    { id: 'trip-connection', label: 'Trip Connection' },
   ]
 
   const sendTest = async (type: string) => {
@@ -1415,7 +1433,8 @@ export default function LifePage() {
   const [trips, setTrips] = useState<Trip[]>([])
   const [tripHistoryExpanded, setTripHistoryExpanded] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [refreshingActivities, setRefreshingActivities] = useState(false)
+  const [refreshingWeekend, setRefreshingWeekend] = useState(false)
+  const [refreshingDates, setRefreshingDates] = useState(false)
   const [toasts, setToasts] = useState<{ id: number; message: string }[]>([])
   const [activeTab, setActiveTab] = useState<TabId>('dashboard')
 
@@ -1451,12 +1470,12 @@ export default function LifePage() {
 
   useEffect(() => { loadData() }, [loadData])
 
-  const refreshActivities = async () => {
-    setRefreshingActivities(true)
+  const refreshWeekend = async () => {
+    setRefreshingWeekend(true)
     try {
-      const result = await lifeApi.refreshActivities()
+      const result = await lifeApi.refreshWeekendActivities()
       if (result.success) {
-        addToast('Activities refreshed')
+        addToast('Weekend ideas refreshed')
         const activitiesData = await lifeApi.getActivities()
         setActivities(activitiesData)
       } else {
@@ -1465,7 +1484,25 @@ export default function LifePage() {
     } catch (err: unknown) {
       addToast('Refresh failed: ' + (err instanceof Error ? err.message : String(err)))
     } finally {
-      setRefreshingActivities(false)
+      setRefreshingWeekend(false)
+    }
+  }
+
+  const refreshDates = async () => {
+    setRefreshingDates(true)
+    try {
+      const result = await lifeApi.refreshDateActivities()
+      if (result.success) {
+        addToast('Date ideas refreshed')
+        const activitiesData = await lifeApi.getActivities()
+        setActivities(activitiesData)
+      } else {
+        addToast('Refresh failed: ' + (result.error || 'Unknown'))
+      }
+    } catch (err: unknown) {
+      addToast('Refresh failed: ' + (err instanceof Error ? err.message : String(err)))
+    } finally {
+      setRefreshingDates(false)
     }
   }
 
@@ -1593,24 +1630,34 @@ export default function LifePage() {
             {/* Local Events */}
             <LocalEventsScroll events={localEvents} />
 
-            {/* Refresh button */}
-            <div className="flex items-center justify-end">
+            {/* Refresh buttons */}
+            <div className="flex items-center justify-end gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={refreshActivities}
-                disabled={refreshingActivities}
+                onClick={refreshWeekend}
+                disabled={refreshingWeekend || refreshingDates}
                 className="text-xs text-white/40 border-white/10 hover:bg-white/[0.03]"
               >
-                {refreshingActivities ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
-                Refresh Ideas
+                {refreshingWeekend ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+                Refresh Weekend
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={refreshDates}
+                disabled={refreshingDates || refreshingWeekend}
+                className="text-xs text-white/40 border-white/10 hover:bg-white/[0.03]"
+              >
+                {refreshingDates ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+                Refresh Dates
               </Button>
             </div>
 
             {/* Idea cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <IdeasSection type="weekend" ideas={activities.weekend.ideas} content={activities.weekend.content} lastUpdated={activities.weekend.lastUpdated} refreshing={refreshingActivities} toast={addToast} onDidThis={handleDidThis} />
-              <IdeasSection type="date" ideas={activities.date.ideas} content={activities.date.content} lastUpdated={activities.date.lastUpdated} refreshing={refreshingActivities} toast={addToast} onDidThis={handleDidThis} />
+              <IdeasSection type="weekend" ideas={activities.weekend.ideas} content={activities.weekend.content} lastUpdated={activities.weekend.lastUpdated} refreshing={refreshingWeekend} toast={addToast} onDidThis={handleDidThis} />
+              <IdeasSection type="date" ideas={activities.date.ideas} content={activities.date.content} lastUpdated={activities.date.lastUpdated} refreshing={refreshingDates} toast={addToast} onDidThis={handleDidThis} />
             </div>
 
             {/* Trip History */}

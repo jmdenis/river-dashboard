@@ -77,6 +77,7 @@ export interface WeatherDay {
 export interface WeekendWeather {
   saturday: WeatherDay
   sunday: WeatherDay
+  homeCity?: string
   fetchedAt: string
 }
 
@@ -128,6 +129,16 @@ export const lifeApi = {
 
   async refreshActivities(): Promise<{ success?: boolean; refreshed?: { weekend: boolean; date: boolean }; error?: string }> {
     const res = await fetch(`${API_BASE_URL}/api/activities/refresh`, { method: 'POST' })
+    return res.json()
+  },
+
+  async refreshWeekendActivities(): Promise<{ success?: boolean; refreshed?: { weekend: boolean; date: boolean }; error?: string }> {
+    const res = await fetch(`${API_BASE_URL}/api/activities/refresh/weekend`, { method: 'POST' })
+    return res.json()
+  },
+
+  async refreshDateActivities(): Promise<{ success?: boolean; refreshed?: { weekend: boolean; date: boolean }; error?: string }> {
+    const res = await fetch(`${API_BASE_URL}/api/activities/refresh/date`, { method: 'POST' })
     return res.json()
   },
 
