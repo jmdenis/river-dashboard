@@ -111,6 +111,113 @@ export interface Activities {
   date: ActivitySection
 }
 
+export interface HomeSettings {
+  homeAddress: string
+  homeCity: string
+  homeCoords: { lat: number; lng: number }
+}
+
+// Raw types from /api/trips/upcoming
+interface RawFlight {
+  number: string
+  from: string
+  to: string
+  depart: string
+  arrive: string
+}
+
+interface RawTrip {
+  id: string
+  flights: RawFlight[]
+  returnFlights?: RawFlight[]
+  destination: string
+  dates: { depart: string; arrive?: string; return?: string }
+  status: 'upcoming' | 'active'
+  context: {
+    weather?: { forecast: { date: string; tempMax: number; tempMin: number; precipitation: number; condition: string }[] }
+    timezone?: { description: string }
+    currency?: { description: string }
+  }
+}
+
+export interface UpcomingTrip {
+  id: string
+  destination: string
+  emoji: string
+  dateRange: string       // "Feb 23-28"
+  route: string           // "TLS → CDG → SFO"
+  daysUntil: number
+  weather: string         // "18°C"
+  weatherIcon: string     // "☀️"
+  timezone: string        // "-9h"
+  currency: string        // "=€0.92"
+  status: 'upcoming' | 'active'
+}
+
+export type EquipmentType = 'none' | 'dumbbells' | 'kettlebells'
+
+export interface TravelWorkoutExercise {
+  name: string
+  sets?: number
+  reps_or_duration: string
+  rest_seconds: number
+  description: string
+  imageQuery: string
+  muscleGroups?: string[]
+}
+
+export interface TravelWorkout {
+  title?: string
+  duration?: string
+  duration_min?: number
+  equipment?: EquipmentType
+  weight_suggestion?: string
+  rounds?: number
+  exercises: TravelWorkoutExercise[]
+  generatedAt?: string
+}
+
+export interface DayPlanStep {
+  time: string
+  action: string
+  type?: 'drive' | 'arrive' | 'activity' | 'lunch'
+  notes?: string
+  place?: string
+  cuisine?: string
+  price?: string
+  parking?: string
+  duration?: string
+  mapQuery?: string
+}
+
+export interface Contact {
+  id: string
+  firstName: string
+  lastName: string
+  birthday: string // MM-DD
+  birthYear?: string // YYYY
+  phone: string
+  email: string
+  notes: string
+  tags: string[]
+  relationship: string
+  deceased?: boolean
+  hidden?: boolean
+  photo?: string
+  lastContact?: string // YYYY-MM-DD
+  giftHistory: string[]
+  // Legacy fields kept for birthday compatibility
+  emailSentYear?: number
+}
+
+export interface DayPlan {
+  id?: string
+  title: string
+  day: string
+  steps: DayPlanStep[]
+  createdAt?: string
+}
+
 export const lifeApi = {
   async getActivities(): Promise<Activities> {
     const res = await fetch(`${API_BASE_URL}/api/activities`)
@@ -287,5 +394,169 @@ export const lifeApi = {
     })
     if (!res.ok) throw new Error('Failed to add trip')
     return res.json()
+  },
+
+  async getSettings(): Promise<HomeSettings> {
+    const res = await fetch(`${API_BASE_URL}/api/settings`)
+    if (!res.ok) return { homeAddress: '', homeCity: '', homeCoords: { lat: 0, lng: 0 } }
+    return res.json()
+  },
+
+  async updateSettings(settings: Partial<HomeSettings>): Promise<HomeSettings> {
+    const res = await fetch(`${API_BASE_URL}/api/settings`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings),
+    })
+    if (!res.ok) throw new Error('Failed to update settings')
+    return res.json()
+  },
+
+  async getUpcomingTrip(): Promise<UpcomingTrip | null> {
+    const res = await fetch(`${API_BASE_URL}/api/trips/upcoming`)
+    if (!res.ok) return null
+    const data = await res.json()
+    const trips = Array.isArray(data) ? data : []
+    const trip = trips.find((t: RawTrip) => t.destination !== 'Toulouse')
+    if (!trip) return null
+
+    // Build route from flights: extract airport codes from city names
+    const airportCodes: Record<string, string> = {
+      'toulouse': 'TLS', 'paris cdg': 'CDG', 'paris': 'CDG',
+      'san francisco': 'SFO', 'new york': 'JFK', 'los angeles': 'LAX',
+      'london': 'LHR', 'tokyo': 'NRT', 'barcelona': 'BCN',
+    }
+    const toCode = (city: string) => airportCodes[city.toLowerCase()] || city.slice(0, 3).toUpperCase()
+    const route = trip.flights?.length
+      ? [toCode(trip.flights[0].from), ...trip.flights.map((f: RawFlight) => toCode(f.to))].join(' → ')
+      : trip.destination
+
+    // Format date range: "Feb 23-28" — use return date from merged trip
+    const depart = new Date(trip.dates.depart + 'T00:00:00')
+    const returnDateStr = trip.dates.return || trip.dates.arrive
+    const returnDate = returnDateStr ? new Date(returnDateStr + 'T00:00:00') : null
+    const monthShort = depart.toLocaleDateString('en-US', { month: 'short' })
+    const dateRange = returnDate && returnDate.getTime() !== depart.getTime()
+      ? `${monthShort} ${depart.getDate()}-${returnDate.getDate()}`
+      : `${monthShort} ${depart.getDate()}`
+
+    // Days until departure
+    const now = new Date()
+    const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const daysUntil = Math.max(0, Math.round((depart.getTime() - todayMidnight.getTime()) / 86400000))
+
+    // Weather mapping
+    const forecast = trip.context?.weather?.forecast?.[0]
+    const conditionLower = (forecast?.condition || '').toLowerCase()
+    const weatherIcon = conditionLower.includes('snow') ? '🌨️'
+      : conditionLower.includes('rain') || conditionLower.includes('drizzle') || conditionLower.includes('shower') ? '🌧️'
+      : conditionLower.includes('cloud') || conditionLower.includes('overcast') ? '⛅'
+      : conditionLower.includes('fog') || conditionLower.includes('mist') ? '🌫️'
+      : conditionLower.includes('thunder') || conditionLower.includes('storm') ? '⛈️'
+      : '☀️'
+
+    return {
+      id: trip.id,
+      destination: trip.destination,
+      emoji: '✈️',
+      dateRange,
+      route,
+      daysUntil,
+      status: trip.status,
+      weatherIcon,
+      weather: forecast ? `${Math.round(forecast.tempMax)}°C` : '',
+      timezone: trip.context?.timezone?.description || '',
+      currency: trip.context?.currency?.description || '',
+    }
+  },
+
+  async getTravelWorkout(equipment: EquipmentType = 'none'): Promise<TravelWorkout> {
+    const res = await fetch(`${API_BASE_URL}/api/workouts/travel?equipment=${equipment}`)
+    if (!res.ok) return { exercises: [] }
+    return res.json()
+  },
+
+  async refreshWorkout(equipment: EquipmentType = 'none'): Promise<TravelWorkout> {
+    const res = await fetch(`${API_BASE_URL}/api/workouts/refresh?equipment=${equipment}`, { method: 'POST' })
+    if (!res.ok) return { exercises: [] }
+    return res.json()
+  },
+
+  async emailWorkout(workout: TravelWorkout): Promise<{ success?: boolean; error?: string }> {
+    const res = await fetch(`${API_BASE_URL}/api/workouts/email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workout }),
+    })
+    const data = await res.json()
+    if (!res.ok) return { error: data.error || res.statusText }
+    return data
+  },
+
+  async notifyAnne(id: string): Promise<{ success?: boolean; error?: string }> {
+    const res = await fetch(`${API_BASE_URL}/api/trips/${id}/notify-anne`, { method: 'POST' })
+    const data = await res.json()
+    if (!res.ok) return { error: data.error || res.statusText }
+    return data
+  },
+
+  async planDay(params: { title: string; location?: string; day: 'Saturday' | 'Sunday'; weather?: string }): Promise<DayPlan> {
+    const res = await fetch(`${API_BASE_URL}/api/plan-day`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    })
+    if (!res.ok) {
+      const data = await res.json()
+      throw new Error(data.error || 'Failed to generate plan')
+    }
+    return res.json()
+  },
+
+  async sharePlan(plan: DayPlan): Promise<{ success?: boolean; error?: string }> {
+    const res = await fetch(`${API_BASE_URL}/api/plan-day/share`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan }),
+    })
+    const data = await res.json()
+    if (!res.ok) return { error: data.error || res.statusText }
+    return data
+  },
+
+  async getContacts(): Promise<Contact[]> {
+    const res = await fetch(`${API_BASE_URL}/api/contacts`)
+    if (!res.ok) return []
+    return res.json()
+  },
+
+  async createContact(contact: Omit<Contact, 'id'>): Promise<Contact> {
+    const res = await fetch(`${API_BASE_URL}/api/contacts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(contact),
+    })
+    if (!res.ok) throw new Error('Failed to create contact')
+    return res.json()
+  },
+
+  async updateContact(id: string, updates: Partial<Contact>): Promise<Contact> {
+    const res = await fetch(`${API_BASE_URL}/api/contacts/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    })
+    if (!res.ok) throw new Error('Failed to update contact')
+    return res.json()
+  },
+
+  async downloadIcs(plan: DayPlan, date?: string): Promise<Blob> {
+    const res = await fetch(`${API_BASE_URL}/api/plan-day/ics`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan, date }),
+    })
+    if (!res.ok) throw new Error('Failed to generate ICS')
+    return res.blob()
   },
 }

@@ -1,13 +1,13 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { lifeApi, type LifeData, type Birthday, type Reminder, type CronJob, type CalendarEvent, type Activities, type Idea, type WeekendWeather, type LocalEvent, type Trip } from '../services/lifeApi'
+import { lifeApi, type LifeData, type Birthday, type Reminder, type CronJob, type CalendarEvent, type Activities, type Idea, type WeekendWeather, type LocalEvent, type Trip, type HomeSettings, type UpcomingTrip, type TravelWorkout, type EquipmentType, type DayPlan, type DayPlanStep, type Contact } from '../services/lifeApi'
 import ReactMarkdown from 'react-markdown'
 import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Badge } from '../components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '../components/ui/dialog'
-import { Loader2, Plus, Trash2, Check, Clock, Calendar as CalendarIcon, MessageCircle, Gift, Copy, ExternalLink, Sparkles, Heart, Pencil, X, Eye, EyeOff, Mail, RefreshCw, Car, Share2, MapPin, ParkingSquare, Hotel, Search, ChevronDown, Star, UtensilsCrossed, History, CloudRain, Sun, CloudSun, Cloud, Snowflake, CloudDrizzle, Zap, Wind } from 'lucide-react'
+import { Loader2, Plus, Trash2, Check, Clock, Calendar as CalendarIcon, MessageCircle, Gift, Copy, ExternalLink, Sparkles, Heart, Pencil, X, Eye, EyeOff, Mail, RefreshCw, Car, Share2, MapPin, ParkingSquare, Hotel, Search, ChevronDown, Star, UtensilsCrossed, History, CloudRain, Sun, CloudSun, Cloud, Snowflake, CloudDrizzle, Zap, Wind, Home, Plane, Dumbbell, Send, Download, Phone, Users, Tag, ChevronUp } from 'lucide-react'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -33,12 +33,14 @@ function getDayLabel(date: Date): string {
   eventDate.setHours(0, 0, 0, 0)
 
   const diffDays = Math.floor((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const dateSuffix = ` — ${monthNames[eventDate.getMonth()]} ${eventDate.getDate()}`
 
-  if (diffDays === 0) return 'Today'
-  if (diffDays === 1) return 'Tomorrow'
+  if (diffDays === 0) return 'Today' + dateSuffix
+  if (diffDays === 1) return 'Tomorrow' + dateSuffix
 
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-  return dayNames[eventDate.getDay()]
+  return dayNames[eventDate.getDay()] + dateSuffix
 }
 
 function formatEventTime(event: CalendarEvent): string {
@@ -113,11 +115,12 @@ function getAgeNumber(dateStr: string, yearStr?: string): number | null {
 }
 
 // --- Segmented Tab Control ---
-type TabId = 'dashboard' | 'ideas' | 'settings'
+type TabId = 'dashboard' | 'ideas' | 'contacts' | 'settings'
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'ideas', label: 'Ideas' },
+  { id: 'contacts', label: 'Contacts' },
   { id: 'settings', label: 'Settings' },
 ]
 
@@ -128,7 +131,7 @@ function TabControl({ active, onChange }: { active: TabId; onChange: (id: TabId)
         <button
           key={tab.id}
           onClick={() => onChange(tab.id)}
-          className={`relative px-5 py-1.5 text-sm font-medium rounded-full transition-all duration-200 ${
+          className={`relative px-3.5 sm:px-5 py-1.5 text-xs sm:text-sm font-medium rounded-full transition-all duration-200 ${
             active === tab.id
               ? 'bg-white/[0.1] text-white shadow-sm'
               : 'text-white/40 hover:text-white/60'
@@ -141,12 +144,364 @@ function TabControl({ active, onChange }: { active: TabId; onChange: (id: TabId)
   )
 }
 
+// --- Exercise emoji mapping ---
+const MUSCLE_EMOJIS: Record<string, string> = {
+  push: '💪', chest: '💪', press: '💪',
+  squat: '🦵', lunge: '🦵', leg: '🦵', calf: '🦵', goblet: '🦵',
+  plank: '🧘', core: '🧘', crunch: '🧘', ab: '🧘', sit: '🧘', halo: '🧘', windmill: '🧘',
+  burpee: '❤️‍🔥', jump: '❤️‍🔥', cardio: '❤️‍🔥', run: '❤️‍🔥', mountain: '❤️‍🔥', jack: '❤️‍🔥',
+  swing: '🔥', snatch: '🔥', clean: '🔥', thruster: '🔥',
+  row: '🏋️', pull: '🏋️', back: '🏋️', shoulder: '🏋️', dip: '🏋️', tricep: '🏋️',
+  'get-up': '🏋️', 'turkish': '🏋️', renegade: '🏋️',
+}
+
+// --- Equipment toggle pills ---
+const EQUIPMENT_OPTIONS: { id: EquipmentType; label: string }[] = [
+  { id: 'none', label: 'No equipment' },
+  { id: 'dumbbells', label: 'Dumbbells' },
+  { id: 'kettlebells', label: 'Kettlebells' },
+]
+
+function getExerciseEmoji(name: string): string {
+  const lower = name.toLowerCase()
+  for (const [key, emoji] of Object.entries(MUSCLE_EMOJIS)) {
+    if (lower.includes(key)) return emoji
+  }
+  return '🏋️'
+}
+
+const MUSCLE_GROUP_BADGES: Record<string, { emoji: string; bg: string; border: string; text: string }> = {
+  chest: { emoji: '💪', bg: 'bg-red-500/10', border: 'border-red-500/25', text: 'text-red-300' },
+  push: { emoji: '💪', bg: 'bg-red-500/10', border: 'border-red-500/25', text: 'text-red-300' },
+  legs: { emoji: '🦵', bg: 'bg-amber-500/10', border: 'border-amber-500/25', text: 'text-amber-300' },
+  squat: { emoji: '🦵', bg: 'bg-amber-500/10', border: 'border-amber-500/25', text: 'text-amber-300' },
+  core: { emoji: '🧘', bg: 'bg-emerald-500/10', border: 'border-emerald-500/25', text: 'text-emerald-300' },
+  abs: { emoji: '🧘', bg: 'bg-emerald-500/10', border: 'border-emerald-500/25', text: 'text-emerald-300' },
+  cardio: { emoji: '❤️‍🔥', bg: 'bg-orange-500/10', border: 'border-orange-500/25', text: 'text-orange-300' },
+  'full body': { emoji: '❤️‍🔥', bg: 'bg-orange-500/10', border: 'border-orange-500/25', text: 'text-orange-300' },
+  back: { emoji: '🏋️', bg: 'bg-blue-500/10', border: 'border-blue-500/25', text: 'text-blue-300' },
+  pull: { emoji: '🏋️', bg: 'bg-blue-500/10', border: 'border-blue-500/25', text: 'text-blue-300' },
+  shoulders: { emoji: '🏋️', bg: 'bg-purple-500/10', border: 'border-purple-500/25', text: 'text-purple-300' },
+  arms: { emoji: '💪', bg: 'bg-pink-500/10', border: 'border-pink-500/25', text: 'text-pink-300' },
+}
+
+function getMuscleGroupBadge(mg: string): { emoji: string; bg: string; border: string; text: string } {
+  const lower = mg.toLowerCase()
+  for (const [key, badge] of Object.entries(MUSCLE_GROUP_BADGES)) {
+    if (lower.includes(key)) return badge
+  }
+  return { emoji: '🏋️', bg: 'bg-white/[0.04]', border: 'border-white/[0.06]', text: 'text-white/30' }
+}
+
+// --- Workout Modal ---
+function WorkoutModal({ workout, open, onClose, toast, equipment, onEquipmentChange, loading }: {
+  workout: TravelWorkout
+  open: boolean
+  onClose: () => void
+  toast: (msg: string) => void
+  equipment: EquipmentType
+  onEquipmentChange: (eq: EquipmentType) => void
+  loading: boolean
+}) {
+  const [emailing, setEmailing] = useState(false)
+
+  if (!open) return null
+
+  const handleEmail = async () => {
+    setEmailing(true)
+    try {
+      const result = await lifeApi.emailWorkout(workout)
+      toast(result.success ? 'Workout emailed!' : `Failed: ${result.error || 'Unknown'}`)
+    } catch {
+      toast('Failed to send email')
+    } finally {
+      setEmailing(false)
+    }
+  }
+
+  const equipmentLabel = equipment === 'kettlebells' ? 'Kettlebells' : equipment === 'dumbbells' ? 'Dumbbells' : 'No equipment'
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+
+      {/* Modal card */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        transition={{ duration: 0.2 }}
+        className="relative w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl border border-violet-500/20 bg-[#12121e] shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-1.5 rounded-full bg-white/[0.06] hover:bg-white/[0.12] text-white/50 hover:text-white/80 transition-colors z-10"
+        >
+          <X className="h-4 w-4" />
+        </button>
+
+        {/* Equipment toggle pills */}
+        <div className="px-6 pt-6 pb-3">
+          <div className="inline-flex rounded-full bg-white/[0.04] p-1 border border-white/[0.06]">
+            {EQUIPMENT_OPTIONS.map(opt => (
+              <button
+                key={opt.id}
+                onClick={() => onEquipmentChange(opt.id)}
+                disabled={loading}
+                className={`px-3.5 py-1.5 text-[11px] font-medium rounded-full transition-all duration-200 ${
+                  equipment === opt.id
+                    ? 'bg-violet-500/20 text-violet-300 shadow-sm border border-violet-500/30'
+                    : 'text-white/35 hover:text-white/55 border border-transparent'
+                } disabled:opacity-50`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Header */}
+        <div className="px-6 pb-4">
+          <div className="flex items-center gap-3 mb-1">
+            <Dumbbell className="h-5 w-5 text-violet-400" />
+            <h2 className="text-lg font-semibold text-white/90">{workout.title || 'Travel Workout'}</h2>
+          </div>
+          <div className="flex items-center gap-2 ml-8 flex-wrap">
+            <Badge variant="outline" className="text-[11px] border-violet-500/30 text-violet-300 bg-violet-500/10">
+              {workout.duration || '25 min'}
+            </Badge>
+            <span className="text-[11px] text-white/30">{equipmentLabel}</span>
+            {workout.weight_suggestion && (
+              <Badge variant="outline" className="text-[11px] border-amber-500/30 text-amber-300 bg-amber-500/10">
+                ⚖️ {workout.weight_suggestion}
+              </Badge>
+            )}
+            {workout.rounds && (
+              <Badge variant="outline" className="text-[11px] border-cyan-500/30 text-cyan-300 bg-cyan-500/10">
+                🔄 {workout.rounds} rounds
+              </Badge>
+            )}
+          </div>
+        </div>
+
+        {/* Loading overlay */}
+        {loading ? (
+          <div className="px-6 pb-6 flex items-center justify-center py-12 gap-2 text-white/40">
+            <Loader2 className="h-5 w-5 animate-spin text-violet-400" />
+            <span className="text-sm">Generating {equipmentLabel.toLowerCase()} workout...</span>
+          </div>
+        ) : (
+          <>
+            {/* Exercises */}
+            <div className="px-6 pb-4 space-y-3">
+              {workout.exercises.map((ex, i) => (
+                <div key={i} className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="text-xl mt-0.5 shrink-0">{getExerciseEmoji(ex.name)}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-white/90">{ex.name}</p>
+                        <a
+                          href={`https://www.youtube.com/results?search_query=${encodeURIComponent(ex.name + ' form tutorial')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-0.5 text-[10px] text-violet-400/60 hover:text-violet-300 transition-colors shrink-0"
+                        >
+                          <ExternalLink className="h-2.5 w-2.5" />
+                          Form
+                        </a>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-violet-300 font-mono">{ex.sets ? `${ex.sets} × ` : ''}{ex.reps_or_duration}</span>
+                        <span className="w-px h-3 bg-white/[0.08]" />
+                        <span className="text-xs text-white/35">{ex.rest_seconds}s rest</span>
+                      </div>
+                      {ex.description && (
+                        <p className="text-xs text-white/40 mt-1.5 leading-relaxed">{ex.description}</p>
+                      )}
+                      {ex.muscleGroups && ex.muscleGroups.length > 0 && (
+                        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                          {ex.muscleGroups.map((mg, j) => {
+                            const badge = getMuscleGroupBadge(mg)
+                            return (
+                              <span key={j} className={`text-[10px] px-1.5 py-0.5 rounded-full border ${badge.bg} ${badge.border} ${badge.text}`}>
+                                {badge.emoji} {mg}
+                              </span>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Footer actions */}
+        <div className="p-6 pt-2 flex items-center gap-3 border-t border-white/[0.06]">
+          <button
+            onClick={handleEmail}
+            disabled={emailing || loading}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-medium transition-colors disabled:opacity-50"
+          >
+            {emailing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+            Email to me
+          </button>
+          <button
+            onClick={onClose}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-white/50 hover:text-white/70 text-xs font-medium transition-colors border border-white/[0.06]"
+          >
+            Close
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
+// --- Trip Helper Section ---
+function TripHelper({ trip, toast }: { trip: UpcomingTrip; toast: (msg: string) => void }) {
+  const [workout, setWorkout] = useState<TravelWorkout | null>(null)
+  const [loadingWorkout, setLoadingWorkout] = useState(false)
+  const [workoutModalOpen, setWorkoutModalOpen] = useState(false)
+  const [notifying, setNotifying] = useState(false)
+  const [equipment, setEquipment] = useState<EquipmentType>('none')
+  // Cache workouts per equipment type on the client side
+  const [workoutsByEquipment, setWorkoutsByEquipment] = useState<Partial<Record<EquipmentType, TravelWorkout>>>({})
+
+  const fetchWorkout = async (equip: EquipmentType) => {
+    // Check client-side cache first
+    if (workoutsByEquipment[equip]) {
+      setWorkout(workoutsByEquipment[equip]!)
+      return
+    }
+    setLoadingWorkout(true)
+    try {
+      const data = await lifeApi.getTravelWorkout(equip)
+      setWorkout(data)
+      setWorkoutsByEquipment(prev => ({ ...prev, [equip]: data }))
+    } catch { setWorkout({ exercises: [] }) }
+    finally { setLoadingWorkout(false) }
+  }
+
+  const openWorkout = async () => {
+    setWorkoutModalOpen(true)
+    if (!workoutsByEquipment[equipment]) {
+      await fetchWorkout(equipment)
+    } else {
+      setWorkout(workoutsByEquipment[equipment]!)
+    }
+  }
+
+  const handleEquipmentChange = async (equip: EquipmentType) => {
+    setEquipment(equip)
+    await fetchWorkout(equip)
+  }
+
+  const handleNotify = async () => {
+    setNotifying(true)
+    try {
+      const result = await lifeApi.notifyAnne(trip.id)
+      toast(result.success ? 'Anne notified!' : `Failed: ${result.error || 'Unknown'}`)
+    } catch {
+      toast('Failed to notify Anne')
+    } finally {
+      setNotifying(false)
+    }
+  }
+
+  const daysLabel = trip.status === 'active' ? 'now' : trip.daysUntil === 0 ? 'today' : trip.daysUntil === 1 ? 'tomorrow' : `in ${trip.daysUntil} days`
+
+  return (
+    <div className="col-span-full">
+      <div className="rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/[0.06] to-transparent overflow-hidden">
+        {/* Main card */}
+        <div className="p-5">
+          {/* Top row: destination + date */}
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2.5">
+              <span className="text-base">{trip.emoji}</span>
+              <span className="text-sm font-semibold tracking-wide text-white/90 uppercase">{trip.destination}</span>
+            </div>
+            <span className="text-xs text-white/40 font-mono">{trip.dateRange}</span>
+          </div>
+
+          {/* Route + countdown */}
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-xs text-white/35 flex items-center gap-1.5">
+              <Plane className="h-3 w-3" />
+              {trip.route}
+            </span>
+            <span className={`text-xs font-medium ${trip.status === 'active' ? 'text-emerald-400' : 'text-cyan-400'}`}>
+              {daysLabel}
+            </span>
+          </div>
+
+          {/* Info pills */}
+          <div className="flex items-center gap-3 mb-4">
+            <span className="flex items-center gap-1.5 text-xs text-white/50">
+              <span>{trip.weatherIcon}</span> {trip.weather}
+            </span>
+            <span className="w-px h-3 bg-white/[0.08]" />
+            <span className="flex items-center gap-1.5 text-xs text-white/50">
+              <Clock className="h-3 w-3 text-white/30" /> {trip.timezone}
+            </span>
+            <span className="w-px h-3 bg-white/[0.08]" />
+            <span className="flex items-center gap-1.5 text-xs text-white/50">
+              💵 {trip.currency}
+            </span>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={openWorkout}
+              disabled={loadingWorkout}
+              className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-white/[0.04] text-white/50 hover:bg-white/[0.08] hover:text-white/70 border border-white/[0.06] transition-colors disabled:opacity-50"
+            >
+              {loadingWorkout ? <Loader2 className="h-3 w-3 animate-spin" /> : <Dumbbell className="h-3 w-3" />}
+              Workout
+            </button>
+            <button
+              onClick={handleNotify}
+              disabled={notifying}
+              className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-white/[0.04] text-white/50 hover:bg-white/[0.08] hover:text-white/70 border border-white/[0.06] transition-colors disabled:opacity-50"
+            >
+              {notifying ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+              Notify Anne
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Workout modal */}
+      {workoutModalOpen && (
+        <WorkoutModal
+          workout={workout || { exercises: [] }}
+          open={workoutModalOpen}
+          onClose={() => setWorkoutModalOpen(false)}
+          toast={toast}
+          equipment={equipment}
+          onEquipmentChange={handleEquipmentChange}
+          loading={loadingWorkout}
+        />
+      )}
+    </div>
+  )
+}
+
 // --- Calendar Section ---
 function CalendarSection({ events }: { events: CalendarEvent[] }) {
   if (events.length === 0) {
     return (
       <Card>
-        <CardContent className="p-6">
+        <CardContent className="p-5">
           <div className="flex items-center gap-2 mb-4">
             <CalendarIcon className="h-4 w-4 text-white/40" />
             <p className="text-xs uppercase tracking-widest text-white/40">This Week</p>
@@ -167,14 +522,14 @@ function CalendarSection({ events }: { events: CalendarEvent[] }) {
 
   return (
     <Card>
-      <CardContent className="p-6">
+      <CardContent className="p-5">
         <div className="flex items-center gap-2 mb-4">
           <CalendarIcon className="h-4 w-4 text-white/40" />
           <p className="text-xs uppercase tracking-widest text-white/40">This Week</p>
         </div>
         <div className="space-y-4">
           {Object.entries(eventsByDay).map(([dayLabel, dayEvents]) => {
-            const isToday = dayLabel === 'Today'
+            const isToday = dayLabel.startsWith('Today')
             return (
               <div key={dayLabel}>
                 <p className={`text-xs font-medium mb-2 ${isToday ? 'text-white' : 'text-white/40'}`}>
@@ -205,7 +560,78 @@ function CalendarSection({ events }: { events: CalendarEvent[] }) {
   )
 }
 
-// --- Cron Jobs Section ---
+// --- Home Location Section (compact single row) ---
+function HomeLocationSection({ toast }: { toast: (msg: string) => void }) {
+  const [draft, setDraft] = useState({ homeAddress: '', homeCity: '' })
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [dirty, setDirty] = useState(false)
+
+  useEffect(() => {
+    lifeApi.getSettings().then(s => {
+      setDraft({ homeAddress: s.homeAddress, homeCity: s.homeCity })
+      setLoading(false)
+    }).catch(() => setLoading(false))
+  }, [])
+
+  const handleChange = (field: 'homeAddress' | 'homeCity', value: string) => {
+    setDraft(d => ({ ...d, [field]: value }))
+    setDirty(true)
+  }
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      const result = await lifeApi.updateSettings({ homeAddress: draft.homeAddress, homeCity: draft.homeCity })
+      setDraft({ homeAddress: result.homeAddress, homeCity: result.homeCity })
+      setDirty(false)
+      toast('Home location saved')
+    } catch {
+      toast('Failed to save')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Card>
+      <CardContent className="p-5">
+        <div className="flex items-center gap-3">
+          <Home className="h-4 w-4 text-white/40 shrink-0" />
+          <p className="text-xs uppercase tracking-widest text-white/40 shrink-0">Home</p>
+          {loading ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-white/20 ml-auto" />
+          ) : (
+            <>
+              <Input
+                value={draft.homeAddress}
+                onChange={e => handleChange('homeAddress', e.target.value)}
+                className="h-8 text-xs bg-white/[0.03] border-white/[0.08] text-white/70 placeholder:text-white/20 flex-1 min-w-0"
+                placeholder="Address"
+              />
+              <Input
+                value={draft.homeCity}
+                onChange={e => handleChange('homeCity', e.target.value)}
+                className="h-8 text-xs bg-white/[0.03] border-white/[0.08] text-white/70 placeholder:text-white/20 w-32 shrink-0"
+                placeholder="City"
+              />
+              <Button
+                size="sm"
+                onClick={save}
+                disabled={saving || !dirty}
+                className="h-8 px-3 text-xs bg-violet-600 hover:bg-violet-700 shrink-0 disabled:opacity-30"
+              >
+                {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+              </Button>
+            </>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+// --- Cron Jobs Section (compact grid) ---
 function CronJobsSection({ cronJobs, onAdd, onDelete }: {
   cronJobs: CronJob[]
   onAdd: (line: string) => void
@@ -216,13 +642,17 @@ function CronJobsSection({ cronJobs, onAdd, onDelete }: {
 
   return (
     <Card>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <p className="text-xs uppercase tracking-widest text-white/40">Cron Jobs</p>
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-white/40" />
+            <p className="text-xs uppercase tracking-widest text-white/40">Cron Jobs</p>
+            {cronJobs.length > 0 && <Badge variant="secondary" className="bg-white/5 text-white/40 border-0 text-[10px]">{cronJobs.length}</Badge>}
+          </div>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="text-xs text-white/40 border-white/10 hover:bg-white/[0.03]">
-                <Plus className="h-3.5 w-3.5 mr-1" /> Add
+              <Button variant="outline" size="sm" className="h-7 text-[11px] text-white/40 border-white/[0.08] hover:bg-white/[0.04]">
+                <Plus className="h-3 w-3 mr-1" /> Add
               </Button>
             </DialogTrigger>
             <DialogContent className="bg-white/5 backdrop-blur-xl border-white/10">
@@ -254,32 +684,24 @@ function CronJobsSection({ cronJobs, onAdd, onDelete }: {
           </Dialog>
         </div>
         {cronJobs.length === 0 ? (
-          <p className="text-sm text-white/20 text-center py-8">No cron jobs configured</p>
+          <p className="text-xs text-white/20 text-center py-4">No cron jobs</p>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-0.5">
             {cronJobs.map((job) => {
               const rawSchedule = job.raw.split(/\s+/).slice(0, 5).join(' ')
               return (
-                <div key={job.id} className="group flex items-center justify-between p-3 rounded-xl hover:bg-white/[0.03] transition-colors duration-150">
-                  <div className="flex flex-col gap-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className={`h-2 w-2 rounded-full shrink-0 ${job.source === 'server' ? 'bg-violet-500/80' : 'bg-emerald-500/80'}`} />
-                      <span className="text-sm text-white/80">{job.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2 ml-4">
-                      <span className="text-xs text-white/40">{job.schedule}</span>
-                      <code className="text-[10px] text-violet-400/60 font-mono">{rawSchedule}</code>
-                    </div>
-                  </div>
+                <div key={job.id} className="group flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/[0.03] transition-colors duration-150">
+                  <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${job.source === 'server' ? 'bg-violet-500/80' : 'bg-emerald-500/80'}`} />
+                  <span className="text-xs text-white/70 truncate flex-1 min-w-0">{job.name}</span>
+                  <code className="text-[10px] text-white/30 font-mono shrink-0">{rawSchedule}</code>
+                  <span className="text-[10px] text-white/20 shrink-0 hidden sm:inline">{job.schedule}</span>
                   {job.source === 'crontab' && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
+                    <button
                       onClick={() => onDelete(job.raw)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-white/20 hover:text-rose-400/80"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-white/20 hover:text-rose-400/80 shrink-0 p-0.5"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                      <Trash2 className="h-3 w-3" />
+                    </button>
                   )}
                 </div>
               )
@@ -392,16 +814,17 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
 
   return (
     <Card>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Gift className="h-4 w-4 text-white/40" />
             <p className="text-xs uppercase tracking-widest text-white/40">Birthdays</p>
             {living.length > 0 && <Badge variant="secondary" className="bg-white/5 text-white/50 border-0 text-[10px]">{living.length}</Badge>}
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="text-xs text-white/40 border-white/10 hover:bg-white/[0.03]">
-                <Plus className="h-3.5 w-3.5 mr-1" /> Add
+              <Button variant="outline" size="sm" className="h-7 text-[11px] text-white/40 border-white/[0.08] hover:bg-white/[0.04]">
+                <Plus className="h-3 w-3 mr-1" /> Add
               </Button>
             </DialogTrigger>
             <DialogContent className="bg-white/5 backdrop-blur-xl border-white/10">
@@ -689,16 +1112,17 @@ function RemindersSection({ reminders, onUpdate, onRefresh }: {
 
   return (
     <Card>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-white/40" />
             <p className="text-xs uppercase tracking-widest text-white/40">Reminders</p>
             {active.length > 0 && <Badge variant="secondary" className="bg-white/5 text-white/50 border-0 text-[10px]">{active.length}</Badge>}
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="text-xs text-white/40 border-white/10 hover:bg-white/[0.03]">
-                <Plus className="h-3.5 w-3.5 mr-1" /> Add
+              <Button variant="outline" size="sm" className="h-7 text-[11px] text-white/40 border-white/[0.08] hover:bg-white/[0.04]">
+                <Plus className="h-3 w-3 mr-1" /> Add
               </Button>
             </DialogTrigger>
             <DialogContent className="bg-white/5 backdrop-blur-xl border-white/10">
@@ -834,10 +1258,169 @@ function RemindersSection({ reminders, onUpdate, onRefresh }: {
   )
 }
 
+// --- Day Planner Modal ---
+function DayPlannerModal({ plan, open, onClose, toast }: { plan: DayPlan; open: boolean; onClose: () => void; toast: (msg: string) => void }) {
+  const [sharing, setSharing] = useState(false)
+  const [downloading, setDownloading] = useState(false)
+
+  if (!open || !plan) return null
+
+  const stepTypeIcon = (type?: string) => {
+    switch (type) {
+      case 'drive': return '🚗'
+      case 'arrive': return '📍'
+      case 'activity': return '🎯'
+      case 'lunch': return '🍽️'
+      default: return '•'
+    }
+  }
+
+  const handleShare = async () => {
+    setSharing(true)
+    try {
+      const result = await lifeApi.sharePlan(plan)
+      toast(result.success ? 'Plan shared with Anne!' : `Failed: ${result.error || 'Unknown'}`)
+    } catch {
+      toast('Failed to share plan')
+    } finally {
+      setSharing(false)
+    }
+  }
+
+  const handleDownloadIcs = async () => {
+    setDownloading(true)
+    try {
+      const blob = await lifeApi.downloadIcs(plan)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${(plan.title || 'day-plan').replace(/[^a-zA-Z0-9-_ ]/g, '')}.ics`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      toast('Calendar file downloaded')
+    } catch {
+      toast('Failed to download calendar')
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        transition={{ duration: 0.2 }}
+        className="relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border border-violet-500/20 bg-[#12121e] shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-1.5 rounded-full bg-white/[0.06] hover:bg-white/[0.12] text-white/50 hover:text-white/80 transition-colors z-10"
+        >
+          <X className="h-4 w-4" />
+        </button>
+
+        {/* Header */}
+        <div className="p-6 pb-4">
+          <div className="flex items-center gap-3 mb-1">
+            <CalendarIcon className="h-5 w-5 text-violet-400" />
+            <h2 className="text-lg font-semibold text-white/90">{plan.title}</h2>
+          </div>
+          <div className="ml-8">
+            <Badge variant="outline" className="text-[11px] border-violet-500/30 text-violet-300 bg-violet-500/10">
+              {plan.day}
+            </Badge>
+          </div>
+        </div>
+
+        {/* Timeline */}
+        <div className="px-6 pb-4">
+          <div className="relative">
+            {/* Vertical line */}
+            <div className="absolute left-[27px] top-2 bottom-2 w-px bg-white/[0.08]" />
+
+            <div className="space-y-0">
+              {plan.steps.map((step: DayPlanStep, i: number) => (
+                <div key={i} className="relative flex gap-4 py-3">
+                  {/* Time + dot */}
+                  <div className="flex items-start gap-2 shrink-0 w-[56px]">
+                    <span className="text-xs font-mono text-violet-400/80 mt-0.5">{step.time}</span>
+                  </div>
+                  {/* Icon dot on line */}
+                  <div className="flex items-start shrink-0 -ml-1 mt-0.5">
+                    <span className="text-sm relative z-10 bg-[#12121e] px-0.5">{stepTypeIcon(step.type)}</span>
+                  </div>
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white/80">{step.action}</p>
+                    {step.place && (
+                      <p className="text-xs text-violet-300/60 mt-0.5">{step.place}{step.cuisine ? ` · ${step.cuisine}` : ''}{step.price ? ` · ${step.price}` : ''}</p>
+                    )}
+                    {step.parking && (
+                      <p className="text-[11px] text-white/25 mt-0.5">🅿️ {step.parking}</p>
+                    )}
+                    {step.notes && (
+                      <p className="text-xs text-white/35 mt-1 leading-relaxed">{step.notes}</p>
+                    )}
+                    {step.mapQuery && (
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(step.mapQuery)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] text-violet-400/60 hover:text-violet-300 mt-1"
+                      >
+                        <MapPin className="h-2.5 w-2.5" /> Maps
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer actions */}
+        <div className="p-6 pt-2 flex items-center gap-3 border-t border-white/[0.06]">
+          <button
+            onClick={handleShare}
+            disabled={sharing}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-medium transition-colors disabled:opacity-50"
+          >
+            {sharing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
+            Share with Anne
+          </button>
+          <button
+            onClick={handleDownloadIcs}
+            disabled={downloading}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-white/50 hover:text-white/70 text-xs font-medium transition-colors border border-white/[0.06] disabled:opacity-50"
+          >
+            {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+            Add to Calendar
+          </button>
+          <button
+            onClick={onClose}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-white/50 hover:text-white/70 text-xs font-medium transition-colors border border-white/[0.06]"
+          >
+            Close
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
 // --- Idea Card (compact + expandable) ---
-function IdeaCard({ idea, type, toast, onDidThis }: { idea: Idea; type: 'weekend' | 'date'; toast: (msg: string) => void; onDidThis: (idea: Idea) => void }) {
+function IdeaCard({ idea, type, toast, onDidThis, weather, onOpenPlan }: { idea: Idea; type: 'weekend' | 'date'; toast: (msg: string) => void; onDidThis: (idea: Idea) => void; weather?: WeekendWeather | null; onOpenPlan: (plan: DayPlan) => void }) {
   const [expanded, setExpanded] = useState(false)
   const [sharing, setSharing] = useState(false)
+  const [planning, setPlanning] = useState(false)
+  const [planDay, setPlanDay] = useState<'Saturday' | 'Sunday'>('Saturday')
 
   const query = idea.mapQuery || idea.title
   const mapsQuery = encodeURIComponent(query.includes('Toulouse') ? query : `${query} Toulouse`)
@@ -872,7 +1455,29 @@ function IdeaCard({ idea, type, toast, onDidThis }: { idea: Idea; type: 'weekend
     onDidThis(idea)
   }
 
+  const handlePlanDay = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setPlanning(true)
+    try {
+      const weatherStr = weather
+        ? `${planDay === 'Saturday' ? weather.saturday.condition : weather.sunday.condition}, ${planDay === 'Saturday' ? weather.saturday.tempMax : weather.sunday.tempMax}°C`
+        : undefined
+      const plan = await lifeApi.planDay({
+        title: idea.title,
+        location: idea.mapQuery || idea.title,
+        day: planDay,
+        weather: weatherStr,
+      })
+      onOpenPlan(plan)
+    } catch {
+      toast('Failed to generate plan')
+    } finally {
+      setPlanning(false)
+    }
+  }
+
   return (
+    <>
     <div
       className="group rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-all duration-200 cursor-pointer overflow-hidden"
       onClick={() => setExpanded(!expanded)}
@@ -980,7 +1585,29 @@ function IdeaCard({ idea, type, toast, onDidThis }: { idea: Idea; type: 'weekend
               </div>
             )}
 
+            {/* Plan this day */}
             <div className="flex items-center gap-2 pt-2 border-t border-white/[0.04]">
+              <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                <select
+                  value={planDay}
+                  onChange={e => setPlanDay(e.target.value as 'Saturday' | 'Sunday')}
+                  className="text-[11px] bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1.5 text-white/50 appearance-none cursor-pointer focus:outline-none"
+                >
+                  <option value="Saturday">Saturday</option>
+                  <option value="Sunday">Sunday</option>
+                </select>
+                <button
+                  onClick={handlePlanDay}
+                  disabled={planning}
+                  className="inline-flex items-center gap-1.5 text-xs text-white/60 hover:text-violet-300 bg-violet-500/[0.1] hover:bg-violet-500/[0.2] px-3 py-1.5 rounded-lg transition-colors border border-violet-500/20 disabled:opacity-50"
+                >
+                  {planning ? <Loader2 className="h-3 w-3 animate-spin" /> : <CalendarIcon className="h-3 w-3" />}
+                  Plan this day
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
               <button
                 onClick={handleShare}
                 disabled={sharing}
@@ -1000,6 +1627,8 @@ function IdeaCard({ idea, type, toast, onDidThis }: { idea: Idea; type: 'weekend
         </motion.div>
       )}
     </div>
+
+    </>
   )
 }
 
@@ -1024,9 +1653,9 @@ function WeatherBar({ weather }: { weather: WeekendWeather | null }) {
   const { saturday, sunday, homeCity } = weather
 
   return (
-    <div className="flex items-center gap-4 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+    <div className="flex flex-wrap items-center gap-3 sm:gap-4 px-4 py-3 rounded-2xl border border-white/[0.06] bg-white/[0.02]">
       <span className="text-xs uppercase tracking-widest text-white/30 shrink-0">This weekend{homeCity ? ` — ${homeCity}` : ''}</span>
-      <div className="flex items-center gap-6 ml-auto">
+      <div className="flex items-center gap-4 sm:gap-6 ml-auto">
         <div className="flex items-center gap-2">
           <WeatherIcon code={saturday.weatherCode} className="h-4 w-4 text-amber-400/80" />
           <span className="text-sm text-white/60">Sat</span>
@@ -1144,14 +1773,18 @@ function TripHistorySection({ trips, expanded, onToggle }: { trips: Trip[]; expa
 }
 
 // --- Ideas Section (weekend or date) ---
-function IdeasSection({ type, ideas, content, lastUpdated, refreshing, toast, onDidThis }: {
+function IdeasSection({ type, ideas, content, lastUpdated, refreshing, refreshDisabled, onRefresh, toast, onDidThis, weather, onOpenPlan }: {
   type: 'weekend' | 'date'
   ideas: Idea[]
   content: string
   lastUpdated: string | null
   refreshing: boolean
+  refreshDisabled: boolean
+  onRefresh: () => void
   toast: (msg: string) => void
   onDidThis: (idea: Idea) => void
+  weather?: WeekendWeather | null
+  onOpenPlan: (plan: DayPlan) => void
 }) {
   const isWeekend = type === 'weekend'
   const Icon = isWeekend ? Sparkles : Heart
@@ -1174,20 +1807,32 @@ function IdeasSection({ type, ideas, content, lastUpdated, refreshing, toast, on
 
   return (
     <Card>
-      <CardContent className="p-6">
+      <CardContent className="p-5">
         <div className="flex items-center gap-2 mb-4">
           <Icon className={`h-4 w-4 text-white/40 ${refreshing ? 'animate-spin' : ''}`} />
           <p className="text-xs uppercase tracking-widest text-white/40">{label}</p>
-          {lastUpdated && (
-            <span className="text-[10px] text-white/20 ml-auto">Updated {lastUpdated}</span>
-          )}
+          <div className="flex items-center gap-2 ml-auto">
+            {lastUpdated && (
+              <span className="text-[10px] text-white/20">Updated {lastUpdated}</span>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onRefresh}
+              disabled={refreshDisabled}
+              className="h-6 px-1.5 sm:px-2 text-xs text-white/30 hover:text-white/50 hover:bg-white/[0.03]"
+            >
+              {refreshing ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+              <span className="hidden sm:inline ml-1">Refresh</span>
+            </Button>
+          </div>
         </div>
         {refreshing ? (
           <p className="text-sm text-white/20 text-center py-8">Generating suggestions...</p>
         ) : hasIdeas ? (
           <div className="space-y-2">
             {parsedIdeas.map((idea, i) => (
-              <IdeaCard key={i} idea={idea} type={type} toast={toast} onDidThis={onDidThis} />
+              <IdeaCard key={i} idea={idea} type={type} toast={toast} onDidThis={onDidThis} weather={weather} onOpenPlan={onOpenPlan} />
             ))}
           </div>
         ) : content.trim() ? (
@@ -1207,25 +1852,25 @@ function IdeasSection({ type, ideas, content, lastUpdated, refreshing, toast, on
   )
 }
 
-// --- Email Settings Section ---
-const NOTIFICATION_LABELS: Record<string, string> = {
-  'birthday-reminders': 'Birthday Reminders',
-  'weekend-family': 'Weekend Family Ideas',
-  'midweek-date': 'Midweek Date Ideas',
-  'morning-digest': 'Morning Digest',
-  'article-summaries': 'Article Summaries',
-  'trip-packing': 'Trip Packing Checklist',
-  'trip-anne-notification': 'Trip Anne Notification',
-  'trip-connection-summary': 'Trip Connection Summary',
-}
+// --- Email Notifications Section (unified: test + recipients + add per row) ---
+const EMAIL_TYPES: { id: string; label: string; testId?: string }[] = [
+  { id: 'morning-digest', label: 'Morning Digest', testId: 'morning-digest' },
+  { id: 'weekend-family', label: 'Weekend Family', testId: 'weekend-family' },
+  { id: 'midweek-date', label: 'Midweek Date', testId: 'midweek-date' },
+  { id: 'birthday-reminders', label: 'Birthday Reminders', testId: 'birthday-reminders' },
+  { id: 'weekend-plans', label: 'Weekend Plans', testId: 'weekend-plans' },
+  { id: 'article-summaries', label: 'Article Summaries' },
+  { id: 'trip-packing', label: 'Trip Packing', testId: 'trip-packing' },
+  { id: 'trip-anne-notification', label: 'Trip Anne', testId: 'trip-anne' },
+  { id: 'trip-connection-summary', label: 'Trip Connection', testId: 'trip-connection' },
+]
 
-const TEST_TYPES = new Set(['birthday-reminders', 'weekend-family', 'midweek-date', 'morning-digest', 'trip-packing', 'trip-anne', 'trip-connection'])
-
-function EmailSettingsSection({ toast }: { toast: (msg: string) => void }) {
+function EmailNotificationsSection({ toast }: { toast: (msg: string) => void }) {
   const [config, setConfig] = useState<{ recipients: Record<string, string[]> } | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [newEmails, setNewEmails] = useState<Record<string, string>>({})
+  const [addingFor, setAddingFor] = useState<string | null>(null)
   const [testState, setTestState] = useState<Record<string, 'idle' | 'sending' | 'sent'>>({})
 
   useEffect(() => {
@@ -1237,7 +1882,6 @@ function EmailSettingsSection({ toast }: { toast: (msg: string) => void }) {
     try {
       const result = await lifeApi.updateEmailConfig(updated)
       setConfig(result)
-      toast('Email settings saved')
     } catch {
       toast('Failed to save')
     } finally {
@@ -1259,24 +1903,25 @@ function EmailSettingsSection({ toast }: { toast: (msg: string) => void }) {
     const updated = { ...config, recipients: { ...config.recipients, [type]: [...(config.recipients[type] || []), email] } }
     setConfig(updated)
     setNewEmails(prev => ({ ...prev, [type]: '' }))
+    setAddingFor(null)
     save(updated)
   }
 
-  const sendTest = async (type: string) => {
-    setTestState(prev => ({ ...prev, [type]: 'sending' }))
+  const sendTest = async (testId: string) => {
+    setTestState(prev => ({ ...prev, [testId]: 'sending' }))
     try {
-      const result = await lifeApi.sendTestEmail(type)
+      const result = await lifeApi.sendTestEmail(testId)
       if (result.error) {
         toast(`Test failed: ${result.error}`)
-        setTestState(prev => ({ ...prev, [type]: 'idle' }))
+        setTestState(prev => ({ ...prev, [testId]: 'idle' }))
       } else {
-        setTestState(prev => ({ ...prev, [type]: 'sent' }))
-        toast(`Test email sent!`)
-        setTimeout(() => setTestState(prev => ({ ...prev, [type]: 'idle' })), 2000)
+        setTestState(prev => ({ ...prev, [testId]: 'sent' }))
+        toast('Test email sent!')
+        setTimeout(() => setTestState(prev => ({ ...prev, [testId]: 'idle' })), 2000)
       }
     } catch {
       toast('Test failed')
-      setTestState(prev => ({ ...prev, [type]: 'idle' }))
+      setTestState(prev => ({ ...prev, [testId]: 'idle' }))
     }
   }
 
@@ -1284,129 +1929,518 @@ function EmailSettingsSection({ toast }: { toast: (msg: string) => void }) {
 
   return (
     <Card>
-      <CardContent className="p-6">
-        <div className="flex items-center gap-2 mb-6">
+      <CardContent className="p-5">
+        <div className="flex items-center gap-2 mb-4">
           <Mail className="h-4 w-4 text-white/40" />
-          <p className="text-xs uppercase tracking-widest text-white/40">Email Settings</p>
+          <p className="text-xs uppercase tracking-widest text-white/40">Email Notifications</p>
           {saving && <Loader2 className="h-3 w-3 animate-spin text-violet-400 ml-auto" />}
         </div>
-        <div className="space-y-5">
-          {Object.entries(NOTIFICATION_LABELS).map(([type, label]) => (
-            <div key={type}>
-              <div className="flex items-center gap-2 mb-2">
-                <p className="text-sm text-white/70">{label}</p>
-                {TEST_TYPES.has(type) && (
-                  <button
-                    onClick={() => sendTest(type)}
-                    disabled={(testState[type] || 'idle') !== 'idle'}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all border border-white/10 hover:bg-white/[0.06] text-white/40 hover:text-white/60 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {testState[type] === 'sending' ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : testState[type] === 'sent' ? (
-                      <Check className="h-3 w-3 text-emerald-400" />
-                    ) : (
-                      <Mail className="h-3 w-3" />
-                    )}
-                    {testState[type] === 'sent' ? 'Sent' : 'Test'}
-                  </button>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-1.5 mb-2">
-                {(config?.recipients[type] || []).map(email => (
-                  <span key={email} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-white/[0.06] text-white/60 border border-white/[0.08]">
-                    {email}
-                    <button onClick={() => removeRecipient(type, email)} className="text-white/30 hover:text-rose-400 transition-colors">
-                      <X className="h-3 w-3" />
+        <div className="space-y-1">
+          {EMAIL_TYPES.map(({ id, label, testId }) => {
+            const recipients = config?.recipients[id] || []
+            const tState = testId ? (testState[testId] || 'idle') : null
+            return (
+              <div key={id} className="group rounded-lg hover:bg-white/[0.02] transition-colors px-2 py-2">
+                {/* Row: name + test + pills + add */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-medium text-white/60 shrink-0 w-28 truncate" title={label}>{label}</span>
+                  {testId && (
+                    <button
+                      onClick={() => sendTest(testId)}
+                      disabled={tState !== 'idle'}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium transition-all border border-white/[0.08] hover:bg-white/[0.06] text-white/35 hover:text-white/55 disabled:opacity-50 shrink-0"
+                    >
+                      {tState === 'sending' ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : tState === 'sent' ? <Check className="h-2.5 w-2.5 text-emerald-400" /> : <Mail className="h-2.5 w-2.5" />}
+                      {tState === 'sent' ? 'Sent' : 'Test'}
                     </button>
-                  </span>
-                ))}
+                  )}
+                  {!testId && <span className="w-[52px] shrink-0" />}
+                  <div className="flex items-center gap-1 flex-wrap flex-1 min-w-0">
+                    {recipients.map(email => (
+                      <span key={email} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-white/[0.05] text-white/50 border border-white/[0.06]">
+                        {email}
+                        <button onClick={() => removeRecipient(id, email)} className="text-white/25 hover:text-rose-400 transition-colors">
+                          <X className="h-2.5 w-2.5" />
+                        </button>
+                      </span>
+                    ))}
+                    {addingFor === id ? (
+                      <div className="inline-flex items-center gap-1">
+                        <input
+                          autoFocus
+                          placeholder="email@..."
+                          value={newEmails[id] || ''}
+                          onChange={e => setNewEmails(prev => ({ ...prev, [id]: e.target.value }))}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') addRecipient(id)
+                            if (e.key === 'Escape') setAddingFor(null)
+                          }}
+                          onBlur={() => { if (!(newEmails[id] || '').trim()) setAddingFor(null) }}
+                          className="h-5 w-32 text-[10px] bg-white/[0.04] border border-white/[0.1] rounded px-1.5 text-white/60 placeholder:text-white/20 outline-none focus:border-violet-500/40"
+                        />
+                        <button onClick={() => addRecipient(id)} className="text-white/30 hover:text-violet-400">
+                          <Check className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setAddingFor(id)}
+                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] text-white/20 hover:text-white/40 hover:bg-white/[0.04] transition-colors"
+                      >
+                        <Plus className="h-2.5 w-2.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Add email..."
-                  value={newEmails[type] || ''}
-                  onChange={e => setNewEmails(prev => ({ ...prev, [type]: e.target.value }))}
-                  onKeyDown={e => e.key === 'Enter' && addRecipient(type)}
-                  className="h-8 text-xs bg-white/[0.03] border-white/[0.08] text-white/60 placeholder:text-white/20"
-                />
-                <Button variant="outline" size="sm" onClick={() => addRecipient(type)} className="h-8 px-3 text-xs text-white/40 border-white/10 hover:bg-white/[0.03]">
-                  <Plus className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </CardContent>
     </Card>
   )
 }
 
-// --- Email Test Buttons (compact for Settings tab) ---
-function EmailTestButtons({ toast }: { toast: (msg: string) => void }) {
-  const [testState, setTestState] = useState<Record<string, 'idle' | 'sending' | 'sent'>>({})
+// --- Relationship options ---
+const RELATIONSHIP_OPTIONS = ['Family', 'Friend', 'Colleague', 'Acquaintance', 'Neighbor', 'Other']
 
-  const tests = [
-    { id: 'morning-digest', label: 'Morning Digest' },
-    { id: 'weekend-family', label: 'Weekend Family' },
-    { id: 'midweek-date', label: 'Midweek Date' },
-    { id: 'birthday-reminders', label: 'Birthday Reminders' },
-    { id: 'trip-packing', label: 'Trip Packing' },
-    { id: 'trip-anne', label: 'Trip Anne' },
-    { id: 'trip-connection', label: 'Trip Connection' },
-  ]
+const TAG_COLORS: Record<string, { bg: string; border: string; text: string }> = {
+  family:      { bg: 'bg-pink-500/10', border: 'border-pink-500/25', text: 'text-pink-300' },
+  friend:      { bg: 'bg-blue-500/10', border: 'border-blue-500/25', text: 'text-blue-300' },
+  colleague:   { bg: 'bg-violet-500/10', border: 'border-violet-500/25', text: 'text-violet-300' },
+  acquaintance:{ bg: 'bg-amber-500/10', border: 'border-amber-500/25', text: 'text-amber-300' },
+  neighbor:    { bg: 'bg-emerald-500/10', border: 'border-emerald-500/25', text: 'text-emerald-300' },
+  other:       { bg: 'bg-white/[0.06]', border: 'border-white/[0.1]', text: 'text-white/50' },
+}
 
-  const sendTest = async (type: string) => {
-    setTestState(prev => ({ ...prev, [type]: 'sending' }))
+function getTagColor(tag: string) {
+  return TAG_COLORS[tag.toLowerCase()] || TAG_COLORS.other
+}
+
+function contactInitials(c: Contact): string {
+  return ((c.firstName?.[0] || '') + (c.lastName?.[0] || '')).toUpperCase() || '?'
+}
+
+// --- Contacts Section ---
+function ContactsSection({ toast }: { toast: (msg: string) => void }) {
+  const [contacts, setContacts] = useState<Contact[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [addOpen, setAddOpen] = useState(false)
+  const [saving, setSaving] = useState<string | null>(null)
+
+  // Add form state
+  const [newFirstName, setNewFirstName] = useState('')
+  const [newLastName, setNewLastName] = useState('')
+  const [newBirthday, setNewBirthday] = useState('')
+  const [newPhone, setNewPhone] = useState('')
+  const [newEmail, setNewEmail] = useState('')
+  const [newRelationship, setNewRelationship] = useState('')
+  const [newNotes, setNewNotes] = useState('')
+  const [newTags, setNewTags] = useState<string[]>([])
+
+  // Inline edit state
+  const [editField, setEditField] = useState<{ id: string; field: string } | null>(null)
+  const [editValue, setEditValue] = useState('')
+
+  useEffect(() => {
+    lifeApi.getContacts().then(c => { setContacts(c); setLoading(false) }).catch(() => setLoading(false))
+  }, [])
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase().trim()
+    const list = contacts.filter(c => !c.deceased && !c.hidden)
+    const sortByName = (a: Contact, b: Contact) => (a.lastName || '').localeCompare(b.lastName || '') || (a.firstName || '').localeCompare(b.firstName || '')
+    if (!q) return list.sort(sortByName)
+    return list.filter(c =>
+      `${c.lastName} ${c.firstName}`.toLowerCase().includes(q) ||
+      `${c.firstName} ${c.lastName}`.toLowerCase().includes(q) ||
+      c.phone.toLowerCase().includes(q) ||
+      c.email.toLowerCase().includes(q) ||
+      c.relationship.toLowerCase().includes(q) ||
+      c.tags.some(t => t.toLowerCase().includes(q))
+    ).sort(sortByName)
+  }, [contacts, search])
+
+  const resetAddForm = () => {
+    setNewFirstName(''); setNewLastName(''); setNewBirthday(''); setNewPhone('')
+    setNewEmail(''); setNewRelationship(''); setNewNotes(''); setNewTags([])
+  }
+
+  const addContact = async () => {
+    if (!newFirstName.trim()) return
     try {
-      const result = await lifeApi.sendTestEmail(type)
-      if (result.error) {
-        toast(`Test failed: ${result.error}`)
-        setTestState(prev => ({ ...prev, [type]: 'idle' }))
-      } else {
-        setTestState(prev => ({ ...prev, [type]: 'sent' }))
-        toast(`Test email sent!`)
-        setTimeout(() => setTestState(prev => ({ ...prev, [type]: 'idle' })), 2000)
-      }
+      const mmdd = newBirthday ? newBirthday.slice(5) : ''
+      const birthYear = newBirthday ? newBirthday.slice(0, 4) : undefined
+      const contact = await lifeApi.createContact({
+        firstName: newFirstName.trim(),
+        lastName: newLastName.trim(),
+        birthday: mmdd,
+        birthYear,
+        phone: newPhone.trim(),
+        email: newEmail.trim(),
+        notes: newNotes.trim(),
+        tags: newTags,
+        relationship: newRelationship,
+        giftHistory: [],
+      })
+      setContacts(prev => [...prev, contact])
+      resetAddForm()
+      setAddOpen(false)
+      toast('Contact added')
     } catch {
-      toast('Test failed')
-      setTestState(prev => ({ ...prev, [type]: 'idle' }))
+      toast('Failed to add contact')
     }
   }
 
+  const saveField = async (id: string, field: string, value: string | string[]) => {
+    setSaving(id)
+    try {
+      const updated = await lifeApi.updateContact(id, { [field]: value })
+      setContacts(prev => prev.map(c => c.id === id ? { ...c, ...updated } : c))
+      setEditField(null)
+    } catch {
+      toast('Failed to save')
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  const startEdit = (id: string, field: string, currentValue: string) => {
+    setEditField({ id, field })
+    setEditValue(currentValue)
+  }
+
+  const commitEdit = () => {
+    if (!editField) return
+    saveField(editField.id, editField.field, editValue)
+  }
+
+  const toggleTag = (tag: string) => {
+    setNewTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
+  }
+
+  const toggleContactTag = async (contact: Contact, tag: string) => {
+    const updated = contact.tags.includes(tag) ? contact.tags.filter(t => t !== tag) : [...contact.tags, tag]
+    await saveField(contact.id, 'tags', updated)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-5 w-5 animate-spin text-white/20" />
+      </div>
+    )
+  }
+
   return (
-    <Card>
-      <CardContent className="p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Mail className="h-4 w-4 text-white/40" />
-          <p className="text-xs uppercase tracking-widest text-white/40">Test Emails</p>
+    <div className="space-y-4">
+      {/* Search + Add */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search contacts..."
+            className="pl-10 h-9 bg-white/[0.03] border-white/[0.08] text-white/80 placeholder:text-white/25"
+          />
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          {tests.map(t => {
-            const state = testState[t.id] || 'idle'
-            return (
-              <Button
-                key={t.id}
-                variant="outline"
-                size="sm"
-                onClick={() => sendTest(t.id)}
-                disabled={state !== 'idle'}
-                className="text-xs text-white/50 border-white/10 hover:bg-white/[0.03] justify-start gap-2"
+        <Dialog open={addOpen} onOpenChange={setAddOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" className="h-9 text-xs text-white/40 border-white/[0.08] hover:bg-white/[0.04]">
+              <Plus className="h-3.5 w-3.5 mr-1" /> Add
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="bg-white/5 backdrop-blur-xl border-white/10 max-h-[85vh] overflow-y-auto">
+            <DialogHeader><DialogTitle className="text-white/90 font-medium">New Contact</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-white/40 mb-1 block">First name *</label>
+                  <Input value={newFirstName} onChange={e => setNewFirstName(e.target.value)} className="bg-white/[0.03] border-white/10 text-white/80" placeholder="Jean" />
+                </div>
+                <div>
+                  <label className="text-xs text-white/40 mb-1 block">Last name</label>
+                  <Input value={newLastName} onChange={e => setNewLastName(e.target.value)} className="bg-white/[0.03] border-white/10 text-white/80" placeholder="Dupont" />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-white/40 mb-1 block">Birthday</label>
+                <Input type="date" value={newBirthday} onChange={e => setNewBirthday(e.target.value)} className="bg-white/[0.03] border-white/10 text-white/80" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-white/40 mb-1 block">Phone</label>
+                  <Input value={newPhone} onChange={e => setNewPhone(e.target.value)} className="bg-white/[0.03] border-white/10 text-white/80" placeholder="+33 6..." />
+                </div>
+                <div>
+                  <label className="text-xs text-white/40 mb-1 block">Email</label>
+                  <Input value={newEmail} onChange={e => setNewEmail(e.target.value)} className="bg-white/[0.03] border-white/10 text-white/80" placeholder="email@..." />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-white/40 mb-1 block">Relationship</label>
+                <select
+                  value={newRelationship}
+                  onChange={e => setNewRelationship(e.target.value)}
+                  className="w-full h-9 rounded-md border border-white/10 bg-white/[0.03] text-white/80 text-sm px-3"
+                >
+                  <option value="">Select...</option>
+                  {RELATIONSHIP_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-white/40 mb-1 block">Tags</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {RELATIONSHIP_OPTIONS.map(tag => {
+                    const active = newTags.includes(tag.toLowerCase())
+                    const colors = getTagColor(tag)
+                    return (
+                      <button
+                        key={tag}
+                        onClick={() => toggleTag(tag.toLowerCase())}
+                        className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
+                          active ? `${colors.bg} ${colors.border} ${colors.text}` : 'bg-white/[0.03] border-white/[0.08] text-white/30 hover:text-white/50'
+                        }`}
+                      >
+                        {tag}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-white/40 mb-1 block">Notes</label>
+                <textarea
+                  value={newNotes}
+                  onChange={e => setNewNotes(e.target.value)}
+                  rows={3}
+                  className="w-full rounded-md border border-white/10 bg-white/[0.03] text-white/80 text-sm px-3 py-2 resize-none placeholder:text-white/20"
+                  placeholder="Additional notes..."
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={addContact} disabled={!newFirstName.trim()} className="bg-violet-500 hover:bg-violet-600 text-white">Add Contact</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Contact count */}
+      <div className="flex items-center gap-2">
+        <Users className="h-3.5 w-3.5 text-white/30" />
+        <span className="text-xs text-white/30">{filtered.length} contact{filtered.length !== 1 ? 's' : ''}</span>
+      </div>
+
+      {/* Contact list */}
+      <div className="space-y-1">
+        {filtered.map(contact => {
+          const isExpanded = expandedId === contact.id
+          const age = contact.birthYear ? (() => {
+            const year = parseInt(contact.birthYear)
+            const [mm, dd] = contact.birthday.split('-').map(Number)
+            const now = new Date()
+            let a = now.getFullYear() - year
+            if (now.getMonth() + 1 < mm || (now.getMonth() + 1 === mm && now.getDate() < dd)) a--
+            return a
+          })() : null
+          const birthdayFormatted = contact.birthday ? formatBirthdayDate(contact.birthday) : ''
+          const daysUntil = contact.birthday ? daysUntilBirthday(contact.birthday) : null
+
+          return (
+            <div key={contact.id} className="rounded-xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+              {/* Compact row */}
+              <div
+                className="flex items-center gap-3 p-3 cursor-pointer hover:bg-white/[0.03] transition-colors"
+                onClick={() => setExpandedId(isExpanded ? null : contact.id)}
               >
-                {state === 'sending' ? (
-                  <Loader2 className="h-3 w-3 animate-spin shrink-0" />
-                ) : state === 'sent' ? (
-                  <Check className="h-3 w-3 text-emerald-400 shrink-0" />
-                ) : (
-                  <Mail className="h-3 w-3 shrink-0" />
+                {/* Avatar */}
+                <div className="h-9 w-9 rounded-full bg-violet-500/15 border border-violet-500/25 flex items-center justify-center shrink-0">
+                  <span className="text-xs font-semibold text-violet-300">{contactInitials(contact)}</span>
+                </div>
+                {/* Name + details */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-white/80 truncate">{contact.lastName} {contact.firstName}</span>
+                    {contact.relationship && (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${getTagColor(contact.relationship).bg} ${getTagColor(contact.relationship).border} ${getTagColor(contact.relationship).text}`}>
+                        {contact.relationship}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 mt-0.5">
+                    {birthdayFormatted && (
+                      <span className="text-[11px] text-white/35 flex items-center gap-1">
+                        <CalendarIcon className="h-2.5 w-2.5" /> {birthdayFormatted}{age !== null ? ` (${age})` : ''}
+                      </span>
+                    )}
+                    {contact.phone && (
+                      <span className="text-[11px] text-white/35 flex items-center gap-1">
+                        <Phone className="h-2.5 w-2.5" /> {contact.phone}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {/* Tags */}
+                <div className="hidden sm:flex items-center gap-1 shrink-0">
+                  {contact.tags.slice(0, 2).map(tag => {
+                    const colors = getTagColor(tag)
+                    return (
+                      <span key={tag} className={`text-[10px] px-1.5 py-0.5 rounded-full border ${colors.bg} ${colors.border} ${colors.text}`}>{tag}</span>
+                    )
+                  })}
+                </div>
+                {/* Birthday countdown */}
+                {daysUntil !== null && daysUntil <= 30 && (
+                  <span className={`text-[10px] font-medium shrink-0 ${daysUntil === 0 ? 'text-violet-400' : 'text-white/40'}`}>
+                    {daysUntil === 0 ? 'Today!' : daysUntil === 1 ? 'Tomorrow' : `${daysUntil}d`}
+                  </span>
                 )}
-                {t.label}
-              </Button>
-            )
-          })}
-        </div>
-      </CardContent>
-    </Card>
+                <ChevronDown className={`h-3.5 w-3.5 text-white/20 transition-transform duration-200 shrink-0 ${isExpanded ? 'rotate-180' : ''}`} />
+              </div>
+
+              {/* Expanded card */}
+              {isExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="border-t border-white/[0.06]"
+                >
+                  <div className="p-4 space-y-3">
+                    {/* Editable fields */}
+                    {[
+                      { field: 'firstName', label: 'First Name', value: contact.firstName },
+                      { field: 'lastName', label: 'Last Name', value: contact.lastName },
+                      { field: 'phone', label: 'Phone', value: contact.phone },
+                      { field: 'email', label: 'Email', value: contact.email },
+                      { field: 'notes', label: 'Notes', value: contact.notes },
+                    ].map(({ field, label, value }) => (
+                      <div key={field} className="flex items-start gap-3">
+                        <span className="text-xs text-white/30 w-20 shrink-0 pt-1">{label}</span>
+                        {editField?.id === contact.id && editField?.field === field ? (
+                          <div className="flex-1 flex items-center gap-2">
+                            {field === 'notes' ? (
+                              <textarea
+                                autoFocus
+                                value={editValue}
+                                onChange={e => setEditValue(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Escape') setEditField(null) }}
+                                rows={3}
+                                className="flex-1 rounded-md border border-violet-500/30 bg-white/[0.04] text-white/80 text-sm px-2 py-1 resize-none outline-none focus:border-violet-500/50"
+                              />
+                            ) : (
+                              <input
+                                autoFocus
+                                value={editValue}
+                                onChange={e => setEditValue(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') commitEdit(); if (e.key === 'Escape') setEditField(null) }}
+                                className="flex-1 h-7 rounded-md border border-violet-500/30 bg-white/[0.04] text-white/80 text-sm px-2 outline-none focus:border-violet-500/50"
+                              />
+                            )}
+                            <button onClick={commitEdit} disabled={saving === contact.id} className="text-violet-400 hover:text-violet-300 p-1">
+                              {saving === contact.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                            </button>
+                            <button onClick={() => setEditField(null)} className="text-white/30 hover:text-white/50 p-1">
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => startEdit(contact.id, field, value || '')}
+                            className="flex-1 text-left text-sm text-white/60 hover:text-white/80 hover:bg-white/[0.03] rounded px-2 py-0.5 -ml-2 transition-colors group"
+                          >
+                            {value || <span className="text-white/15 italic">empty</span>}
+                            <Pencil className="h-2.5 w-2.5 inline ml-2 opacity-0 group-hover:opacity-50" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Relationship dropdown */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-white/30 w-20 shrink-0">Relationship</span>
+                      <select
+                        value={contact.relationship}
+                        onChange={e => saveField(contact.id, 'relationship', e.target.value)}
+                        className="h-7 rounded-md border border-white/10 bg-white/[0.03] text-white/60 text-sm px-2"
+                      >
+                        <option value="">None</option>
+                        {RELATIONSHIP_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    </div>
+
+                    {/* Birthday */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-white/30 w-20 shrink-0">Birthday</span>
+                      <span className="text-sm text-white/60">{birthdayFormatted || 'Not set'}{age !== null ? ` (${age} years old)` : ''}</span>
+                      {daysUntil !== null && (
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${daysUntil <= 7 ? 'bg-violet-500/10 text-violet-300 border border-violet-500/20' : 'text-white/30'}`}>
+                          {daysUntil === 0 ? 'Today!' : daysUntil === 1 ? 'Tomorrow' : `in ${daysUntil} days`}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Tags */}
+                    <div className="flex items-start gap-3">
+                      <span className="text-xs text-white/30 w-20 shrink-0 pt-1">Tags</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {RELATIONSHIP_OPTIONS.map(tag => {
+                          const active = contact.tags.includes(tag.toLowerCase())
+                          const colors = getTagColor(tag)
+                          return (
+                            <button
+                              key={tag}
+                              onClick={() => toggleContactTag(contact, tag.toLowerCase())}
+                              className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+                                active ? `${colors.bg} ${colors.border} ${colors.text}` : 'bg-white/[0.02] border-white/[0.06] text-white/20 hover:text-white/40'
+                              }`}
+                            >
+                              {tag}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-white/[0.04]">
+                      {contact.phone && (
+                        <a
+                          href={`tel:${contact.phone}`}
+                          className="inline-flex items-center gap-1.5 text-xs text-white/40 hover:text-emerald-400 bg-white/[0.04] hover:bg-emerald-500/[0.1] px-3 py-1.5 rounded-lg transition-colors"
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <Phone className="h-3 w-3" /> Call
+                        </a>
+                      )}
+                      {contact.email && (
+                        <a
+                          href={`mailto:${contact.email}`}
+                          className="inline-flex items-center gap-1.5 text-xs text-white/40 hover:text-violet-400 bg-white/[0.04] hover:bg-violet-500/[0.1] px-3 py-1.5 rounded-lg transition-colors"
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <Mail className="h-3 w-3" /> Email
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          )
+        })}
+        {filtered.length === 0 && (
+          <p className="text-sm text-white/20 text-center py-12">
+            {search ? 'No contacts matching your search' : 'No contacts yet'}
+          </p>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -1431,12 +2465,15 @@ export default function LifePage() {
   const [weather, setWeather] = useState<WeekendWeather | null>(null)
   const [localEvents, setLocalEvents] = useState<LocalEvent[]>([])
   const [trips, setTrips] = useState<Trip[]>([])
+  const [upcomingTrip, setUpcomingTrip] = useState<UpcomingTrip | null>(null)
   const [tripHistoryExpanded, setTripHistoryExpanded] = useState(false)
   const [loading, setLoading] = useState(true)
   const [refreshingWeekend, setRefreshingWeekend] = useState(false)
   const [refreshingDates, setRefreshingDates] = useState(false)
   const [toasts, setToasts] = useState<{ id: number; message: string }[]>([])
   const [activeTab, setActiveTab] = useState<TabId>('dashboard')
+  const [globalDayPlan, setGlobalDayPlan] = useState<DayPlan | null>(null)
+  const [globalPlanModalOpen, setGlobalPlanModalOpen] = useState(false)
 
   const addToast = useCallback((message: string) => {
     const id = Date.now()
@@ -1446,14 +2483,15 @@ export default function LifePage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [lifeData, calendarData, remindersData, activitiesData, weatherData, eventsData, tripsData] = await Promise.all([
+      const [lifeData, calendarData, remindersData, activitiesData, weatherData, eventsData, tripsData, upcomingTripData] = await Promise.all([
         lifeApi.getData(),
         lifeApi.getCalendar(7),
         lifeApi.getReminders(),
         lifeApi.getActivities(),
         lifeApi.getWeekendWeather(),
         lifeApi.getLocalEvents(),
-        lifeApi.getTrips()
+        lifeApi.getTrips(),
+        lifeApi.getUpcomingTrip()
       ])
       setData({ ...lifeData, reminders: remindersData.length > 0 ? remindersData : lifeData.reminders })
       setCalendar(calendarData)
@@ -1461,6 +2499,7 @@ export default function LifePage() {
       setWeather(weatherData)
       setLocalEvents(eventsData)
       setTrips(tripsData)
+      setUpcomingTrip(upcomingTripData)
     } catch (e) {
       console.error('LifePage: Error loading data:', e)
     } finally {
@@ -1504,6 +2543,11 @@ export default function LifePage() {
     } finally {
       setRefreshingDates(false)
     }
+  }
+
+  const openDayPlan = (plan: DayPlan) => {
+    setGlobalDayPlan(plan)
+    setGlobalPlanModalOpen(true)
   }
 
   if (loading) {
@@ -1603,13 +2647,15 @@ export default function LifePage() {
             transition={{ duration: 0.15 }}
             className="grid grid-cols-1 md:grid-cols-2 gap-6"
           >
-            {/* Left column: Calendar + Reminders */}
+            {/* Trip Helper — full width at top */}
+            {upcomingTrip && <TripHelper trip={upcomingTrip} toast={addToast} />}
+            {/* Left column: Calendar */}
             <div className="space-y-6">
               <CalendarSection events={calendar} />
-              <RemindersSection reminders={data.reminders} onUpdate={updateReminders} onRefresh={refreshReminders} />
             </div>
-            {/* Right column: Birthdays */}
+            {/* Right column: Reminders + Birthdays */}
             <div className="space-y-6">
+              <RemindersSection reminders={data.reminders} onUpdate={updateReminders} onRefresh={refreshReminders} />
               <BirthdaysSection birthdays={data.birthdays} onUpdate={updateBirthdays} onPatchBirthday={patchBirthday} onSendEmail={sendBirthdayEmail} toast={addToast} />
             </div>
           </motion.div>
@@ -1630,34 +2676,10 @@ export default function LifePage() {
             {/* Local Events */}
             <LocalEventsScroll events={localEvents} />
 
-            {/* Refresh buttons */}
-            <div className="flex items-center justify-end gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={refreshWeekend}
-                disabled={refreshingWeekend || refreshingDates}
-                className="text-xs text-white/40 border-white/10 hover:bg-white/[0.03]"
-              >
-                {refreshingWeekend ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
-                Refresh Weekend
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={refreshDates}
-                disabled={refreshingDates || refreshingWeekend}
-                className="text-xs text-white/40 border-white/10 hover:bg-white/[0.03]"
-              >
-                {refreshingDates ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
-                Refresh Dates
-              </Button>
-            </div>
-
             {/* Idea cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <IdeasSection type="weekend" ideas={activities.weekend.ideas} content={activities.weekend.content} lastUpdated={activities.weekend.lastUpdated} refreshing={refreshingWeekend} toast={addToast} onDidThis={handleDidThis} />
-              <IdeasSection type="date" ideas={activities.date.ideas} content={activities.date.content} lastUpdated={activities.date.lastUpdated} refreshing={refreshingDates} toast={addToast} onDidThis={handleDidThis} />
+              <IdeasSection type="weekend" ideas={activities.weekend.ideas} content={activities.weekend.content} lastUpdated={activities.weekend.lastUpdated} refreshing={refreshingWeekend} refreshDisabled={refreshingWeekend || refreshingDates} onRefresh={refreshWeekend} toast={addToast} onDidThis={handleDidThis} weather={weather} onOpenPlan={openDayPlan} />
+              <IdeasSection type="date" ideas={activities.date.ideas} content={activities.date.content} lastUpdated={activities.date.lastUpdated} refreshing={refreshingDates} refreshDisabled={refreshingDates || refreshingWeekend} onRefresh={refreshDates} toast={addToast} onDidThis={handleDidThis} weather={weather} onOpenPlan={openDayPlan} />
             </div>
 
             {/* Trip History */}
@@ -1665,23 +2687,41 @@ export default function LifePage() {
           </motion.div>
         )}
 
-        {/* TAB 3 — Settings */}
+        {/* TAB 3 — Contacts */}
+        {activeTab === 'contacts' && (
+          <motion.div
+            key="contacts"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            <ContactsSection toast={addToast} />
+          </motion.div>
+        )}
+
+        {/* TAB 4 — Settings */}
         {activeTab === 'settings' && (
           <motion.div
             key="settings"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.15 }}
-            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+            className="space-y-4"
           >
+            <HomeLocationSection toast={addToast} />
+            <EmailNotificationsSection toast={addToast} />
             <CronJobsSection cronJobs={data.cronJobs} onAdd={addCron} onDelete={deleteCron} />
-            <div className="space-y-6">
-              <EmailTestButtons toast={addToast} />
-              <EmailSettingsSection toast={addToast} />
-            </div>
           </motion.div>
         )}
       </div>
+      {globalDayPlan && (
+        <DayPlannerModal
+          plan={globalDayPlan}
+          open={globalPlanModalOpen}
+          onClose={() => setGlobalPlanModalOpen(false)}
+          toast={addToast}
+        />
+      )}
       <ToastContainer toasts={toasts} />
     </>
   )

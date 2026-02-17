@@ -1,9 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react'
-import { motion } from 'framer-motion'
-import { opsApi, type Task, type SystemInfo } from '../services/opsApi'
-import { Card, CardContent } from '../components/ui/card'
-import { Progress } from '../components/ui/progress'
-import { Loader2, RotateCcw, ChevronDown, ChevronRight, DollarSign, GitBranch, Trash2, GitCommitHorizontal, Check, X, ArrowDownToLine, Sparkles } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { opsApi, type Task, type SystemInfo, type InboxItem } from '../services/opsApi'
+import { Loader2, RotateCcw, ChevronDown, ChevronRight, DollarSign, Trash2, Check, X, ArrowDownToLine, Sparkles, Clock, Inbox, ExternalLink } from 'lucide-react'
 import TaskLogPanel from '../components/TaskLogPanel'
 
 // --- Helpers ---
@@ -87,14 +85,6 @@ function ModelBadge({ name }: { name: string }) {
   )
 }
 
-const cardVariants = {
-  hidden: { opacity: 0, y: 8 },
-  visible: (i: number) => ({
-    opacity: 1, y: 0,
-    transition: { delay: i * 0.05, duration: 0.25, ease: 'easeOut' },
-  }),
-}
-
 export default function OpsPage() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
@@ -108,13 +98,16 @@ export default function OpsPage() {
   const [oclawUpdateState, setOclawUpdateState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [cleanupState, setCleanupState] = useState<'idle' | 'loading'>('idle')
   const [cleanupCount, setCleanupCount] = useState<number | null>(null)
+  const [inboxItems, setInboxItems] = useState<InboxItem[]>([])
+  const [expandedInbox, setExpandedInbox] = useState<string | null>(null)
 
   const loadData = () => {
-    Promise.all([opsApi.getTasks(), opsApi.getSystemInfo(), opsApi.getGitStatus()])
-      .then(([tasksData, sysData, gitData]) => {
+    Promise.all([opsApi.getTasks(), opsApi.getSystemInfo(), opsApi.getGitStatus(), opsApi.getInboxRecent(20)])
+      .then(([tasksData, sysData, gitData, inboxData]) => {
         setTasks(tasksData)
         setSystemInfo(sysData)
         setGitStatus(gitData)
+        setInboxItems(inboxData)
       })
       .catch((error) => console.error('Failed to load data:', error))
       .finally(() => setLoading(false))
@@ -158,32 +151,9 @@ export default function OpsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-8">
-        <div>
-          <div className="skeleton h-8 w-24 rounded-xl" />
-          <div className="skeleton h-4 w-56 mt-2 rounded-xl" />
-        </div>
-        <div className="grid gap-4 md:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <div className="skeleton h-3 w-16 mb-3 rounded-xl" />
-                <div className="skeleton h-12 w-24 rounded-xl" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        <div className="grid gap-4 md:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <div className="skeleton h-3 w-16 mb-3 rounded-xl" />
-                <div className="skeleton h-12 w-24 rounded-xl" />
-                <div className="skeleton h-1 w-full mt-3 rounded-full" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      <div className="space-y-4">
+        <div className="skeleton h-10 w-full rounded-xl" />
+        <div className="skeleton h-5 w-72 rounded-lg" />
         <div>
           <div className="skeleton h-5 w-20 mb-4 rounded-xl" />
           {[...Array(3)].map((_, i) => (
@@ -256,18 +226,84 @@ export default function OpsPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-white/90">Ops</h1>
-          <p className="text-sm text-white/50 mt-1">Live task tracking and system overview</p>
+    <div className="space-y-4">
+      {/* Compact status bar — system metrics */}
+      {systemInfo && (
+        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+          <div className="flex flex-wrap items-center gap-3 sm:gap-5 px-4 py-2.5 rounded-2xl border border-white/[0.06] bg-white/[0.02]">
+            {[
+              { label: 'CPU', value: `${systemInfo.cpu}%`, warn: systemInfo.cpu > 80 },
+              { label: 'Mem', value: `${systemInfo.mem}%`, warn: systemInfo.mem > 80 },
+              { label: 'Disk', value: `${systemInfo.disk}%`, warn: systemInfo.disk > 90 },
+              { label: 'Up', value: formatUptime(systemInfo.uptime) },
+            ].map((s, i) => (
+              <span key={s.label} className="flex items-center gap-1.5 text-xs text-white/40">
+                <span className="text-white/20">{s.label}</span>
+                <span className={s.warn ? 'text-amber-400/80' : 'text-white/60 tabular-nums'}>{s.value}</span>
+                {i < 3 && <span className="text-white/10 ml-1.5">·</span>}
+              </span>
+            ))}
+            <span className="text-white/10 ml-auto">·</span>
+            <span className="flex items-center gap-1.5 text-xs">
+              <span className="text-white/20">Cost</span>
+              <span className="text-amber-400/70 tabular-nums"><AnimatedNumber value={totalCost} prefix="$" decimals={2} /></span>
+              <button onClick={handleResetCosts} title="Reset costs" className="text-white/15 hover:text-amber-400/80 transition-colors duration-150 p-0.5">
+                <RotateCcw className="h-2.5 w-2.5" />
+              </button>
+            </span>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Task counts + git + version — one compact row */}
+      <div className="flex flex-wrap items-center gap-3 sm:gap-4 px-1">
+        {/* Task counts */}
+        <div className="flex items-center gap-3 text-xs">
+          {[
+            { label: 'Running', value: runningCount, color: 'text-violet-400', pulse: runningCount > 0 },
+            { label: 'Queued', value: queuedCount, color: 'text-white/50' },
+            { label: 'Done', value: doneCount, color: 'text-emerald-400/80' },
+          ].map((s) => (
+            <span key={s.label} className="flex items-center gap-1">
+              <span className="text-white/25">{s.label}</span>
+              <span className={`font-medium tabular-nums ${s.color} ${s.pulse ? 'animate-pulse' : ''}`}>{s.value}</span>
+            </span>
+          ))}
         </div>
-        <div className="flex items-center gap-4">
-          {/* OpenClaw version indicator */}
-          {oclawVersion && (
+
+        <span className="text-white/10">·</span>
+
+        {/* Git status */}
+        {gitStatus && (
+          <div className="flex items-center gap-1.5 text-xs">
+            {gitStatus.clean ? (
+              <span className="text-emerald-400/70">Clean ✓</span>
+            ) : (
+              <>
+                <span className="text-amber-400/70">{gitStatus.changedFiles} file{gitStatus.changedFiles !== 1 ? 's' : ''}</span>
+                <span className="text-white/20">→</span>
+                <button
+                  onClick={handleGitCommit}
+                  disabled={commitState === 'loading'}
+                  className="text-white/40 hover:text-violet-400 transition-colors duration-150 disabled:opacity-50"
+                >
+                  {commitState === 'loading' ? <Loader2 className="h-3 w-3 animate-spin inline" /> :
+                   commitState === 'success' ? <span className="text-emerald-400">Committed ✓</span> :
+                   commitState === 'error' ? <span className="text-rose-400">Failed</span> :
+                   <span>Commit</span>}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Version */}
+        {oclawVersion && (
+          <>
+            <span className="text-white/10">·</span>
             <div className="flex items-center gap-1.5 text-xs">
-              <span className={`h-2 w-2 rounded-full ${oclawVersion.upToDate ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
-              <span className="text-white/40">v{oclawVersion.current.replace(/^v/, '')}</span>
+              <span className={`h-1.5 w-1.5 rounded-full ${oclawVersion.upToDate ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
+              <span className="text-white/35">v{oclawVersion.current.replace(/^v/, '')}</span>
               {!oclawVersion.upToDate && (
                 <button
                   onClick={handleOclawUpdate}
@@ -275,113 +311,22 @@ export default function OpsPage() {
                   title={`Update to ${oclawVersion.latest}`}
                   className="text-amber-400/70 hover:text-amber-400 transition-colors duration-150 p-0.5 disabled:opacity-50"
                 >
-                  {oclawUpdateState === 'loading' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> :
-                   oclawUpdateState === 'success' ? <Check className="h-3.5 w-3.5 text-emerald-400" /> :
-                   oclawUpdateState === 'error' ? <X className="h-3.5 w-3.5 text-rose-400" /> :
-                   <ArrowDownToLine className="h-3.5 w-3.5" />}
+                  {oclawUpdateState === 'loading' ? <Loader2 className="h-3 w-3 animate-spin" /> :
+                   oclawUpdateState === 'success' ? <Check className="h-3 w-3 text-emerald-400" /> :
+                   oclawUpdateState === 'error' ? <X className="h-3 w-3 text-rose-400" /> :
+                   <ArrowDownToLine className="h-3 w-3" />}
                 </button>
               )}
             </div>
-          )}
-
-          {/* Git status + commit button */}
-          {gitStatus && (
-            <div className="flex items-center gap-2 text-xs">
-              <span className={`h-2 w-2 rounded-full ${gitStatus.clean ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-              <GitBranch className="h-3.5 w-3.5 text-white/30" />
-              <span className={gitStatus.clean ? 'text-emerald-400/80' : 'text-amber-400/80'}>
-                {gitStatus.clean ? 'Git: Clean' : `Git: ${gitStatus.changedFiles} uncommitted file${gitStatus.changedFiles !== 1 ? 's' : ''}`}
-              </span>
-              {!gitStatus.clean && (
-                <button
-                  onClick={handleGitCommit}
-                  disabled={commitState === 'loading'}
-                  title="Commit &amp; push"
-                  className="text-white/30 hover:text-violet-400 transition-colors duration-150 p-0.5 disabled:opacity-50"
-                >
-                  {commitState === 'loading' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> :
-                   commitState === 'success' ? <Check className="h-3.5 w-3.5 text-emerald-400" /> :
-                   commitState === 'error' ? <X className="h-3.5 w-3.5 text-rose-400" /> :
-                   <GitCommitHorizontal className="h-3.5 w-3.5" />}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
-
-      {/* Hero row — primary stats */}
-      <div className="grid gap-4 md:grid-cols-3">
-        {[
-          { label: 'RUNNING', value: runningCount, color: 'text-violet-400' },
-          { label: 'QUEUED', value: queuedCount, color: 'text-white/40' },
-          { label: 'DONE', value: doneCount, color: 'text-emerald-400/80' },
-        ].map((stat, i) => (
-          <motion.div key={stat.label} custom={i} variants={cardVariants} initial="hidden" animate="visible">
-            <Card className={stat.label === 'RUNNING' && stat.value > 0 ? 'animate-pulse-glow' : ''}>
-              <CardContent className="p-5">
-                <p className="text-xs uppercase tracking-widest text-white/30">{stat.label}</p>
-                <p className={`text-4xl font-light tracking-tight mt-1 ${stat.color}`}>
-                  <AnimatedNumber value={stat.value} />
-                </p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Secondary row — compact system metrics */}
-      {systemInfo && (
-        <div className="grid gap-3 grid-cols-5">
-          {[
-            { label: 'CPU', value: systemInfo.cpu, suffix: '%', color: 'bg-violet-500/80', bar: true },
-            { label: 'MEMORY', value: systemInfo.mem, suffix: '%', color: 'bg-blue-500/80', bar: true },
-            { label: 'DISK', value: systemInfo.disk, suffix: '%', color: 'bg-emerald-500/80', bar: true },
-          ].map((sys, i) => (
-            <motion.div key={sys.label} custom={i + 3} variants={cardVariants} initial="hidden" animate="visible" className="min-w-0 w-full">
-              <Card className="bg-white/[0.03]">
-                <CardContent className="p-3">
-                  <p className="text-[10px] uppercase tracking-widest text-white/25">{sys.label}</p>
-                  <p className="text-xl font-light tracking-tight text-white/70 mt-0.5">
-                    <AnimatedNumber value={sys.value} suffix={sys.suffix} />
-                  </p>
-                  <Progress value={sys.value} color={sys.color} className="mt-2 h-0.5" />
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-          <motion.div custom={6} variants={cardVariants} initial="hidden" animate="visible" className="min-w-0 w-full">
-            <Card className="bg-white/[0.03]">
-              <CardContent className="p-3">
-                <p className="text-[10px] uppercase tracking-widest text-white/25">UPTIME</p>
-                <p className="text-xl font-light tracking-tight text-white/70 mt-0.5">{formatUptime(systemInfo.uptime)}</p>
-                <div className="mt-2 h-0.5" />
-              </CardContent>
-            </Card>
-          </motion.div>
-          <motion.div custom={7} variants={cardVariants} initial="hidden" animate="visible" className="min-w-0 w-full">
-            <Card className="bg-white/[0.03]">
-              <CardContent className="p-3">
-                <p className="text-[10px] uppercase tracking-widest text-white/25">TOTAL COST</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <p className="text-xl font-light tracking-tight text-amber-400/80">
-                    <AnimatedNumber value={totalCost} prefix="$" decimals={2} />
-                  </p>
-                  <button onClick={handleResetCosts} title="Reset all costs" className="text-white/15 hover:text-amber-400/80 transition-colors duration-150 p-0.5">
-                    <RotateCcw className="h-3 w-3" />
-                  </button>
-                </div>
-                <div className="mt-2 h-0.5" />
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
-      )}
 
       {/* Timeline */}
       <div>
         <div className="flex items-center gap-2 mb-4">
-          <h2 className="text-lg font-medium text-white/90">Timeline</h2>
+          <Clock className="h-4 w-4 text-white/40" />
+          <p className="text-xs uppercase tracking-widest text-white/40">Timeline</p>
           <button
             onClick={handleTaskCleanup}
             disabled={cleanupState === 'loading'}
@@ -404,7 +349,7 @@ export default function OpsPage() {
             <p className="text-sm text-white/20 text-center py-12">No tasks yet</p>
           ) : (
             dayGroups.map((group) => (
-              <div key={group.date} className="rounded-2xl border border-white/10 overflow-hidden bg-white/[0.03] backdrop-blur-lg">
+              <div key={group.date} className="rounded-2xl border border-white/[0.06] overflow-hidden bg-white/[0.02]">
                 <button onClick={() => toggleDay(group.date)} className="w-full flex items-center justify-between p-4 hover:bg-white/[0.03] transition-colors duration-150 text-left">
                   <div className="flex items-center gap-3">
                     {expandedDays.has(group.date) ? <ChevronDown className="h-4 w-4 text-white/20 shrink-0" /> : <ChevronRight className="h-4 w-4 text-white/20 shrink-0" />}
@@ -470,6 +415,128 @@ export default function OpsPage() {
           )}
         </div>
       </div>
+
+      {/* Inbox */}
+      {inboxItems.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <Inbox className="h-4 w-4 text-white/40" />
+            <p className="text-xs uppercase tracking-widest text-white/40">Inbox</p>
+            <span className="text-xs text-white/25">{inboxItems.length}</span>
+          </div>
+          <div className="space-y-1.5">
+            {inboxItems.map((item) => {
+              const a = item.analysis
+              const rel = a?.relevance || { openclaw: 0, claude: 0, ai: 0, meta: 0, webdev: 0 }
+              const hasProposal = !!a?.integrationProposal
+              const isExpanded = expandedInbox === item.id
+              const categoryEmojis: Record<string, string> = {
+                'youtube-video': '\u{1F3AC}', 'tech-news': '\u{1F4F0}', 'ai-research': '\u{1F9EA}',
+                'tool-update': '\u{1F527}', 'tutorial': '\u{1F4DA}', 'business': '\u{1F4BC}',
+              }
+              const emoji = categoryEmojis[a?.category || ''] || '\u{1F4E8}'
+              const relDot = (v: number) => v > 7 ? 'bg-emerald-400' : v >= 4 ? 'bg-amber-400' : 'bg-white/20'
+
+              return (
+                <div key={item.id}>
+                  <button
+                    onClick={() => setExpandedInbox(isExpanded ? null : item.id)}
+                    className={`w-full text-left p-3 rounded-xl border transition-colors duration-150 ${
+                      hasProposal
+                        ? 'border-cyan-500/20 bg-cyan-500/[0.04] hover:bg-cyan-500/[0.07]'
+                        : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-sm shrink-0">{emoji}</span>
+                      <span className="text-sm text-white/80 truncate flex-1">{item.subject}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 ${
+                        hasProposal ? 'bg-cyan-500/15 text-cyan-400/90' : 'bg-white/5 text-white/40'
+                      }`}>
+                        {a?.category || 'other'}
+                      </span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {Object.values(rel).map((v, i) => (
+                          <span key={i} className={`h-1.5 w-1.5 rounded-full ${relDot(v)}`} />
+                        ))}
+                      </div>
+                      {isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-white/20 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 text-white/20 shrink-0" />}
+                    </div>
+                    {!isExpanded && a?.summary && (
+                      <p className="text-xs text-white/30 mt-1 truncate pl-6">{a.summary}</p>
+                    )}
+                  </button>
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className={`mx-2 p-4 rounded-b-xl border border-t-0 ${
+                          hasProposal ? 'border-cyan-500/20 bg-cyan-500/[0.02]' : 'border-white/[0.06] bg-white/[0.015]'
+                        }`}>
+                          <p className="text-xs text-white/20 mb-2">
+                            From: {item.from} &bull; {new Date(item.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </p>
+                          <p className="text-sm text-white/60 leading-relaxed">{a?.summary}</p>
+
+                          {a?.keyTakeaways && a.keyTakeaways.length > 0 && (
+                            <div className="mt-3">
+                              <p className="text-xs uppercase tracking-wider text-white/30 mb-1.5">Key Takeaways</p>
+                              <ul className="space-y-1">
+                                {a.keyTakeaways.map((t, i) => (
+                                  <li key={i} className="text-xs text-white/50 pl-3 relative before:content-[''] before:absolute before:left-0 before:top-[7px] before:h-1 before:w-1 before:rounded-full before:bg-violet-400/50">
+                                    {t}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {a?.integrationProposal && (
+                            <div className="mt-3 p-3 rounded-lg bg-cyan-500/[0.06] border border-cyan-500/10">
+                              <p className="text-xs uppercase tracking-wider text-cyan-400/60 mb-1">Integration Proposal</p>
+                              <p className="text-xs text-cyan-300/70 leading-relaxed">{a.integrationProposal}</p>
+                            </div>
+                          )}
+
+                          <div className="mt-3 flex items-center gap-3 flex-wrap">
+                            {Object.entries(rel).map(([k, v]) => (
+                              <span key={k} className="flex items-center gap-1 text-[10px] text-white/30">
+                                <span className={`h-1.5 w-1.5 rounded-full ${relDot(v)}`} />
+                                {k}: {v}
+                              </span>
+                            ))}
+                          </div>
+
+                          {a?.videoVerdict && (
+                            <p className="text-xs text-white/30 mt-2 italic">{a.videoVerdict}</p>
+                          )}
+
+                          {item.urls && item.urls.length > 0 && (
+                            <a
+                              href={item.urls[0]}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs text-violet-400/70 hover:text-violet-400 mt-2 transition-colors"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              Open link
+                            </a>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <TaskLogPanel
         task={selectedTask}
