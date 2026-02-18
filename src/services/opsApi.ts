@@ -31,6 +31,7 @@ export interface IntegrationProposal {
   why?: string
   how: string
   effort: string
+  impact?: string
   connectsTo: string
   rrCommand?: string
 }
@@ -45,6 +46,7 @@ export interface InboxItem {
     summary: string
     tldr?: string
     keyTakeaways: string[] | null
+    actionItems?: string[]
     relevance: { openclaw: number; claude: number; ai: number; meta: number; webdev: number }
     category: string
     integrationProposal: IntegrationProposal | null

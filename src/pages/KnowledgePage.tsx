@@ -127,14 +127,42 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
   const source = sourceName(item)
   const fullDate = new Date(item.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
 
+  // Parse actionItems (can be array of strings or objects from different sources)
+  const actionItems: { assignee: string; action: string }[] = []
+  if (a?.actionItems && Array.isArray(a.actionItems)) {
+    for (const ai of a.actionItems) {
+      if (typeof ai === 'string') {
+        const match = ai.match(/^\[([^\]]+)\]\s*(.*)$/)
+        if (match) actionItems.push({ assignee: match[1], action: match[2] })
+        else actionItems.push({ assignee: 'jm', action: ai })
+      } else if (ai && typeof ai === 'object') {
+        actionItems.push({ assignee: (ai as { for?: string }).for || 'jm', action: (ai as { action?: string }).action || String(ai) })
+      }
+    }
+  }
+
+  // Parse summary into bullet points (can be a joined string with ". " separators)
+  const summaryBullets: string[] = []
+  if (a?.keyTakeaways && a.keyTakeaways.length > 0) {
+    summaryBullets.push(...a.keyTakeaways)
+  } else if (a?.summary) {
+    const parts = a.summary.split(/\.\s+/).filter(Boolean)
+    if (parts.length > 1) summaryBullets.push(...parts)
+  }
+
   return (
     <div className="h-full flex flex-col">
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-6 py-6">
-        {/* Source + date */}
+        {/* Source + date + category badge */}
         <div className="flex items-center gap-2 mb-3">
           <span className="text-[13px] font-medium text-[#0A84FF]">{source}</span>
           <span className="text-[13px] text-white/30 tabular-nums">{fullDate}</span>
+          {a?.category && (
+            <span className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-white/[0.06] text-white/40 border border-white/[0.08]">
+              {categoryEmojis[a.category] || '\u{1F4E8}'} {formatCategory(a.category)}
+            </span>
+          )}
         </div>
 
         {/* Title */}
@@ -142,20 +170,35 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
           {title}
         </h2>
 
-        {/* Summary */}
-        {a?.summary && (
-          <p className="text-[14px] leading-relaxed text-white/55 mb-6">{a.summary}</p>
-        )}
-
-        {/* Key Takeaways */}
-        {a?.keyTakeaways && a.keyTakeaways.length > 0 && (
+        {/* Summary as bullet points */}
+        {summaryBullets.length > 0 ? (
           <div className="mb-6">
-            <p className="text-[11px] uppercase tracking-wider font-semibold text-white/30 mb-2">Key Takeaways</p>
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-white/30 mb-2">Summary</p>
             <ul className="space-y-1.5">
-              {a.keyTakeaways.map((t, i) => (
-                <li key={i} className="text-[14px] pl-3.5 relative text-white/55">
-                  <span className="absolute left-0 top-[8px] h-[5px] w-[5px] rounded-full bg-[#0A84FF]" />
-                  {t}
+              {summaryBullets.map((s, i) => (
+                <li key={i} className="text-[14px] pl-3.5 relative text-white/55 leading-relaxed">
+                  <span className="absolute left-0 top-[9px] h-[5px] w-[5px] rounded-full bg-[#0A84FF]" />
+                  {s}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : a?.summary ? (
+          <p className="text-[14px] leading-relaxed text-white/55 mb-6">{a.summary}</p>
+        ) : null}
+
+        {/* Action Items */}
+        {actionItems.length > 0 && (
+          <div className="mb-6">
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-white/30 mb-2">Action Items</p>
+            <ul className="space-y-1.5">
+              {actionItems.map((ai, i) => (
+                <li key={i} className="text-[14px] pl-3.5 relative text-white/55 leading-relaxed">
+                  <span className="absolute left-0 top-[9px] h-[5px] w-[5px] rounded-full bg-emerald-400" />
+                  <span className="text-[11px] uppercase tracking-wider font-semibold mr-1.5 px-1.5 py-0.5 rounded bg-white/[0.06] text-white/40">
+                    {ai.assignee}
+                  </span>
+                  {ai.action}
                 </li>
               ))}
             </ul>
@@ -170,17 +213,18 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
           </div>
         )}
 
-        {/* Integration Proposal */}
+        {/* Integration Plan / Proposal */}
         {proposal && (
           <div className="rounded-lg p-4 space-y-2.5 mb-6 border border-[#0A84FF]/20 bg-[#0A84FF]/[0.05]">
-            <p className="text-[11px] uppercase tracking-wider font-semibold text-[#0A84FF]">Integration Proposal</p>
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-[#0A84FF]">Integration Plan</p>
             <div className="grid gap-2">
               {([
-                ['WHAT', proposal.what],
+                ['WHERE', proposal.connectsTo],
                 ['HOW', proposal.how],
                 ['EFFORT', proposal.effort],
-                ['CONNECTS', proposal.connectsTo],
-              ] as [string, string][]).map(([label, value]) => (
+                ['IMPACT', (proposal as IntegrationProposal & { impact?: string }).impact],
+                ['WHAT', proposal.what],
+              ] as [string, string | undefined][]).filter(([, v]) => v).map(([label, value]) => (
                 <div key={label} className="flex gap-2.5">
                   <span className="text-[10px] uppercase tracking-wider w-[68px] shrink-0 pt-0.5 font-semibold text-[#0A84FF]/60">
                     {label}
@@ -248,16 +292,19 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
           </div>
         )}
 
-        {/* Relevance */}
+        {/* Relevance scores */}
         {a?.relevance && (
           <div className="mb-6">
             <p className="text-[11px] uppercase tracking-wider font-semibold text-white/30 mb-2">Relevance</p>
             <div className="flex items-center gap-3 flex-wrap">
-              {Object.entries(a.relevance).map(([k, v]) => (
-                <span key={k} className="text-[13px] text-white/55">
-                  {k}: {v}
-                </span>
-              ))}
+              {Object.entries(a.relevance).map(([k, v]) => {
+                const color = (v as number) > 7 ? 'text-emerald-400' : (v as number) >= 4 ? 'text-amber-400' : 'text-white/30'
+                return (
+                  <span key={k} className={`text-[13px] ${color}`}>
+                    {k}: <span className="font-semibold">{v}</span>
+                  </span>
+                )
+              })}
             </div>
           </div>
         )}
@@ -268,7 +315,7 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
             href={item.urls[0]}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs text-[#0A84FF] hover:underline mb-6"
+            className="inline-flex items-center gap-1.5 text-[13px] text-[#0A84FF] hover:underline mb-6"
           >
             <ExternalLink className="h-3.5 w-3.5" />
             Open source

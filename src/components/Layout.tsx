@@ -1,14 +1,22 @@
 import { useState } from 'react'
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
-import { AnimatePresence } from 'framer-motion'
-import { Upload, Terminal, House, BookOpen, Settings, type LucideIcon } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { Upload, Terminal, Home, BookOpen, Settings, type LucideIcon } from 'lucide-react'
+
 import UploadModal from './UploadModal'
+
+const ICON_HOVER: Record<string, object> = {
+  Ops: { y: -1 },
+  Home: { rotate: -8 },
+  Knowledge: { scale: 1.1 },
+  Settings: { rotate: 30 },
+}
 
 const FULL_BLEED_ROUTES = ['/ops', '/knowledge', '/home', '/settings']
 
 const NAV_ITEMS: { name: string; href: string; Icon: LucideIcon }[] = [
+  { name: 'Home', href: '/home', Icon: Home },
   { name: 'Ops', href: '/ops', Icon: Terminal },
-  { name: 'Home', href: '/home', Icon: House },
   { name: 'Knowledge', href: '/knowledge', Icon: BookOpen },
   { name: 'Settings', href: '/settings', Icon: Settings },
 ]
@@ -17,6 +25,7 @@ export default function Layout() {
   const location = useLocation()
   const isFullBleed = FULL_BLEED_ROUTES.includes(location.pathname)
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [hoveredTab, setHoveredTab] = useState<string | null>(null)
 
   return (
     <div className="min-h-screen flex flex-col relative">
@@ -50,6 +59,8 @@ export default function Layout() {
               <NavLink
                 key={item.name}
                 to={item.href}
+                onMouseEnter={() => setHoveredTab(item.name)}
+                onMouseLeave={() => setHoveredTab(null)}
                 className={({ isActive }) =>
                   `group relative flex items-center gap-2 text-[14px] font-medium transition-all duration-200 ${
                     isActive
@@ -65,11 +76,17 @@ export default function Layout() {
               >
                 {({ isActive }) => (
                   <>
-                    <item.Icon
-                      size={20}
-                      className={`shrink-0 transition-opacity duration-200 ${isActive ? 'opacity-100' : 'opacity-50 group-hover:opacity-100'}`}
-                      strokeWidth={2}
-                    />
+                    <motion.div
+                      className="inline-flex items-center justify-center"
+                      animate={hoveredTab === item.name ? ICON_HOVER[item.name] : { y: 0, rotate: 0, scale: 1 }}
+                      transition={{ duration: 0.25, ease: 'easeOut' }}
+                    >
+                      <item.Icon
+                        size={18}
+                        className={`shrink-0 transition-opacity duration-200 ${isActive ? 'opacity-100' : 'opacity-50 group-hover:opacity-100'}`}
+                        strokeWidth={1.5}
+                      />
+                    </motion.div>
                     {item.name}
                   </>
                 )}
@@ -130,7 +147,7 @@ export default function Layout() {
             >
               {({ isActive }) => (
                 <>
-                  <item.Icon size={20} className="shrink-0" strokeWidth={2} />
+                  <item.Icon size={18} className="shrink-0" strokeWidth={1.5} />
                   <span className="text-[11px]">{item.name}</span>
                 </>
               )}
