@@ -10,8 +10,8 @@ const COLORS = ['hsl(263, 70%, 58%)', 'hsl(160, 60%, 45%)', 'hsl(43, 74%, 66%)',
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null
   return (
-    <div className="rounded-lg border bg-card px-3 py-2 text-sm shadow-md">
-      {label && <p className="font-medium mb-1">{label}</p>}
+    <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-2 text-sm">
+      {label && <p className="mb-1" style={{ fontWeight: 500, color: 'var(--text-1)' }}>{label}</p>}
       {payload.map((entry: any, i: number) => (
         <p key={i} style={{ color: entry.color }} className="text-xs">
           {entry.name}: {typeof entry.value === 'number' ? `€${entry.value.toLocaleString('fr-FR')}` : entry.value}
@@ -48,13 +48,13 @@ export default function FinancePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--text-2)]" />
       </div>
     )
   }
 
   if (!spending || !subscriptions || !insurance || !waste) {
-    return <div className="text-center text-muted-foreground py-12">Failed to load financial data</div>
+    return <div className="text-center text-[var(--text-2)] py-12">Failed to load financial data</div>
   }
 
   const totalIncome = spending.monthly_trends.average_monthly_income * 14
@@ -69,30 +69,30 @@ export default function FinancePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-semibold">Financial Intelligence</h1>
-        <p className="text-muted-foreground">Comprehensive financial overview</p>
+        <h1 style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>Financial Intelligence</h1>
+        <p className="text-[var(--text-2)]">Comprehensive financial overview</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card>
-          <CardHeader className="pb-2"><p className="text-sm text-muted-foreground">Total Income</p></CardHeader>
-          <CardContent><p className="text-2xl font-semibold text-green-600 dark:text-green-400">{'\u20AC'}{totalIncome.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</p></CardContent>
+          <CardHeader className="pb-2"><p className="text-sm text-[var(--text-2)]">Total Income</p></CardHeader>
+          <CardContent><p className="text-green-400" style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }}>{'\u20AC'}{totalIncome.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</p></CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><p className="text-sm text-muted-foreground">Total Expenses</p></CardHeader>
-          <CardContent><p className="text-2xl font-semibold">{'\u20AC'}{totalExpenses.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</p></CardContent>
+          <CardHeader className="pb-2"><p className="text-sm text-[var(--text-2)]">Total Expenses</p></CardHeader>
+          <CardContent><p style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>{'\u20AC'}{totalExpenses.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</p></CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><p className="text-sm text-muted-foreground">Savings Rate</p></CardHeader>
-          <CardContent><p className="text-2xl font-semibold">{savingsRate.toFixed(1)}%</p></CardContent>
+          <CardHeader className="pb-2"><p className="text-sm text-[var(--text-2)]">Savings Rate</p></CardHeader>
+          <CardContent><p style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>{savingsRate.toFixed(1)}%</p></CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><p className="text-sm text-muted-foreground">Subscriptions</p></CardHeader>
-          <CardContent><p className="text-2xl font-semibold text-amber-600 dark:text-amber-400">{'\u20AC'}{subscriptions.totals.total_monthly.toLocaleString('fr-FR')}/mo</p></CardContent>
+          <CardHeader className="pb-2"><p className="text-sm text-[var(--text-2)]">Subscriptions</p></CardHeader>
+          <CardContent><p className="text-amber-400" style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }}>{'\u20AC'}{subscriptions.totals.total_monthly.toLocaleString('fr-FR')}/mo</p></CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><p className="text-sm text-muted-foreground">Potential Savings</p></CardHeader>
-          <CardContent><p className="text-2xl font-semibold text-green-600 dark:text-green-400">{'\u20AC'}{potentialSavings.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}/yr</p></CardContent>
+          <CardHeader className="pb-2"><p className="text-sm text-[var(--text-2)]">Potential Savings</p></CardHeader>
+          <CardContent><p className="text-green-400" style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }}>{'\u20AC'}{potentialSavings.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}/yr</p></CardContent>
         </Card>
       </div>
 
@@ -167,16 +167,16 @@ export default function FinancePage() {
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
-          <CardHeader className="pb-2"><p className="text-sm text-muted-foreground">Total Annual Waste</p></CardHeader>
-          <CardContent><p className="text-2xl font-semibold text-red-600 dark:text-red-400">{'\u20AC'}{waste.totals.total_annual_waste.toLocaleString('fr-FR')}</p></CardContent>
+          <CardHeader className="pb-2"><p className="text-sm text-[var(--text-2)]">Total Annual Waste</p></CardHeader>
+          <CardContent><p className="text-red-400" style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }}>{'\u20AC'}{waste.totals.total_annual_waste.toLocaleString('fr-FR')}</p></CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><p className="text-sm text-muted-foreground">Bank Fees</p></CardHeader>
-          <CardContent><p className="text-2xl font-semibold">{'\u20AC'}{waste.totals.breakdown.bank_fees.toLocaleString('fr-FR')}</p></CardContent>
+          <CardHeader className="pb-2"><p className="text-sm text-[var(--text-2)]">Bank Fees</p></CardHeader>
+          <CardContent><p style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>{'\u20AC'}{waste.totals.breakdown.bank_fees.toLocaleString('fr-FR')}</p></CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><p className="text-sm text-muted-foreground">Small Forgotten Charges</p></CardHeader>
-          <CardContent><p className="text-2xl font-semibold">{'\u20AC'}{waste.totals.breakdown.small_forgotten_charges.toLocaleString('fr-FR')}</p></CardContent>
+          <CardHeader className="pb-2"><p className="text-sm text-[var(--text-2)]">Small Forgotten Charges</p></CardHeader>
+          <CardContent><p style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>{'\u20AC'}{waste.totals.breakdown.small_forgotten_charges.toLocaleString('fr-FR')}</p></CardContent>
         </Card>
       </div>
 
@@ -241,7 +241,7 @@ export default function FinancePage() {
       <Card>
         <CardHeader>
           <CardTitle>Action Plan</CardTitle>
-          <p className="text-sm text-muted-foreground">Prioritized recommendations with estimated savings</p>
+          <p className="text-sm text-[var(--text-2)]">Prioritized recommendations with estimated savings</p>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -251,8 +251,8 @@ export default function FinancePage() {
               { title: 'Cancel Forgotten Charges', description: 'Remove unused subscriptions', savings: waste.totals.breakdown.small_forgotten_charges },
             ].sort((a, b) => b.savings - a.savings).map((action, i) => (
               <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
-                <div><p className="font-medium">{action.title}</p><p className="text-sm text-muted-foreground">{action.description}</p></div>
-                <div className="text-xl font-light text-green-600 dark:text-green-400">{'\u20AC'}{action.savings.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}/yr</div>
+                <div><p style={{ fontWeight: 600, color: 'var(--text-1)' }}>{action.title}</p><p className="text-sm text-[var(--text-2)]">{action.description}</p></div>
+                <div className="text-green-400" style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }}>{'\u20AC'}{action.savings.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}/yr</div>
               </div>
             ))}
           </div>

@@ -1,29 +1,21 @@
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { opsApi, type Task, type SystemInfo, type InboxItem } from '../services/opsApi'
-import { Loader2, RotateCcw, ChevronDown, ChevronRight, DollarSign, Trash2, Check, X, ArrowDownToLine, Sparkles, Clock, Inbox, ExternalLink } from 'lucide-react'
-import TaskLogPanel from '../components/TaskLogPanel'
+import { opsApi, type Task, type SystemInfo } from '../services/opsApi'
+import { Loader2, RotateCcw, ChevronDown, ChevronRight, Trash2, Check, X, ArrowDownToLine, Sparkles, Terminal, ToggleLeft, ToggleRight, Send, ChevronLeft } from 'lucide-react'
 
 // --- Helpers ---
 function formatTime(ts: string): string {
   return new Date(ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
 }
-function getDateKey(ts: string): string {
-  return new Date(ts).toISOString().split('T')[0]
-}
-function getDateLabel(dateStr: string): string {
-  const todayKey = new Date().toISOString().split('T')[0]
-  const y = new Date(); y.setDate(y.getDate() - 1)
-  const yesterdayKey = y.toISOString().split('T')[0]
-  if (dateStr === todayKey) return 'Today'
-  if (dateStr === yesterdayKey) return 'Yesterday'
-  return new Date(dateStr + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+
+function formatFullDate(ts: string): string {
+  return new Date(ts).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
-interface DayGroup { date: string; label: string; tasks: Task[]; totalCost: number }
+type FilterTab = 'all' | 'running' | 'done' | 'failed'
 
 // --- Animated counter ---
-function AnimatedNumber({ value, prefix = '', suffix = '', decimals = 0 }: { value: number; prefix?: string; suffix?: string; decimals?: number }) {
+function AnimatedNumber({ value, prefix = '', decimals = 0 }: { value: number; prefix?: string; decimals?: number }) {
   const [display, setDisplay] = useState(0)
   const prev = useRef(0)
 
@@ -44,87 +36,177 @@ function AnimatedNumber({ value, prefix = '', suffix = '', decimals = 0 }: { val
     prev.current = value
   }, [value])
 
-  return <>{prefix}{decimals > 0 ? display.toFixed(decimals) : Math.round(display)}{suffix}</>
+  return <>{prefix}{decimals > 0 ? display.toFixed(decimals) : Math.round(display)}</>
 }
 
-// --- Status badge ---
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    running: 'bg-violet-500/10 text-violet-400/80 animate-status-pulse',
-    done: 'bg-emerald-500/10 text-emerald-400/80 animate-fade-in-fast',
-    failed: 'bg-rose-500/10 text-rose-400/80',
-    queued: 'bg-white/5 text-white/50',
-    cancelled: 'bg-gray-500/10 text-gray-400/80',
+// --- Status dot (compact, no label) ---
+function StatusDot({ status }: { status: string }) {
+  const dotColor: Record<string, string> = {
+    running: 'var(--accent)',
+    done: 'var(--success)',
+    failed: 'var(--destructive)',
+    queued: 'var(--text-3)',
+    cancelled: 'var(--text-3)',
   }
   return (
-    <span className={`text-[10px] px-2 py-0.5 rounded-full ${styles[status] || styles.queued}`}>
-      {status}
-    </span>
+    <span
+      className={`inline-block h-1.5 w-1.5 rounded-full shrink-0${status === 'running' ? ' animate-pulse' : ''}`}
+      style={{ background: dotColor[status] || dotColor.queued }}
+    />
   )
 }
 
-// --- Deploy status badge ---
-function DeployBadge({ result }: { result?: string }) {
-  if (!result) return null
-  if (result.includes('[deployed]')) {
-    return <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400/80">deployed</span>
-  }
-  if (result.includes('[not deployed]')) {
-    return <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400/80">not deployed</span>
-  }
-  return null
-}
+// --- Task Detail (Right Panel) ---
+function TaskDetail({ task, onDelete, logContent, logLoading, logNotFound }: {
+  task: Task
+  onDelete: (e: React.MouseEvent, id: string) => void
+  logContent: string | null
+  logLoading: boolean
+  logNotFound: boolean
+}) {
+  const bottomRef = useRef<HTMLDivElement>(null)
+  const costVal = parseFloat(task.cost || '0')
+  const modelNames = task.model
+    ? task.model.split(',').map(m => m.trim()).filter(Boolean).map(m => m.split('/').pop() || m)
+    : []
 
-// --- Model badge ---
-function ModelBadge({ name }: { name: string }) {
-  const isManual = name === 'jm-direct'
+  useEffect(() => {
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [logContent])
+
   return (
-    <span className={`text-[10px] px-2 py-0.5 rounded-full ${isManual ? 'bg-violet-500/15 text-violet-400/90' : 'bg-white/5 text-white/50'}`}>
-      {isManual ? 'manual' : name}
-    </span>
+    <div className="h-full flex flex-col">
+      {/* Sticky header */}
+      <div className="shrink-0 px-6 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
+        <div className="flex items-start gap-2">
+          <StatusDot status={task.status} />
+          <div className="min-w-0 flex-1">
+            <h2 className="text-[15px] leading-snug" style={{ fontWeight: 600, color: 'var(--text-1)', letterSpacing: '-0.01em' }}>
+              {task.title}
+            </h2>
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>{task.status}</span>
+              <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>&middot;</span>
+              <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>{formatFullDate(task.created)}</span>
+              {task.service && (
+                <>
+                  <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>&middot;</span>
+                  <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>{task.service}</span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Meta row */}
+        <div className="flex items-center gap-3 mt-3 flex-wrap">
+          {costVal > 0 && (
+            <span className="text-[11px] text-amber-400 tabular-nums">${costVal.toFixed(4)}</span>
+          )}
+          {(task.tokensIn != null && task.tokensIn > 0) && (
+            <span className="text-[11px]" style={{ color: 'var(--text-2)' }}>{(task.tokensIn / 1000).toFixed(1)}K in</span>
+          )}
+          {(task.tokensOut != null && task.tokensOut > 0) && (
+            <span className="text-[11px]" style={{ color: 'var(--text-2)' }}>{(task.tokensOut / 1000).toFixed(1)}K out</span>
+          )}
+          {modelNames.map(name => (
+            <span key={name} className="text-[11px]" style={{ color: 'var(--text-2)' }}>
+              {name === 'jm-direct' ? 'manual' : name}
+            </span>
+          ))}
+          {task.result?.includes('[deployed]') && (
+            <span className="text-[11px] text-emerald-400">deployed</span>
+          )}
+          {task.result?.includes('[not deployed]') && (
+            <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>not deployed</span>
+          )}
+        </div>
+      </div>
+
+      {/* Log output */}
+      <div className="flex-1 overflow-y-auto p-6" style={{ background: 'rgba(0, 0, 0, 0.15)' }}>
+        {logLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--text-3)' }} />
+          </div>
+        ) : logNotFound ? (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-[13px]" style={{ color: 'var(--text-3)' }}>No log file found for this task.</p>
+          </div>
+        ) : (
+          <pre className="text-xs font-mono whitespace-pre-wrap break-words leading-relaxed" style={{ color: 'rgba(34, 197, 94, 0.8)' }}>
+            {logContent}
+            <div ref={bottomRef} />
+          </pre>
+        )}
+      </div>
+
+      {/* Footer actions */}
+      <div className="shrink-0 px-6 py-3 border-t flex items-center gap-2" style={{ borderColor: 'var(--border)' }}>
+        {task.result && (
+          <p className="text-[11px] truncate flex-1 min-w-0" style={{ color: 'var(--text-3)' }}>{task.result}</p>
+        )}
+        <button
+          onClick={(e) => onDelete(e, task.id)}
+          className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-md transition-colors shrink-0"
+          style={{ color: 'var(--text-3)', background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          Delete
+        </button>
+      </div>
+    </div>
   )
 }
+
 
 export default function OpsPage() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
   const [loading, setLoading] = useState(true)
-  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set())
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
-  const [logPanelOpen, setLogPanelOpen] = useState(false)
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const [filter, setFilter] = useState<FilterTab>('all')
   const [gitStatus, setGitStatus] = useState<{ changedFiles: number; clean: boolean } | null>(null)
   const [commitState, setCommitState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [oclawVersion, setOclawVersion] = useState<{ current: string; latest: string; upToDate: boolean } | null>(null)
   const [oclawUpdateState, setOclawUpdateState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [cleanupState, setCleanupState] = useState<'idle' | 'loading'>('idle')
   const [cleanupCount, setCleanupCount] = useState<number | null>(null)
-  const [inboxItems, setInboxItems] = useState<InboxItem[]>([])
-  const [expandedInbox, setExpandedInbox] = useState<string | null>(null)
+  const [quickTaskOpen, setQuickTaskOpen] = useState(false)
+  const [quickTaskText, setQuickTaskText] = useState('')
+  const [batchMode, setBatchMode] = useState(false)
+  const [quickTaskState, setQuickTaskState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [toasts, setToasts] = useState<{ id: number; message: string; type: 'success' | 'error' }[]>([])
+  const toastIdRef = useRef(0)
+
+  // Log panel state (inline in right panel)
+  const [logContent, setLogContent] = useState<string | null>(null)
+  const [logLoading, setLogLoading] = useState(false)
+  const [logNotFound, setLogNotFound] = useState(false)
+  const logIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const addToast = (message: string, type: 'success' | 'error' = 'success') => {
+    const id = ++toastIdRef.current
+    setToasts(prev => [...prev, { id, message, type }])
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000)
+  }
 
   const loadData = () => {
-    Promise.all([opsApi.getTasks(), opsApi.getSystemInfo(), opsApi.getGitStatus(), opsApi.getInboxRecent(20)])
-      .then(([tasksData, sysData, gitData, inboxData]) => {
+    Promise.all([opsApi.getTasks(), opsApi.getSystemInfo(), opsApi.getGitStatus()])
+      .then(([tasksData, sysData, gitData]) => {
         setTasks(tasksData)
         setSystemInfo(sysData)
         setGitStatus(gitData)
-        setInboxItems(inboxData)
       })
       .catch((error) => console.error('Failed to load data:', error))
       .finally(() => setLoading(false))
   }
 
-  // Load OpenClaw version on mount (not on interval — it's slow)
   useEffect(() => {
     opsApi.getOpenClawVersion().then(setOclawVersion).catch(() => {})
   }, [])
-
-  const [initialized, setInitialized] = useState(false)
-  useEffect(() => {
-    if (!initialized && tasks.length > 0) {
-      setExpandedDays(new Set([new Date().toISOString().split('T')[0]]))
-      setInitialized(true)
-    }
-  }, [tasks, initialized])
 
   useEffect(() => {
     loadData()
@@ -132,41 +214,65 @@ export default function OpsPage() {
     return () => clearInterval(interval)
   }, [])
 
-  const dayGroups = useMemo(() => {
-    const groups: Record<string, Task[]> = {}
-    tasks.forEach(t => { const k = getDateKey(t.created); if (!groups[k]) groups[k] = []; groups[k].push(t) })
-    return Object.entries(groups)
-      .map(([date, dayTasks]): DayGroup => ({
-        date,
-        label: getDateLabel(date),
-        tasks: dayTasks.sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime()),
-        totalCost: dayTasks.reduce((s, t) => s + parseFloat(t.cost || '0'), 0),
-      }))
-      .sort((a, b) => b.date.localeCompare(a.date))
-  }, [tasks])
-
-  const toggleDay = (d: string) => {
-    setExpandedDays(prev => { const n = new Set(prev); if (n.has(d)) n.delete(d); else n.add(d); return n })
+  // Fetch log for selected task
+  const fetchLog = async (taskId: string) => {
+    const result = await opsApi.getTaskLog(taskId)
+    if (result) {
+      setLogContent(result.content)
+      setLogNotFound(false)
+    } else {
+      setLogNotFound(true)
+    }
+    setLogLoading(false)
   }
 
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="skeleton h-10 w-full rounded-xl" />
-        <div className="skeleton h-5 w-72 rounded-lg" />
-        <div>
-          <div className="skeleton h-5 w-20 mb-4 rounded-xl" />
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="skeleton h-16 w-full mb-2 rounded-2xl" />
-          ))}
-        </div>
-      </div>
-    )
-  }
+  useEffect(() => {
+    if (logIntervalRef.current) {
+      clearInterval(logIntervalRef.current)
+      logIntervalRef.current = null
+    }
 
-  const runningCount = tasks.filter((t) => t.status === 'running').length
-  const queuedCount = tasks.filter((t) => t.status === 'queued').length
-  const doneCount = tasks.filter((t) => t.status === 'done').length
+    if (!selectedTaskId) {
+      setLogContent(null)
+      setLogNotFound(false)
+      return
+    }
+
+    const task = tasks.find(t => t.id === selectedTaskId)
+    if (!task) return
+
+    setLogLoading(true)
+    fetchLog(task.id)
+
+    if (task.status === 'running') {
+      logIntervalRef.current = setInterval(() => fetchLog(task.id), 3000)
+    }
+
+    return () => {
+      if (logIntervalRef.current) {
+        clearInterval(logIntervalRef.current)
+        logIntervalRef.current = null
+      }
+    }
+  }, [selectedTaskId, tasks])
+
+  const filteredTasks = useMemo(() => {
+    let result = [...tasks]
+    if (filter === 'running') result = result.filter(t => t.status === 'running' || t.status === 'queued')
+    else if (filter === 'done') result = result.filter(t => t.status === 'done')
+    else if (filter === 'failed') result = result.filter(t => t.status === 'failed' || t.status === 'cancelled')
+    return result.sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime())
+  }, [tasks, filter])
+
+  const selectedTask = useMemo(
+    () => tasks.find(t => t.id === selectedTaskId) || null,
+    [tasks, selectedTaskId]
+  )
+
+  const runningCount = tasks.filter(t => t.status === 'running').length
+  const queuedCount = tasks.filter(t => t.status === 'queued').length
+  const doneCount = tasks.filter(t => t.status === 'done').length
+  const failedCount = tasks.filter(t => t.status === 'failed' || t.status === 'cancelled').length
   const totalCost = tasks.reduce((sum, t) => sum + parseFloat(t.cost || '0'), 0)
 
   const handleResetCosts = async () => {
@@ -179,6 +285,7 @@ export default function OpsPage() {
     if (!window.confirm('Delete this task?')) return
     const updated = await opsApi.deleteTask(taskId)
     setTasks(updated)
+    if (selectedTaskId === taskId) setSelectedTaskId(null)
   }
 
   const handleGitCommit = async () => {
@@ -186,7 +293,7 @@ export default function OpsPage() {
     try {
       const result = await opsApi.gitCommit()
       setCommitState(result.ok ? 'success' : 'error')
-      if (result.ok) loadData() // refresh git status
+      if (result.ok) loadData()
     } catch {
       setCommitState('error')
     }
@@ -218,6 +325,41 @@ export default function OpsPage() {
     setTimeout(() => setCleanupCount(null), 3000)
   }
 
+  const handleQuickTask = async () => {
+    const text = quickTaskText.trim()
+    if (!text) return
+    setQuickTaskState('loading')
+    try {
+      if (batchMode) {
+        const prompts = text.split(/\n---\n/).map(s => s.trim()).filter(Boolean)
+        const result = await opsApi.batchTasks(prompts)
+        if (result.ok) {
+          addToast(`${result.count} task${result.count !== 1 ? 's' : ''} queued`)
+          setQuickTaskText('')
+          loadData()
+        } else {
+          addToast(result.error || 'Failed to queue', 'error')
+        }
+      } else {
+        const result = await opsApi.queueTask(text)
+        if (result.ok) {
+          addToast('Task queued')
+          setQuickTaskText('')
+          loadData()
+        } else {
+          addToast(result.error || 'Failed to queue', 'error')
+        }
+      }
+      setQuickTaskState('success')
+    } catch {
+      setQuickTaskState('error')
+      addToast('Failed to queue task', 'error')
+    }
+    setTimeout(() => setQuickTaskState('idle'), 2000)
+  }
+
+  const batchCount = batchMode ? quickTaskText.trim().split(/\n---\n/).map(s => s.trim()).filter(Boolean).length : 0
+
   const formatUptime = (seconds: number) => {
     const d = Math.floor(seconds / 86400)
     const h = Math.floor((seconds % 86400) / 3600)
@@ -225,324 +367,374 @@ export default function OpsPage() {
     return d > 0 ? `${d}d ${h}h` : `${h}h ${m}m`
   }
 
-  return (
-    <div className="space-y-4">
-      {/* Compact status bar — system metrics */}
-      {systemInfo && (
-        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-          <div className="flex flex-wrap items-center gap-3 sm:gap-5 px-4 py-2.5 rounded-2xl border border-white/[0.06] bg-white/[0.02]">
-            {[
-              { label: 'CPU', value: `${systemInfo.cpu}%`, warn: systemInfo.cpu > 80 },
-              { label: 'Mem', value: `${systemInfo.mem}%`, warn: systemInfo.mem > 80 },
-              { label: 'Disk', value: `${systemInfo.disk}%`, warn: systemInfo.disk > 90 },
-              { label: 'Up', value: formatUptime(systemInfo.uptime) },
-            ].map((s, i) => (
-              <span key={s.label} className="flex items-center gap-1.5 text-xs text-white/40">
-                <span className="text-white/20">{s.label}</span>
-                <span className={s.warn ? 'text-amber-400/80' : 'text-white/60 tabular-nums'}>{s.value}</span>
-                {i < 3 && <span className="text-white/10 ml-1.5">·</span>}
-              </span>
-            ))}
-            <span className="text-white/10 ml-auto">·</span>
-            <span className="flex items-center gap-1.5 text-xs">
-              <span className="text-white/20">Cost</span>
-              <span className="text-amber-400/70 tabular-nums"><AnimatedNumber value={totalCost} prefix="$" decimals={2} /></span>
-              <button onClick={handleResetCosts} title="Reset costs" className="text-white/15 hover:text-amber-400/80 transition-colors duration-150 p-0.5">
-                <RotateCcw className="h-2.5 w-2.5" />
-              </button>
-            </span>
-          </div>
-        </motion.div>
-      )}
+  const filters: { key: FilterTab; label: string; count: number }[] = [
+    { key: 'all', label: 'All', count: tasks.length },
+    { key: 'running', label: 'Running', count: runningCount + queuedCount },
+    { key: 'done', label: 'Done', count: doneCount },
+    { key: 'failed', label: 'Failed', count: failedCount },
+  ]
 
-      {/* Task counts + git + version — one compact row */}
-      <div className="flex flex-wrap items-center gap-3 sm:gap-4 px-1">
-        {/* Task counts */}
-        <div className="flex items-center gap-3 text-xs">
-          {[
-            { label: 'Running', value: runningCount, color: 'text-violet-400', pulse: runningCount > 0 },
-            { label: 'Queued', value: queuedCount, color: 'text-white/50' },
-            { label: 'Done', value: doneCount, color: 'text-emerald-400/80' },
-          ].map((s) => (
-            <span key={s.label} className="flex items-center gap-1">
-              <span className="text-white/25">{s.label}</span>
-              <span className={`font-medium tabular-nums ${s.color} ${s.pulse ? 'animate-pulse' : ''}`}>{s.value}</span>
-            </span>
-          ))}
-        </div>
-
-        <span className="text-white/10">·</span>
-
-        {/* Git status */}
-        {gitStatus && (
-          <div className="flex items-center gap-1.5 text-xs">
-            {gitStatus.clean ? (
-              <span className="text-emerald-400/70">Clean ✓</span>
-            ) : (
-              <>
-                <span className="text-amber-400/70">{gitStatus.changedFiles} file{gitStatus.changedFiles !== 1 ? 's' : ''}</span>
-                <span className="text-white/20">→</span>
-                <button
-                  onClick={handleGitCommit}
-                  disabled={commitState === 'loading'}
-                  className="text-white/40 hover:text-violet-400 transition-colors duration-150 disabled:opacity-50"
-                >
-                  {commitState === 'loading' ? <Loader2 className="h-3 w-3 animate-spin inline" /> :
-                   commitState === 'success' ? <span className="text-emerald-400">Committed ✓</span> :
-                   commitState === 'error' ? <span className="text-rose-400">Failed</span> :
-                   <span>Commit</span>}
-                </button>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* Version */}
-        {oclawVersion && (
-          <>
-            <span className="text-white/10">·</span>
-            <div className="flex items-center gap-1.5 text-xs">
-              <span className={`h-1.5 w-1.5 rounded-full ${oclawVersion.upToDate ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
-              <span className="text-white/35">v{oclawVersion.current.replace(/^v/, '')}</span>
-              {!oclawVersion.upToDate && (
-                <button
-                  onClick={handleOclawUpdate}
-                  disabled={oclawUpdateState === 'loading'}
-                  title={`Update to ${oclawVersion.latest}`}
-                  className="text-amber-400/70 hover:text-amber-400 transition-colors duration-150 p-0.5 disabled:opacity-50"
-                >
-                  {oclawUpdateState === 'loading' ? <Loader2 className="h-3 w-3 animate-spin" /> :
-                   oclawUpdateState === 'success' ? <Check className="h-3 w-3 text-emerald-400" /> :
-                   oclawUpdateState === 'error' ? <X className="h-3 w-3 text-rose-400" /> :
-                   <ArrowDownToLine className="h-3 w-3" />}
-                </button>
-              )}
-            </div>
-          </>
-        )}
+  if (loading) {
+    return (
+      <div className="p-6 space-y-4">
+        <div className="skeleton h-10 w-full rounded-xl" />
+        <div className="skeleton h-5 w-72 rounded-lg" />
+        <div className="skeleton h-10 w-full rounded-xl" />
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="skeleton h-16 w-full mb-2 rounded-2xl" />
+        ))}
       </div>
+    )
+  }
 
-      {/* Timeline */}
-      <div>
-        <div className="flex items-center gap-2 mb-4">
-          <Clock className="h-4 w-4 text-white/40" />
-          <p className="text-xs uppercase tracking-widest text-white/40">Timeline</p>
-          <button
-            onClick={handleTaskCleanup}
-            disabled={cleanupState === 'loading'}
-            title="Clean up stale tasks"
-            className="relative text-white/20 hover:text-violet-400 transition-colors duration-150 p-1 disabled:opacity-50"
-          >
-            {cleanupState === 'loading' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-            {cleanupCount !== null && cleanupCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 bg-violet-500 text-white text-[9px] font-medium rounded-full h-4 min-w-[16px] flex items-center justify-center px-1 animate-fade-in-fast">
-                {cleanupCount}
-              </span>
-            )}
-          </button>
-          {cleanupCount !== null && cleanupCount === 0 && (
-            <span className="text-xs text-white/30">No stale tasks</span>
+  return (
+    <>
+      {/* Full-bleed two-panel layout */}
+      <div
+        className="flex flex-col md:flex-row"
+        style={{
+          height: 'calc(100vh - 48px)',
+          background: 'var(--bg-surface)',
+        }}
+      >
+        {/* Left Panel — fixed 400px */}
+        <div
+          className={`shrink-0 flex flex-col md:w-[400px] ${selectedTask ? 'hidden md:flex' : 'flex'}`}
+          style={{ borderRight: '1px solid var(--border)', height: '100%' }}
+        >
+          {/* Page title */}
+          <div className="shrink-0 px-4 pt-4 pb-2">
+            <div className="flex items-center gap-2">
+              <Terminal className="h-4 w-4" style={{ color: 'var(--text-3)' }} />
+              <h1 style={{ fontSize: 16, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>Ops</h1>
+            </div>
+          </div>
+
+          {/* System stats compact row */}
+          {systemInfo && (
+            <div className="shrink-0 px-4 pb-1.5">
+              <div className="flex items-center gap-2 text-[10px] flex-wrap" style={{ color: 'var(--text-3)' }}>
+                {[
+                  { label: 'CPU', value: `${systemInfo.cpu}%`, warn: systemInfo.cpu > 80 },
+                  { label: 'Mem', value: `${systemInfo.mem}%`, warn: systemInfo.mem > 80 },
+                  { label: 'Disk', value: `${systemInfo.disk}%`, warn: systemInfo.disk > 90 },
+                  { label: 'Up', value: formatUptime(systemInfo.uptime) },
+                ].map((s, i) => (
+                  <span key={s.label} className="flex items-center gap-1">
+                    <span>{s.label}</span>
+                    <span className={s.warn ? 'text-amber-400' : 'tabular-nums'}>{s.value}</span>
+                    {i < 3 && <span style={{ color: 'rgba(255,255,255,0.1)' }}>·</span>}
+                  </span>
+                ))}
+                <span style={{ color: 'rgba(255,255,255,0.1)' }}>·</span>
+                <span className="flex items-center gap-1">
+                  <span className="text-amber-400 tabular-nums"><AnimatedNumber value={totalCost} prefix="$" decimals={2} /></span>
+                  <button onClick={handleResetCosts} title="Reset costs" className="hover:text-amber-400 transition-colors duration-150 p-0.5" style={{ color: 'var(--text-3)' }}>
+                    <RotateCcw className="h-2 w-2" />
+                  </button>
+                </span>
+              </div>
+            </div>
           )}
-        </div>
-        <div className="space-y-2">
-          {dayGroups.length === 0 ? (
-            <p className="text-sm text-white/20 text-center py-12">No tasks yet</p>
-          ) : (
-            dayGroups.map((group) => (
-              <div key={group.date} className="rounded-2xl border border-white/[0.06] overflow-hidden bg-white/[0.02]">
-                <button onClick={() => toggleDay(group.date)} className="w-full flex items-center justify-between p-4 hover:bg-white/[0.03] transition-colors duration-150 text-left">
-                  <div className="flex items-center gap-3">
-                    {expandedDays.has(group.date) ? <ChevronDown className="h-4 w-4 text-white/20 shrink-0" /> : <ChevronRight className="h-4 w-4 text-white/20 shrink-0" />}
-                    <span className="text-sm font-medium text-white/80">{group.label}</span>
-                    <span className="text-xs text-white/25">{group.date}</span>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-white/30">
-                    <span>{group.tasks.length} tasks</span>
-                    {group.totalCost > 0 && <span className="flex items-center gap-1 text-amber-400/60"><DollarSign className="h-3 w-3" />{group.totalCost.toFixed(4)}</span>}
-                  </div>
-                </button>
-                {expandedDays.has(group.date) && (
+
+          {/* Quick Task collapsed bar */}
+          <div className="shrink-0 px-4 pb-1.5">
+            <div className="rounded-lg border border-[var(--border)] overflow-hidden" style={{ background: 'rgba(255,255,255,0.02)' }}>
+              <button
+                onClick={() => setQuickTaskOpen(!quickTaskOpen)}
+                className="w-full flex items-center gap-2 px-3 py-2 hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-150 text-left"
+              >
+                <Terminal className="h-3 w-3" style={{ color: 'var(--accent)' }} />
+                <span className="text-[11px]" style={{ color: 'var(--text-2)' }}>Quick Task</span>
+                {quickTaskOpen
+                  ? <ChevronDown className="h-3 w-3 ml-auto" style={{ color: 'var(--text-3)' }} />
+                  : <ChevronRight className="h-3 w-3 ml-auto" style={{ color: 'var(--text-3)' }} />
+                }
+              </button>
+              <AnimatePresence>
+                {quickTaskOpen && (
                   <motion.div
-                    className="border-t border-white/[0.04]"
-                    initial="hidden"
-                    animate="visible"
-                    variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.05 } } }}
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
                   >
-                    {group.tasks.map((task) => {
-                      const costVal = parseFloat(task.cost || '0')
-                      const modelNames = task.model
-                        ? task.model.split(',').map(m => m.trim()).filter(Boolean).map(m => m.split('/').pop() || m)
-                        : []
-                      return (
-                        <motion.div
-                          key={task.id}
-                          className="group flex items-start gap-3 p-4 border-l-2 border-white/[0.04] ml-4 hover:bg-white/[0.03] cursor-pointer w-[calc(100%-1rem)] text-left transition-colors duration-150"
-                          onClick={() => { setSelectedTask(task); setLogPanelOpen(true) }}
-                          variants={{ hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0, transition: { duration: 0.25, ease: 'easeOut' } } }}
+                    <div className="px-3 pb-2.5 pt-0.5 space-y-1.5" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setBatchMode(!batchMode)}
+                          className="flex items-center gap-1 text-[10px] transition-colors duration-150"
+                          style={{ color: 'var(--text-2)' }}
                         >
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-xs tabular-nums text-white/25">{formatTime(task.created)}</span>
-                              <span className="text-sm font-medium text-white/80 truncate">{task.title}</span>
-                              <StatusBadge status={task.status} />
-                              <DeployBadge result={task.result} />
-                              {modelNames.map((name) => (
-                                <ModelBadge key={name} name={name} />
-                              ))}
-                            </div>
-                            <div className="flex items-center gap-3 mt-1 text-xs text-white/30">
-                              {task.service && <span>{task.service}</span>}
-                              {costVal > 0 && <span className="text-amber-400/60">${costVal.toFixed(4)}</span>}
-                              {(task.tokensIn != null && task.tokensIn > 0) && <span>{(task.tokensIn / 1000).toFixed(1)}K in</span>}
-                              {(task.tokensOut != null && task.tokensOut > 0) && <span>{(task.tokensOut / 1000).toFixed(1)}K out</span>}
-                            </div>
-                            {task.result && <p className="text-xs text-white/20 mt-1 truncate">{task.result}</p>}
-                          </div>
-                          <button
-                            onClick={(e) => handleDeleteTask(e, task.id)}
-                            className="opacity-0 group-hover:opacity-100 text-white/20 hover:text-rose-400/80 transition-all duration-150 p-1 shrink-0 mt-0.5"
-                            title="Delete task"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </motion.div>
-                      )
-                    })}
+                          {batchMode
+                            ? <ToggleRight className="h-3.5 w-3.5 text-[var(--accent)]" />
+                            : <ToggleLeft className="h-3.5 w-3.5" style={{ color: 'var(--text-3)' }} />
+                          }
+                          <span className={batchMode ? 'text-[var(--accent)]' : ''}>Batch</span>
+                        </button>
+                        {batchMode && <span className="text-[9px]" style={{ color: 'var(--text-3)' }}>Separate with ---</span>}
+                      </div>
+                      <textarea
+                        value={quickTaskText}
+                        onChange={e => setQuickTaskText(e.target.value)}
+                        rows={batchMode ? 6 : 2}
+                        placeholder="Describe what to build..."
+                        className="w-full bg-transparent border border-[var(--border)] rounded-md px-2.5 py-1.5 text-[12px] text-[var(--text-1)] font-mono placeholder:text-[var(--text-3)] focus:outline-none focus:border-[var(--accent)] resize-none transition-all duration-150"
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                            e.preventDefault()
+                            handleQuickTask()
+                          }
+                        }}
+                      />
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px]" style={{ color: 'var(--text-3)' }}>
+                          {batchMode && batchCount > 0 ? `${batchCount} task${batchCount !== 1 ? 's' : ''}` : '\u2318+Enter'}
+                        </span>
+                        <button
+                          onClick={handleQuickTask}
+                          disabled={!quickTaskText.trim() || quickTaskState === 'loading'}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-[var(--accent)] text-white text-[11px] font-medium hover:brightness-110 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150"
+                        >
+                          {quickTaskState === 'loading' ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> :
+                           quickTaskState === 'success' ? <Check className="h-2.5 w-2.5" /> :
+                           <Send className="h-2.5 w-2.5" />}
+                          {batchMode && batchCount > 1 ? `Queue ${batchCount}` : 'Queue'}
+                        </button>
+                      </div>
+                    </div>
                   </motion.div>
                 )}
+              </AnimatePresence>
+            </div>
+          </div>
+
+          {/* Running/Queued/Done counts on one line */}
+          <div className="shrink-0 px-4 pb-1.5">
+            <div className="flex items-center gap-2.5 text-[10px]">
+              <span className="flex items-center gap-1">
+                <span style={{ color: 'var(--text-3)' }}>Running</span>
+                <span className={`tabular-nums text-[var(--accent)]${runningCount > 0 ? ' animate-pulse' : ''}`}>{runningCount}</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <span style={{ color: 'var(--text-3)' }}>Queued</span>
+                <span className="tabular-nums" style={{ color: 'var(--text-3)' }}>{queuedCount}</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <span style={{ color: 'var(--text-3)' }}>Done</span>
+                <span className="tabular-nums text-emerald-400">{doneCount}</span>
+              </span>
+              <span className="ml-auto">
+                <button
+                  onClick={handleTaskCleanup}
+                  disabled={cleanupState === 'loading'}
+                  title="Clean up stale tasks"
+                  className="relative hover:text-[var(--accent)] transition-colors duration-150 p-0.5 disabled:opacity-50"
+                  style={{ color: 'var(--text-3)' }}
+                >
+                  {cleanupState === 'loading' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                  {cleanupCount !== null && cleanupCount > 0 && (
+                    <span className="absolute -top-1 -right-1 text-[8px] rounded-full h-3 min-w-[12px] flex items-center justify-center px-0.5 animate-fade-in-fast text-white" style={{ background: 'var(--accent)' }}>
+                      {cleanupCount}
+                    </span>
+                  )}
+                </button>
+              </span>
+            </div>
+          </div>
+
+          {/* Filter tabs */}
+          <div className="shrink-0 px-4 pb-2">
+            <div className="flex gap-0.5 rounded-lg p-[2px]" style={{ background: 'rgba(255,255,255,0.03)' }}>
+              {filters.map(f => (
+                <button
+                  key={f.key}
+                  onClick={() => setFilter(f.key)}
+                  className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-md transition-all duration-200 flex-1 justify-center"
+                  style={filter === f.key
+                    ? { background: 'rgba(255,255,255,0.08)', color: 'var(--text-1)' }
+                    : { color: 'var(--text-3)' }
+                  }
+                >
+                  {f.label}
+                  {f.count > 0 && (
+                    <span className="text-[9px] tabular-nums" style={{ color: filter === f.key ? 'var(--text-2)' : 'var(--text-3)' }}>
+                      {f.count}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Scrollable task list */}
+          <div className="flex-1 overflow-y-auto" style={{ borderTop: '1px solid var(--border)' }}>
+            {filteredTasks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+                <Terminal className="h-6 w-6 mb-3" style={{ color: 'rgba(255,255,255,0.08)' }} />
+                <p className="text-[13px]" style={{ color: 'var(--text-3)' }}>
+                  {tasks.length === 0 ? 'No tasks yet' : 'No matches'}
+                </p>
               </div>
-            ))
+            ) : (
+              filteredTasks.map(task => (
+                <button
+                  key={task.id}
+                  onClick={() => setSelectedTaskId(task.id)}
+                  className="w-full text-left flex items-center gap-2.5 px-4 transition-colors duration-100"
+                  style={{
+                    minHeight: 44,
+                    background: selectedTaskId === task.id ? 'var(--accent-subtle)' : 'transparent',
+                    borderLeft: selectedTaskId === task.id ? '2px solid var(--accent)' : '2px solid transparent',
+                  }}
+                >
+                  <span className="text-[10px] tabular-nums shrink-0" style={{ color: 'var(--text-3)' }}>
+                    {formatTime(task.created)}
+                  </span>
+                  <span
+                    className="text-[13px] truncate flex-1 min-w-0"
+                    style={{ color: selectedTaskId === task.id ? 'var(--text-1)' : 'var(--text-2)', fontWeight: selectedTaskId === task.id ? 500 : 400 }}
+                  >
+                    {task.title}
+                  </span>
+                  <StatusDot status={task.status} />
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Right Panel (desktop) */}
+        <div className={`flex-1 min-w-0 ${selectedTask ? 'hidden md:flex' : 'hidden md:flex'} flex-col`}>
+          {selectedTask ? (
+            <TaskDetail
+              task={selectedTask}
+              onDelete={handleDeleteTask}
+              logContent={logContent}
+              logLoading={logLoading}
+              logNotFound={logNotFound}
+            />
+          ) : (
+            <div className="flex-1 flex flex-col">
+              {/* Empty state */}
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center">
+                  <Terminal className="h-8 w-8 mx-auto mb-3" style={{ color: 'rgba(255,255,255,0.06)' }} />
+                  <p className="text-[13px]" style={{ color: 'var(--text-3)' }}>Select a task to view details</p>
+                </div>
+              </div>
+
+              {/* Git + Version footer */}
+              <div className="shrink-0 px-6 py-3 border-t flex items-center gap-3 flex-wrap" style={{ borderColor: 'var(--border)' }}>
+                {gitStatus && (
+                  <div className="flex items-center gap-1.5 text-xs">
+                    {gitStatus.clean ? (
+                      <span className="text-emerald-400">Clean</span>
+                    ) : (
+                      <>
+                        <span className="text-amber-400">{gitStatus.changedFiles} file{gitStatus.changedFiles !== 1 ? 's' : ''}</span>
+                        <span style={{ color: 'var(--text-3)' }}>·</span>
+                        <button
+                          onClick={handleGitCommit}
+                          disabled={commitState === 'loading'}
+                          className="hover:text-[var(--accent)] transition-colors duration-150 disabled:opacity-50"
+                          style={{ color: 'var(--text-2)' }}
+                        >
+                          {commitState === 'loading' ? <Loader2 className="h-3 w-3 animate-spin inline" /> :
+                           commitState === 'success' ? <span className="text-emerald-400">Committed</span> :
+                           commitState === 'error' ? <span className="text-rose-400">Failed</span> :
+                           <span>Commit</span>}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+                {oclawVersion && (
+                  <>
+                    <span style={{ color: 'var(--text-3)' }}>·</span>
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <span className={`h-1.5 w-1.5 rounded-full${oclawVersion.upToDate ? '' : ' animate-pulse'}`} style={{ background: oclawVersion.upToDate ? 'var(--success)' : 'var(--text-3)' }} />
+                      <span style={{ color: 'var(--text-3)' }}>v{oclawVersion.current.replace(/^v/, '')}</span>
+                      {!oclawVersion.upToDate && (
+                        <button
+                          onClick={handleOclawUpdate}
+                          disabled={oclawUpdateState === 'loading'}
+                          title={`Update to ${oclawVersion.latest}`}
+                          className="text-amber-400 hover:text-amber-300 transition-colors duration-150 p-0.5 disabled:opacity-50"
+                        >
+                          {oclawUpdateState === 'loading' ? <Loader2 className="h-3 w-3 animate-spin" /> :
+                           oclawUpdateState === 'success' ? <Check className="h-3 w-3 text-emerald-400" /> :
+                           oclawUpdateState === 'error' ? <X className="h-3 w-3 text-rose-400" /> :
+                           <ArrowDownToLine className="h-3 w-3" />}
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Inbox */}
-      {inboxItems.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <Inbox className="h-4 w-4 text-white/40" />
-            <p className="text-xs uppercase tracking-widest text-white/40">Inbox</p>
-            <span className="text-xs text-white/25">{inboxItems.length}</span>
-          </div>
-          <div className="space-y-1.5">
-            {inboxItems.map((item) => {
-              const a = item.analysis
-              const rel = a?.relevance || { openclaw: 0, claude: 0, ai: 0, meta: 0, webdev: 0 }
-              const hasProposal = !!a?.integrationProposal
-              const isExpanded = expandedInbox === item.id
-              const categoryEmojis: Record<string, string> = {
-                'youtube-video': '\u{1F3AC}', 'tech-news': '\u{1F4F0}', 'ai-research': '\u{1F9EA}',
-                'tool-update': '\u{1F527}', 'tutorial': '\u{1F4DA}', 'business': '\u{1F4BC}',
-              }
-              const emoji = categoryEmojis[a?.category || ''] || '\u{1F4E8}'
-              const relDot = (v: number) => v > 7 ? 'bg-emerald-400' : v >= 4 ? 'bg-amber-400' : 'bg-white/20'
+      {/* Mobile Detail Overlay (< 768px) */}
+      <AnimatePresence>
+        {selectedTask && (
+          <motion.div
+            className="md:hidden fixed inset-0 z-40 flex flex-col"
+            style={{ background: 'var(--bg-surface)', top: 48 }}
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          >
+            <div
+              className="shrink-0 flex items-center gap-2 px-4 py-3 border-b"
+              style={{ borderColor: 'var(--border)' }}
+            >
+              <button
+                onClick={() => setSelectedTaskId(null)}
+                className="flex items-center gap-1 text-[13px]"
+                style={{ color: 'var(--accent)' }}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <TaskDetail
+                task={selectedTask}
+                onDelete={handleDeleteTask}
+                logContent={logContent}
+                logLoading={logLoading}
+                logNotFound={logNotFound}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-              return (
-                <div key={item.id}>
-                  <button
-                    onClick={() => setExpandedInbox(isExpanded ? null : item.id)}
-                    className={`w-full text-left p-3 rounded-xl border transition-colors duration-150 ${
-                      hasProposal
-                        ? 'border-cyan-500/20 bg-cyan-500/[0.04] hover:bg-cyan-500/[0.07]'
-                        : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-sm shrink-0">{emoji}</span>
-                      <span className="text-sm text-white/80 truncate flex-1">{item.subject}</span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 ${
-                        hasProposal ? 'bg-cyan-500/15 text-cyan-400/90' : 'bg-white/5 text-white/40'
-                      }`}>
-                        {a?.category || 'other'}
-                      </span>
-                      <div className="flex items-center gap-1 shrink-0">
-                        {Object.values(rel).map((v, i) => (
-                          <span key={i} className={`h-1.5 w-1.5 rounded-full ${relDot(v)}`} />
-                        ))}
-                      </div>
-                      {isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-white/20 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 text-white/20 shrink-0" />}
-                    </div>
-                    {!isExpanded && a?.summary && (
-                      <p className="text-xs text-white/30 mt-1 truncate pl-6">{a.summary}</p>
-                    )}
-                  </button>
-                  <AnimatePresence>
-                    {isExpanded && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden"
-                      >
-                        <div className={`mx-2 p-4 rounded-b-xl border border-t-0 ${
-                          hasProposal ? 'border-cyan-500/20 bg-cyan-500/[0.02]' : 'border-white/[0.06] bg-white/[0.015]'
-                        }`}>
-                          <p className="text-xs text-white/20 mb-2">
-                            From: {item.from} &bull; {new Date(item.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                          </p>
-                          <p className="text-sm text-white/60 leading-relaxed">{a?.summary}</p>
-
-                          {a?.keyTakeaways && a.keyTakeaways.length > 0 && (
-                            <div className="mt-3">
-                              <p className="text-xs uppercase tracking-wider text-white/30 mb-1.5">Key Takeaways</p>
-                              <ul className="space-y-1">
-                                {a.keyTakeaways.map((t, i) => (
-                                  <li key={i} className="text-xs text-white/50 pl-3 relative before:content-[''] before:absolute before:left-0 before:top-[7px] before:h-1 before:w-1 before:rounded-full before:bg-violet-400/50">
-                                    {t}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-
-                          {a?.integrationProposal && (
-                            <div className="mt-3 p-3 rounded-lg bg-cyan-500/[0.06] border border-cyan-500/10">
-                              <p className="text-xs uppercase tracking-wider text-cyan-400/60 mb-1">Integration Proposal</p>
-                              <p className="text-xs text-cyan-300/70 leading-relaxed">{a.integrationProposal}</p>
-                            </div>
-                          )}
-
-                          <div className="mt-3 flex items-center gap-3 flex-wrap">
-                            {Object.entries(rel).map(([k, v]) => (
-                              <span key={k} className="flex items-center gap-1 text-[10px] text-white/30">
-                                <span className={`h-1.5 w-1.5 rounded-full ${relDot(v)}`} />
-                                {k}: {v}
-                              </span>
-                            ))}
-                          </div>
-
-                          {a?.videoVerdict && (
-                            <p className="text-xs text-white/30 mt-2 italic">{a.videoVerdict}</p>
-                          )}
-
-                          {item.urls && item.urls.length > 0 && (
-                            <a
-                              href={item.urls[0]}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-xs text-violet-400/70 hover:text-violet-400 mt-2 transition-colors"
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                              Open link
-                            </a>
-                          )}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      <TaskLogPanel
-        task={selectedTask}
-        open={logPanelOpen}
-        onOpenChange={setLogPanelOpen}
-      />
-    </div>
+      {/* Toasts */}
+      <div className="fixed bottom-6 right-6 z-50 space-y-2">
+        <AnimatePresence>
+          {toasts.map(toast => (
+            <motion.div
+              key={toast.id}
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              className={`px-4 py-2 rounded-md text-xs ${
+                toast.type === 'success'
+                  ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/20'
+                  : 'bg-rose-500/15 text-rose-300 border border-rose-500/20'
+              }`}
+            >
+              {toast.message}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+    </>
   )
 }

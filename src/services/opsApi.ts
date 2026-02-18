@@ -26,6 +26,15 @@ export interface SystemInfo {
   loadavg: number[]
 }
 
+export interface IntegrationProposal {
+  what: string
+  why?: string
+  how: string
+  effort: string
+  connectsTo: string
+  rrCommand?: string
+}
+
 export interface InboxItem {
   id: string
   from: string
@@ -34,14 +43,17 @@ export interface InboxItem {
   urls: string[]
   analysis: {
     summary: string
+    tldr?: string
     keyTakeaways: string[] | null
     relevance: { openclaw: number; claude: number; ai: number; meta: number; webdev: number }
     category: string
-    integrationProposal: string | null
+    integrationProposal: IntegrationProposal | null
     actionable: boolean
     videoVerdict: string | null
     contentType: string
   }
+  rr_command?: string | null
+  status?: string
   processedAt: string
 }
 
@@ -113,6 +125,24 @@ export const opsApi = {
     return res.json()
   },
 
+  async queueTask(prompt: string): Promise<{ ok: boolean; taskId?: string; error?: string }> {
+    const res = await fetch(`${API_BASE}/tasks/queue`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    })
+    return res.json()
+  },
+
+  async batchTasks(prompts: string[]): Promise<{ ok: boolean; taskIds?: string[]; count?: number; error?: string }> {
+    const res = await fetch(`${API_BASE}/tasks/batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompts }),
+    })
+    return res.json()
+  },
+
   async getInboxRecent(limit = 20): Promise<InboxItem[]> {
     const res = await fetch(`${API_BASE}/inbox/recent?limit=${limit}`)
     if (!res.ok) return []
@@ -129,5 +159,13 @@ export const opsApi = {
     const res = await fetch(`${API_BASE}/inbox/stats`)
     if (!res.ok) return { total: 0, byCategory: {}, avgRelevance: {} }
     return res.json()
+  },
+
+  async inboxAction(id: string, action: number): Promise<void> {
+    await fetch(`${API_BASE}/inbox/${id}/action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action }),
+    })
   },
 }

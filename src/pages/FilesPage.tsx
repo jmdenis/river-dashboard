@@ -70,15 +70,15 @@ export default function FilesPage() {
 
   if (loading) return (
     <div className="flex items-center justify-center py-20">
-      <Loader2 className="h-6 w-6 animate-spin text-white/20" />
+      <Loader2 className="h-6 w-6 animate-spin text-[var(--text-3)]" />
     </div>
   )
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-white">Files</h1>
-        <p className="text-sm text-white/60 mt-1">Share files with River</p>
+        <h1 style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>Files</h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-2)' }}>Share files with River</p>
       </div>
 
       <div
@@ -86,15 +86,16 @@ export default function FilesPage() {
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`rounded-xl border-2 border-dashed p-12 text-center cursor-pointer transition-colors duration-150 ${
-          dragOver
-            ? 'border-violet-500 bg-violet-500/5'
-            : 'border-white/[0.08] hover:border-white/[0.15]'
-        }`}
+        className="p-12 text-center cursor-pointer transition-all duration-150"
+        style={{
+          borderRadius: '12px',
+          border: dragOver ? '2px dashed var(--accent)' : '2px dashed var(--border)',
+          background: dragOver ? 'var(--accent-subtle)' : 'transparent',
+        }}
       >
-        <Upload className={`h-6 w-6 mx-auto mb-3 ${dragOver ? 'text-violet-400' : 'text-white/20'}`} />
-        <p className="text-sm text-white/60">{dragOver ? 'Drop files here' : 'Drag & drop files, or click to browse'}</p>
-        <p className="text-xs text-white/25 mt-1">Up to 200 MB per file</p>
+        <Upload className="h-6 w-6 mx-auto mb-3" style={{ color: dragOver ? 'var(--accent)' : 'var(--text-3)' }} />
+        <p className="text-sm" style={{ color: 'var(--text-2)' }}>{dragOver ? 'Drop files here' : 'Drag & drop files, or click to browse'}</p>
+        <p className="text-xs mt-1" style={{ color: 'var(--text-3)' }}>Up to 200 MB per file</p>
         <input ref={fileInputRef} type="file" multiple onChange={handleFileSelect} className="hidden" />
       </div>
 
@@ -102,10 +103,10 @@ export default function FilesPage() {
         <div className="space-y-2">
           {uploads.map((u, i) => (
             <div key={i} className="flex items-center gap-3 text-sm p-2">
-              {u.status === 'uploading' && <Loader2 className="h-4 w-4 animate-spin text-violet-400 shrink-0" />}
+              {u.status === 'uploading' && <Loader2 className="h-4 w-4 animate-spin text-[var(--accent)] shrink-0" />}
               {u.status === 'done' && <CheckCircle2 className="h-4 w-4 text-emerald-400/80 shrink-0" />}
               {u.status === 'error' && <AlertCircle className="h-4 w-4 text-rose-400/80 shrink-0" />}
-              <span className="truncate text-white/60">{u.name}</span>
+              <span className="truncate text-[var(--text-2)]">{u.name}</span>
               {u.error && <span className="text-xs text-rose-400/80">Error {u.error}</span>}
             </div>
           ))}
@@ -113,11 +114,11 @@ export default function FilesPage() {
       )}
 
       <div>
-        <p className="text-xs uppercase tracking-widest text-white/40 mb-4">{files.length} file{files.length !== 1 ? 's' : ''}</p>
+        <p className="text-[11px] uppercase tracking-[0.05em] mb-4" style={{ color: 'var(--text-3)' }}>{files.length} file{files.length !== 1 ? 's' : ''}</p>
         <Card>
           <CardContent className="p-0">
             {files.length === 0 ? (
-              <p className="text-sm text-white/20 text-center py-12">No files uploaded yet</p>
+              <p className="text-sm text-[var(--text-3)] text-center py-12">No files uploaded yet</p>
             ) : (
               <div>
                 {files.map((f, i) => (
@@ -127,16 +128,17 @@ export default function FilesPage() {
                     variants={cardVariants}
                     initial="hidden"
                     animate="visible"
-                    className="flex items-center justify-between px-6 py-4 border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.03] transition-colors duration-150"
+                    className="flex items-center justify-between px-4 py-3 last:border-b-0 hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-150"
+                    style={{ borderBottom: '1px solid var(--divider)' }}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <FileText className="h-4 w-4 text-white/20 shrink-0" />
+                      <FileText className="h-4 w-4 shrink-0" style={{ color: 'var(--text-3)' }} />
                       <div className="min-w-0">
-                        <p className="text-sm text-white/80 truncate">{f.name}</p>
-                        <p className="text-xs text-white/25">{formatSize(f.size)} · {formatDate(f.mtime)}</p>
+                        <p className="text-sm truncate" style={{ color: 'var(--text-1)' }}>{f.name}</p>
+                        <p className="text-xs" style={{ color: 'var(--text-3)' }}>{formatSize(f.size)} · {formatDate(f.mtime)}</p>
                       </div>
                     </div>
-                    <a href={`${API_BASE_URL}/api/files/${encodeURIComponent(f.name)}`} target="_blank" rel="noopener noreferrer" className="p-2 text-white/20 hover:text-white/60 transition-colors duration-150" title="Download">
+                    <a href={`${API_BASE_URL}/api/files/${encodeURIComponent(f.name)}`} target="_blank" rel="noopener noreferrer" className="p-2 text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors duration-150" title="Download">
                       <Download className="h-4 w-4" />
                     </a>
                   </motion.div>

@@ -2,60 +2,96 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── River Design System Tokens ─── */
+
+:root {
+  /* Backgrounds — Apple systemBackground */
+  --bg-base: #000000;
+  --bg-surface: #1C1C1E;
+  --bg-elevated: #2C2C2E;
+
+  /* Glass (navbar only) — based on secondarySystemBackground */
+  --glass-bg: rgba(28, 28, 30, 0.8);
+  --glass-border: rgba(84, 84, 88, 0.4);
+  --glass-blur: blur(24px) saturate(140%);
+
+  /* Text hierarchy — Apple label / secondaryLabel / tertiaryLabel */
+  --text-1: #FFFFFF;
+  --text-2: rgba(235, 235, 245, 0.6);
+  --text-3: rgba(235, 235, 245, 0.3);
+
+  /* Accent — Apple systemBlue dark */
+  --accent: #0A84FF;
+  --accent-subtle: rgba(10, 132, 255, 0.15);
+  --accent-border: rgba(10, 132, 255, 0.3);
+  --accent-text: #0A84FF;
+  --accent-muted: rgba(10, 132, 255, 0.60);
+
+  /* Semantic — Apple system colors dark */
+  --success: #30D158;
+  --warning: #FFD60A;
+  --destructive: #FF453A;
+
+  /* Borders — Apple separator / systemGray3 / opaqueSeparator */
+  --border: rgba(84, 84, 88, 0.6);
+  --border-hover: #48484A;
+  --divider: rgba(84, 84, 88, 0.36);
+}
+
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 4%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 4%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 4%;
-    --primary: 263 70% 58%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 4%;
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
-    --accent: 263 70% 58%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 263 70% 58%;
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 11%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 11%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 211 100% 52%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 17%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 17%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 0 0% 17%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 100% 61%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 33% / 0.6;
+    --input: 0 0% 33% / 0.6;
+    --ring: 211 100% 52%;
     --radius: 0.75rem;
-    --chart-1: 263 70% 58%;
-    --chart-2: 280 65% 60%;
-    --chart-3: 250 60% 50%;
-    --chart-4: 230 55% 55%;
-    --chart-5: 300 60% 55%;
+    --chart-1: 211 100% 52%;
+    --chart-2: 0 0% 44%;
+    --chart-3: 0 0% 55%;
+    --chart-4: 0 0% 33%;
+    --chart-5: 0 0% 66%;
   }
 
   .dark {
-    --background: 0 0% 4%;
-    --foreground: 0 0% 95%;
-    --card: 0 0% 6.7%;
-    --card-foreground: 0 0% 95%;
-    --popover: 0 0% 8.6%;
-    --popover-foreground: 0 0% 95%;
-    --primary: 263 70% 58%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 10%;
-    --secondary-foreground: 0 0% 95%;
-    --muted: 0 0% 10%;
-    --muted-foreground: 0 0% 45%;
-    --accent: 0 0% 10%;
-    --accent-foreground: 0 0% 95%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 263 70% 58%;
-    --chart-1: 263 70% 58%;
-    --chart-2: 280 65% 60%;
-    --chart-3: 250 60% 50%;
-    --chart-4: 230 55% 55%;
-    --chart-5: 300 60% 55%;
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 11%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 11%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 211 100% 52%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 17%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 17%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 0 0% 17%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 100% 61%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 33% / 0.6;
+    --input: 0 0% 33% / 0.6;
+    --ring: 211 100% 52%;
+    --chart-1: 211 100% 52%;
+    --chart-2: 0 0% 44%;
+    --chart-3: 0 0% 55%;
+    --chart-4: 0 0% 33%;
+    --chart-5: 0 0% 66%;
   }
 }
 
@@ -64,38 +100,83 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg-base);
+    color: var(--text-1);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
   }
 }
 
-/* ─── Liquid Glass Animation System ─── */
+/* ─── Glass (navbar only) ─── */
 
-@keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.3), 0 0 15px -3px rgba(139, 92, 246, 0.1);
-  }
-  50% {
-    box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.6), 0 0 20px -3px rgba(139, 92, 246, 0.25);
-  }
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--glass-border);
 }
+
+/* ─── Segmented Control ─── */
+
+.segmented-control {
+  display: inline-flex;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.segmented-control-item {
+  position: relative;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  color: var(--text-3);
+  background: transparent;
+}
+
+.segmented-control-item.active {
+  background: var(--bg-elevated);
+  color: var(--text-1);
+}
+
+/* ─── Section Labels ─── */
+
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-3);
+}
+
+/* ─── Scrollbar ─── */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ─── Animations ─── */
 
 @keyframes shimmer {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
-}
-
-@keyframes bounce-in {
-  0% { transform: scale(0.9); opacity: 0; }
-  60% { transform: scale(1.05); }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-@keyframes status-pulse {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
 }
 
 @keyframes fade-in {
@@ -103,15 +184,12 @@
   to { opacity: 1; }
 }
 
+@keyframes status-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
 /* ─── Utility Animation Classes ─── */
-
-.animate-pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
-}
-
-.animate-bounce-in {
-  animation: bounce-in 400ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
 
 .animate-status-pulse {
   animation: status-pulse 2s ease-in-out infinite;
@@ -121,32 +199,12 @@
   animation: fade-in 200ms ease-out forwards;
 }
 
-/* ─── Glass Card Gradient Border ─── */
-
-.glass-border {
-  position: relative;
-}
-
-.glass-border::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(180deg, rgba(139, 92, 246, 0.15) 0%, transparent 50%);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-  z-index: 1;
-}
-
 /* ─── Skeleton Shimmer Loading ─── */
 
 .skeleton {
   position: relative;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-surface);
 }
 
 .skeleton::after {

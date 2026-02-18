@@ -126,6 +126,23 @@ interface RawFlight {
   arrive: string
 }
 
+interface RawHotel {
+  name: string
+  address: string | null
+  checkIn: string
+  checkOut: string
+  confirmationNumber: string | null
+}
+
+interface RawHotelInfo {
+  hasGym: boolean
+  hasPool: boolean
+  hasBreakfast: boolean
+  nearestMetro: string
+  walkScore: string
+  neighborhood: string
+}
+
 interface RawTrip {
   id: string
   flights: RawFlight[]
@@ -133,11 +150,25 @@ interface RawTrip {
   destination: string
   dates: { depart: string; arrive?: string; return?: string }
   status: 'upcoming' | 'active'
+  hotel?: RawHotel
+  hotelInfo?: RawHotelInfo
   context: {
     weather?: { forecast: { date: string; tempMax: number; tempMin: number; precipitation: number; condition: string }[] }
     timezone?: { description: string }
     currency?: { description: string }
   }
+}
+
+export interface UpcomingTripHotel {
+  name: string
+  checkIn: string         // "Feb 23"
+  checkOut: string        // "Feb 28"
+  confirmationNumber: string | null
+  hasGym: boolean
+  hasPool: boolean
+  hasBreakfast: boolean
+  nearestMetro: string
+  neighborhood: string
 }
 
 export interface UpcomingTrip {
@@ -152,6 +183,20 @@ export interface UpcomingTrip {
   timezone: string        // "-9h"
   currency: string        // "=€0.92"
   status: 'upcoming' | 'active'
+  hotel?: UpcomingTripHotel
+}
+
+export interface TripQuestion {
+  id: string
+  question: string
+  answer: string
+  asked: boolean
+}
+
+export interface TripPreferencesResponse {
+  preferences: Record<string, string | string[] | number>
+  questions: TripQuestion[]
+  walkTime: { estimate: boolean; note: string } | null
 }
 
 export type EquipmentType = 'none' | 'dumbbells' | 'kettlebells'
@@ -216,6 +261,22 @@ export interface DayPlan {
   day: string
   steps: DayPlanStep[]
   createdAt?: string
+}
+
+export interface PackingItem {
+  name: string
+  quantity: number
+  packed: boolean
+  weatherNote: string | null
+}
+
+export interface PackingCategory {
+  name: string
+  items: PackingItem[]
+}
+
+export interface PackingList {
+  categories: PackingCategory[]
 }
 
 export const lifeApi = {
@@ -455,6 +516,23 @@ export const lifeApi = {
       : conditionLower.includes('thunder') || conditionLower.includes('storm') ? '⛈️'
       : '☀️'
 
+    // Build hotel info if available
+    const formatHotelDate = (iso: string) => {
+      const d = new Date(iso)
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    }
+    const hotel = trip.hotel ? {
+      name: trip.hotel.name,
+      checkIn: formatHotelDate(trip.hotel.checkIn),
+      checkOut: formatHotelDate(trip.hotel.checkOut),
+      confirmationNumber: trip.hotel.confirmationNumber || null,
+      hasGym: trip.hotelInfo?.hasGym ?? false,
+      hasPool: trip.hotelInfo?.hasPool ?? false,
+      hasBreakfast: trip.hotelInfo?.hasBreakfast ?? false,
+      nearestMetro: trip.hotelInfo?.nearestMetro || '',
+      neighborhood: trip.hotelInfo?.neighborhood || '',
+    } : undefined
+
     return {
       id: trip.id,
       destination: trip.destination,
@@ -467,6 +545,7 @@ export const lifeApi = {
       weather: forecast ? `${Math.round(forecast.tempMax)}°C` : '',
       timezone: trip.context?.timezone?.description || '',
       currency: trip.context?.currency?.description || '',
+      hotel,
     }
   },
 
@@ -498,6 +577,22 @@ export const lifeApi = {
     const data = await res.json()
     if (!res.ok) return { error: data.error || res.statusText }
     return data
+  },
+
+  async getTripPreferences(id: string): Promise<TripPreferencesResponse> {
+    const res = await fetch(`${API_BASE_URL}/api/trips/${id}/preferences`)
+    if (!res.ok) return { preferences: {}, questions: [], walkTime: null }
+    return res.json()
+  },
+
+  async updateTripPreference(id: string, data: { key?: string; value?: string; questionId?: string; answer?: string }): Promise<TripPreferencesResponse> {
+    const res = await fetch(`${API_BASE_URL}/api/trips/${id}/preferences`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) throw new Error('Failed to update preferences')
+    return res.json()
   },
 
   async planDay(params: { title: string; location?: string; day: 'Saturday' | 'Sunday'; weather?: string }): Promise<DayPlan> {
@@ -550,6 +645,13 @@ export const lifeApi = {
     return res.json()
   },
 
+  async deleteContact(id: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/contacts/${id}`, {
+      method: 'DELETE',
+    })
+    if (!res.ok) throw new Error('Failed to delete contact')
+  },
+
   async downloadIcs(plan: DayPlan, date?: string): Promise<Blob> {
     const res = await fetch(`${API_BASE_URL}/api/plan-day/ics`, {
       method: 'POST',
@@ -558,5 +660,26 @@ export const lifeApi = {
     })
     if (!res.ok) throw new Error('Failed to generate ICS')
     return res.blob()
+  },
+
+  async generatePackingList(tripId: string): Promise<PackingList> {
+    const res = await fetch(`${API_BASE_URL}/api/trips/${tripId}/packing-list`, { method: 'POST' })
+    if (!res.ok) throw new Error('Failed to generate packing list')
+    return res.json()
+  },
+
+  async getPackingList(tripId: string): Promise<PackingList | null> {
+    const res = await fetch(`${API_BASE_URL}/api/trips/${tripId}/packing-list`)
+    if (!res.ok) return null
+    return res.json()
+  },
+
+  async savePackingList(tripId: string, packingList: PackingList): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/api/trips/${tripId}/packing-list`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(packingList),
+    })
+    if (!res.ok) throw new Error('Failed to save packing list')
   },
 }

@@ -171,7 +171,7 @@ export default function UploadModal({
       {toasts.map(toast => (
         <div
           key={toast.id}
-          className={`pointer-events-auto px-4 py-2.5 rounded-2xl text-sm shadow-lg shadow-black/20 backdrop-blur-xl animate-in slide-in-from-right-5 fade-in duration-200 ${
+          className={`pointer-events-auto px-4 py-2.5 rounded-2xl text-sm shadow-lg shadow-black/20 animate-in slide-in-from-right-5 fade-in duration-200 ${
             toast.type === 'success'
               ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300'
               : 'bg-rose-500/10 border border-rose-500/20 text-rose-300'
@@ -188,7 +188,8 @@ export default function UploadModal({
       {/* Dropdown panel */}
       <div
         ref={dropdownRef}
-        className="fixed top-12 right-4 z-[70] w-[400px] max-h-[calc(100vh-80px)] bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-xl shadow-black/30 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150"
+        className="fixed top-12 right-4 z-[70] w-[400px] max-h-[calc(100vh-80px)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150"
+        style={{ background: 'var(--glass-bg)', border: '1px solid var(--border)', borderRadius: '12px', boxShadow: 'none' }}
       >
         {/* Upload zone */}
         <div
@@ -196,14 +197,15 @@ export default function UploadModal({
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className={`m-3 rounded-xl border-2 border-dashed p-6 text-center cursor-pointer transition-colors duration-150 ${
-            dragOver
-              ? 'border-violet-500 bg-violet-500/5'
-              : 'border-white/10 hover:border-white/20'
-          }`}
+          className="m-3 p-6 text-center cursor-pointer transition-all duration-150"
+          style={{
+            borderRadius: '12px',
+            border: dragOver ? '2px dashed var(--accent)' : '2px dashed var(--border)',
+            background: dragOver ? 'var(--accent-subtle)' : 'transparent',
+          }}
         >
-          <Upload className={`h-5 w-5 mx-auto mb-2 ${dragOver ? 'text-violet-400' : 'text-white/20'}`} />
-          <p className="text-xs text-white/50">
+          <Upload className="h-5 w-5 mx-auto mb-2" style={{ color: dragOver ? 'var(--accent)' : 'var(--text-3)' }} />
+          <p style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-2)' }}>
             {dragOver ? 'Drop files here' : 'Drop files here or click to browse'}
           </p>
           <input
@@ -221,16 +223,16 @@ export default function UploadModal({
             {uploads.map((u, i) => (
               <div key={i} className="space-y-1">
                 <div className="flex items-center gap-2 text-xs">
-                  {u.status === 'uploading' && <Loader2 className="h-3 w-3 animate-spin text-violet-400 shrink-0" />}
+                  {u.status === 'uploading' && <Loader2 className="h-3 w-3 animate-spin text-[var(--accent)] shrink-0" />}
                   {u.status === 'done' && <CheckCircle2 className="h-3 w-3 text-emerald-400 shrink-0" />}
                   {u.status === 'error' && <AlertCircle className="h-3 w-3 text-rose-400 shrink-0" />}
-                  <span className="truncate text-white/60">{u.name}</span>
+                  <span className="truncate text-[var(--text-2)]">{u.name}</span>
                   {u.status === 'uploading' && (
-                    <span className="text-white/30 ml-auto">{u.progress}%</span>
+                    <span className="text-[var(--text-3)] ml-auto">{u.progress}%</span>
                   )}
                 </div>
                 {u.status === 'uploading' && (
-                  <Progress value={u.progress} color="bg-violet-500" className="h-1" />
+                  <Progress value={u.progress} color="bg-[var(--accent)]" className="h-1" />
                 )}
               </div>
             ))}
@@ -238,26 +240,27 @@ export default function UploadModal({
         )}
 
         {/* File list */}
-        <div className="border-t border-white/[0.06]">
+        <div className="border-t border-[rgba(255,255,255,0.1)]">
           {loadingFiles ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-4 w-4 animate-spin text-white/20" />
+              <Loader2 className="h-4 w-4 animate-spin text-[var(--text-3)]" />
             </div>
           ) : files.length === 0 ? (
-            <p className="text-xs text-white/20 text-center py-6">No files uploaded</p>
+            <p className="text-center py-6" style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-2)' }}>No files uploaded</p>
           ) : (
             <div className="divide-y divide-white/[0.04]">
               {files.map((f) => (
                 <a
                   key={f.name}
                   href={`${API_BASE_URL}/api/files/${encodeURIComponent(f.name)}/download`}
-                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.03] transition-colors duration-100 group"
+                  className="flex items-center gap-3 hover:bg-[rgba(255,255,255,0.06)] transition-colors duration-100 group"
+                  style={{ padding: '12px 16px', borderBottom: '1px solid var(--divider)' }}
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white/70 truncate group-hover:text-white/90 transition-colors">{f.name}</p>
-                    <p className="text-[10px] text-white/25">{f.sizeHuman} &middot; {formatDate(f.date)}</p>
+                    <p className="truncate transition-colors" style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-1)' }}>{f.name}</p>
+                    <p style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-2)' }}>{f.sizeHuman} &middot; {formatDate(f.date)}</p>
                   </div>
-                  <Download className="h-3.5 w-3.5 text-white/15 group-hover:text-white/40 shrink-0 transition-colors" />
+                  <Download className="h-3.5 w-3.5 text-[var(--text-3)] group-hover:text-[var(--text-2)] shrink-0 transition-colors" />
                 </a>
               ))}
             </div>
@@ -268,15 +271,15 @@ export default function UploadModal({
               <button
                 onClick={() => page > 1 && loadFiles(page - 1)}
                 disabled={page <= 1}
-                className="text-xs text-white/30 hover:text-white/60 disabled:text-white/10 disabled:cursor-default flex items-center gap-1 transition-colors"
+                className="text-xs text-[var(--text-3)] hover:text-[var(--text-2)] disabled:text-[rgba(255,255,255,0.1)] disabled:cursor-default flex items-center gap-1 transition-colors"
               >
                 <ChevronLeft className="h-3 w-3" /> Prev
               </button>
-              <span className="text-[10px] text-white/20">{page} / {totalPages}</span>
+              <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-2)' }}>{page} / {totalPages}</span>
               <button
                 onClick={() => page < totalPages && loadFiles(page + 1)}
                 disabled={page >= totalPages}
-                className="text-xs text-white/30 hover:text-white/60 disabled:text-white/10 disabled:cursor-default flex items-center gap-1 transition-colors"
+                className="text-xs text-[var(--text-3)] hover:text-[var(--text-2)] disabled:text-[rgba(255,255,255,0.1)] disabled:cursor-default flex items-center gap-1 transition-colors"
               >
                 Next <ChevronRight className="h-3 w-3" />
               </button>
@@ -290,7 +293,7 @@ export default function UploadModal({
         {toasts.map(toast => (
           <div
             key={toast.id}
-            className={`pointer-events-auto px-4 py-2.5 rounded-2xl text-sm shadow-lg shadow-black/20 backdrop-blur-xl animate-in slide-in-from-right-5 fade-in duration-200 ${
+            className={`pointer-events-auto px-4 py-2.5 rounded-2xl text-sm shadow-lg shadow-black/20 animate-in slide-in-from-right-5 fade-in duration-200 ${
               toast.type === 'success'
                 ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300'
                 : 'bg-rose-500/10 border border-rose-500/20 text-rose-300'
