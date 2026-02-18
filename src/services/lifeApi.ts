@@ -171,6 +171,14 @@ export interface UpcomingTripHotel {
   neighborhood: string
 }
 
+export interface UpcomingTripFlight {
+  number: string
+  from: string
+  to: string
+  depart: string          // ISO or time string
+  arrive: string          // ISO or time string
+}
+
 export interface UpcomingTrip {
   id: string
   destination: string
@@ -184,6 +192,7 @@ export interface UpcomingTrip {
   currency: string        // "=€0.92"
   status: 'upcoming' | 'active'
   hotel?: UpcomingTripHotel
+  flights?: UpcomingTripFlight[]
 }
 
 export interface TripQuestion {
@@ -533,6 +542,15 @@ export const lifeApi = {
       neighborhood: trip.hotelInfo?.neighborhood || '',
     } : undefined
 
+    // Map flights for display
+    const flights = trip.flights?.map((f: RawFlight) => ({
+      number: f.number,
+      from: toCode(f.from),
+      to: toCode(f.to),
+      depart: f.depart || '',
+      arrive: f.arrive || '',
+    })) || undefined
+
     return {
       id: trip.id,
       destination: trip.destination,
@@ -546,6 +564,7 @@ export const lifeApi = {
       timezone: trip.context?.timezone?.description || '',
       currency: trip.context?.currency?.description || '',
       hotel,
+      flights,
     }
   },
 

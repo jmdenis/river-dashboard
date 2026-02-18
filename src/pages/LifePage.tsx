@@ -1,12 +1,17 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
+import { TextMorph } from 'torph/react'
 import { lifeApi, type LifeData, type Birthday, type Reminder, type CronJob, type CalendarEvent, type Activities, type Idea, type WeekendWeather, type LocalEvent, type Trip, type HomeSettings, type UpcomingTrip, type TravelWorkout, type EquipmentType, type DayPlan, type DayPlanStep, type Contact, type TripQuestion, type TripPreferencesResponse, type PackingList } from '../services/lifeApi'
 import ReactMarkdown from 'react-markdown'
-import { Card, CardContent } from '../components/ui/card'
+
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '../components/ui/dialog'
-import { Loader2, Plus, Trash2, Check, Clock, Calendar as CalendarIcon, MessageCircle, Gift, Copy, ExternalLink, Sparkles, Heart, Pencil, X, Eye, EyeOff, Mail, RefreshCw, Car, Share2, MapPin, ParkingSquare, Hotel, Search, ChevronDown, ChevronLeft, Star, UtensilsCrossed, History, CloudRain, Sun, CloudSun, Cloud, Snowflake, CloudDrizzle, Zap, Wind, Home, Plane, Dumbbell, Send, Download, Phone, Users, Tag, ChevronUp, Luggage } from 'lucide-react'
+import { Loader2, Plus, Trash2, Check, Clock, Calendar as LucideCalendar, MessageCircle, Gift as LucideGift, Copy, ExternalLink, Sparkles, Heart, Pencil, X, Eye, EyeOff, Mail, RefreshCw, Car, Share2, MapPin, ParkingSquare, Hotel, Search, ChevronDown, ChevronLeft, Star, UtensilsCrossed, History, CloudRain, Sun, CloudSun, Cloud, Snowflake, CloudDrizzle, Zap, Wind, Home, Plane as LucidePlane, Dumbbell, Send, Download, Phone, Users, Tag, ChevronUp, Luggage } from 'lucide-react'
+import { PlaneIcon, type PlaneIconHandle } from '../components/ui/plane-icon'
+import { CalendarIcon } from '../components/ui/calendar-icon'
+import { GiftIcon } from '../components/ui/gift-icon'
+import { ClockIcon } from '../components/ui/clock-icon'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -124,12 +129,16 @@ const TABS: { id: TabId; label: string }[] = [
 
 function TabControl({ active, onChange }: { active: TabId; onChange: (id: TabId) => void }) {
  return (
- <div className="segmented-control">
+ <div className="flex items-center gap-1">
  {TABS.map(tab => (
  <button
  key={tab.id}
  onClick={() => onChange(tab.id)}
- className={`segmented-control-item ${active === tab.id ? 'active' : ''}`}
+ className={`text-[14px] font-medium px-3.5 py-1.5 rounded-lg transition-all duration-200 ${
+  active === tab.id
+   ? 'bg-white/10 text-white'
+   : 'text-white/40 hover:text-white/60 hover:bg-white/[0.04]'
+ }`}
  >
  {tab.label}
  </button>
@@ -218,7 +227,7 @@ function WorkoutModal({ workout, open, onClose, toast, equipment, onEquipmentCha
  exit={{ opacity: 0, scale: 0.95, y: 20 }}
  transition={{ duration: 0.2 }}
  className="relative w-full max-w-lg max-h-[85vh] overflow-y-auto"
- style={{ borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg-surface)' }}
+ style={{ borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)' }}
  onClick={e => e.stopPropagation()}
  >
  {/* Close button */}
@@ -405,7 +414,7 @@ function PackingListModal({ tripId, open, onClose, toast }: {
  exit={{ opacity: 0, scale: 0.95 }}
  transition={{ duration: 0.2 }}
  className="w-full max-w-lg max-h-[85vh] flex flex-col"
- style={{ borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg-surface)' }}
+ style={{ borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)' }}
  onClick={e => e.stopPropagation()}
  >
  {/* Header */}
@@ -592,67 +601,153 @@ function TripHelper({ trip, toast }: { trip: UpcomingTrip; toast: (msg: string) 
 
  const daysLabel = trip.status === 'active' ? 'now' : trip.daysUntil === 0 ? 'today' : trip.daysUntil === 1 ? 'tomorrow' : `in ${trip.daysUntil} days`
 
+ // Format flight time helper
+ const formatFlightTime = (iso: string) => {
+ if (!iso) return 'TBD'
+ const d = new Date(iso)
+ if (isNaN(d.getTime())) return iso
+ return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+ }
+
+ const formatFlightDuration = (depart: string, arrive: string) => {
+ if (!depart || !arrive) return ''
+ const d = new Date(depart)
+ const a = new Date(arrive)
+ if (isNaN(d.getTime()) || isNaN(a.getTime())) return ''
+ const diffMin = Math.round((a.getTime() - d.getTime()) / 60000)
+ if (diffMin <= 0) return ''
+ const h = Math.floor(diffMin / 60)
+ const m = diffMin % 60
+ return h > 0 ? `${h}h${m > 0 ? `${m}m` : ''}` : `${m}m`
+ }
+
+ // Calculate layover between consecutive flights
+ const getLayover = (prevArrive: string, nextDepart: string) => {
+ if (!prevArrive || !nextDepart) return ''
+ const a = new Date(prevArrive)
+ const d = new Date(nextDepart)
+ if (isNaN(a.getTime()) || isNaN(d.getTime())) return ''
+ const diffMin = Math.round((d.getTime() - a.getTime()) / 60000)
+ if (diffMin <= 0) return ''
+ const h = Math.floor(diffMin / 60)
+ const m = diffMin % 60
+ return h > 0 ? `${h}h${m > 0 ? `${m}m` : ''}` : `${m}m`
+ }
+
+ const flights = trip.flights || []
+
  return (
- <div className="col-span-full">
- <div style={{ borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg-surface)', padding: '16px' }}>
- {/* ROW 1: Identity header */}
- <div className="flex items-baseline justify-between">
- <div className="flex items-baseline gap-2">
- <span style={{ fontSize: 17, fontWeight: 600, color: 'var(--text-1)' }}>{trip.destination}</span>
- <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{trip.route}</span>
- </div>
- <div className="flex items-baseline gap-2">
- <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{trip.dateRange}</span>
- <span style={{ fontSize: 13, color: 'var(--accent)' }}>{daysLabel}</span>
- </div>
+ <div className="mb-8">
+ <div className="px-5 md:px-6 py-5 border-b border-white/[0.08]">
+ <div className="flex items-start gap-6">
+ {/* Left: flight + accommodation */}
+ <div className="flex-1 min-w-0">
+
+ {/* LAYER 1 — FLIGHTS */}
+ <div className="mb-5">
+ <div className="flex items-center gap-2.5 mb-3">
+ <PlaneIcon ref={(el: PlaneIconHandle | null) => { if (el) el.startAnimation() }} size={20} className="text-[#0A84FF] shrink-0" />
+ <span className="text-[24px] font-bold text-white">{trip.destination}</span>
  </div>
 
- {/* ROW 2: Divider */}
- <div style={{ height: 1, background: 'var(--divider)', margin: '12px 0' }} />
+ {/* FLIGHTS label */}
+ <p className="text-[11px] uppercase tracking-wider text-white/30 ml-[33px] mb-2">Flights</p>
 
- {/* ROW 3: Two-column details grid */}
- <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
- {/* Left column: Hotel info */}
- <div>
+ {/* Flight route visualization */}
+ {flights.length > 0 ? (
+ <div className="ml-[33px] space-y-0">
+ {flights.map((flight, i) => (
+ <div key={i}>
+ {/* Flight leg */}
+ <div className="flex items-center gap-3 py-1.5">
+ {/* Route dots + line */}
+ <div className="flex items-center gap-1.5 shrink-0 min-w-[100px]">
+ <span className="h-2 w-2 rounded-full bg-[#0A84FF]" />
+ <span className="flex-1 h-px bg-white/15 relative">
+ <span className="absolute -top-[3px] right-0 text-white/15 text-[8px]">{'>'}</span>
+ </span>
+ <span className="h-2 w-2 rounded-full border border-[#0A84FF] bg-transparent" />
+ </div>
+ {/* Leg info */}
+ <span className="text-[14px] font-medium text-white tabular-nums shrink-0">{flight.from} → {flight.to}</span>
+ <span className="text-[12px] text-white/40 font-mono tabular-nums">{formatFlightTime(flight.depart)}</span>
+ <span className="text-[12px] text-white/20">→</span>
+ <span className="text-[12px] text-white/40 font-mono tabular-nums">{formatFlightTime(flight.arrive)}</span>
+ {formatFlightDuration(flight.depart, flight.arrive) && (
+ <span className="text-[12px] text-white/20 tabular-nums">{formatFlightDuration(flight.depart, flight.arrive)}</span>
+ )}
+ {flight.number && <span className="text-[11px] text-white/20 font-mono">{flight.number}</span>}
+ </div>
+ {/* Layover indicator */}
+ {i < flights.length - 1 && (
+ <div className="flex items-center gap-3 py-1 ml-[44px]">
+ <span className="text-[11px] text-white/25 font-mono">{flights[i + 1].from} layover</span>
+ {getLayover(flight.arrive, flights[i + 1].depart) && (
+ <span className="text-[11px] text-white/25 tabular-nums">{getLayover(flight.arrive, flights[i + 1].depart)}</span>
+ )}
+ </div>
+ )}
+ </div>
+ ))}
+ </div>
+ ) : (
+ <div className="ml-[33px]">
+ <span className="text-[13px] text-white/30">{trip.route}</span>
+ </div>
+ )}
+ </div>
+
+ {/* Separator between flights and hotel */}
+ {trip.hotel && <div className="border-b border-white/[0.08] my-4 ml-[33px]" />}
+
+ {/* LAYER 2 — ACCOMMODATION */}
  {trip.hotel && (
- <>
- <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-1)' }}>{trip.hotel.name}</p>
- <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
- {[trip.hotel.hasGym && 'Gym', trip.hotel.hasPool && 'Pool', trip.hotel.hasBreakfast && 'Breakfast'].filter(Boolean).join(' \u00B7 ')}
- </p>
- {(trip.hotel.neighborhood || trip.hotel.nearestMetro) && (
- <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
- {[trip.hotel.neighborhood, trip.hotel.nearestMetro].filter(Boolean).join(' \u00B7 ')}
- </p>
+ <div className="ml-[33px] mb-5">
+ <p className="text-[11px] uppercase tracking-wider text-white/30 mb-2">Accommodation</p>
+ <p className="text-[14px] font-medium text-white/70">
+ {trip.hotel.name}
+ {trip.hotel.confirmationNumber && (
+ <span className="text-[12px] text-white/30 font-mono ml-2">{trip.hotel.confirmationNumber}</span>
  )}
- </>
+ </p>
+ <p className="text-[12px] text-white/40 mt-0.5">
+ {[
+ trip.hotel.hasGym && 'Gym',
+ trip.hotel.hasBreakfast && 'Breakfast',
+ trip.hotel.hasPool && 'Pool',
+ ].filter(Boolean).join(' · ')}
+ {(trip.hotel.hasGym || trip.hotel.hasBreakfast || trip.hotel.hasPool) && (trip.hotel.neighborhood || trip.hotel.nearestMetro) ? ' · ' : ''}
+ {[trip.hotel.neighborhood, trip.hotel.nearestMetro].filter(Boolean).join(', ')}
+ </p>
+ </div>
  )}
  </div>
- {/* Right column: Logistics */}
- <div>
- <p style={{ fontSize: 12, color: 'var(--text-3)' }}>Office: On my own</p>
- <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{trip.weather} \u00B7 {trip.timezone}</p>
- <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{trip.currency}</p>
+
+ {/* Right: LAYER 3 — CONTEXT */}
+ <div className="text-right shrink-0 space-y-0.5">
+ <p className="text-[13px] font-medium text-white">{trip.dateRange}</p>
+ <TextMorph as="p" className="text-[#FF9F0A] font-semibold text-[13px]">{daysLabel}</TextMorph>
+ {trip.weather && <p className="text-[12px] text-white/30 mt-1">{trip.weather}</p>}
+ {trip.timezone && <p className="text-[12px] text-white/30">{trip.timezone}</p>}
+ {trip.currency && <p className="text-[12px] text-white/30">{trip.currency}</p>}
  </div>
  </div>
 
- {/* ROW 4: Divider */}
- <div style={{ height: 1, background: 'var(--divider)', margin: '12px 0' }} />
+ {/* Separator above action buttons */}
+ <div className="border-b border-white/[0.08] mb-4" />
 
- {/* ROW 5: Action buttons \u2014 ghost, evenly spaced */}
- <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+ {/* Action buttons row */}
+ <div className="flex items-center gap-2 mt-4 mb-8">
  <button
  onClick={() => setPackingModalOpen(true)}
- className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-[rgba(255,255,255,0.06)] transition-colors"
- style={{ fontSize: 13, color: 'var(--text-2)', border: '1px solid var(--border)' }}
+ className="rounded-full border border-white/[0.12] bg-transparent text-[13px] font-medium px-5 py-2 text-white/70 hover:text-white hover:bg-white/[0.06] transition-colors"
  >
  Packing list
  </button>
  <button
  onClick={openWorkout}
  disabled={loadingWorkout}
- className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-[rgba(255,255,255,0.06)] transition-colors disabled:opacity-50"
- style={{ fontSize: 13, color: 'var(--text-2)', border: '1px solid var(--border)' }}
+ className="rounded-full border border-white/[0.12] bg-transparent text-[13px] font-medium px-5 py-2 text-white/70 hover:text-white hover:bg-white/[0.06] transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
  >
  {loadingWorkout && <Loader2 className="h-3 w-3 animate-spin" />}
  Workout
@@ -660,8 +755,7 @@ function TripHelper({ trip, toast }: { trip: UpcomingTrip; toast: (msg: string) 
  <button
  onClick={handleNotify}
  disabled={notifying}
- className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-[rgba(255,255,255,0.06)] transition-colors disabled:opacity-50"
- style={{ fontSize: 13, color: 'var(--text-2)', border: '1px solid var(--border)' }}
+ className="rounded-full border border-white/[0.12] bg-transparent text-[13px] font-medium px-5 py-2 text-white/70 hover:text-white hover:bg-white/[0.06] transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
  >
  {notifying && <Loader2 className="h-3 w-3 animate-spin" />}
  Notify Anne
@@ -670,9 +764,9 @@ function TripHelper({ trip, toast }: { trip: UpcomingTrip; toast: (msg: string) 
 
  {/* Trip questions */}
  {unansweredQuestions.length > 0 && (
- <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--divider)' }}>
- <p style={{ fontSize: 12, color: 'var(--text-2)' }} className="mb-3 flex items-center gap-1.5">
- <Sparkles className="h-3 w-3" style={{ color: 'var(--text-3)' }} />
+ <div className="mt-4 pt-4 border-t border-white/[0.08]">
+ <p className="text-[12px] text-white/55 mb-3 flex items-center gap-1.5">
+ <Sparkles className="h-3 w-3 text-white/30" />
  Help River plan better
  </p>
  <div className="space-y-2">
@@ -683,13 +777,12 @@ function TripHelper({ trip, toast }: { trip: UpcomingTrip; toast: (msg: string) 
  value={questionAnswers[q.id] || ''}
  onChange={e => setQuestionAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
  onKeyDown={e => e.key === 'Enter' && handleAnswerSubmit(q.id)}
- className="h-8 text-xs bg-[rgba(255,255,255,0.04)] border-[rgba(255,255,255,0.1)] placeholder:text-[var(--text-3)] flex-1"
+ className="h-8 text-xs bg-[rgba(255,255,255,0.04)] border-[rgba(255,255,255,0.1)] placeholder:text-white/30 flex-1"
  />
  <button
  onClick={() => handleAnswerSubmit(q.id)}
  disabled={!questionAnswers[q.id]?.trim() || savingQuestion === q.id}
- className="inline-flex items-center justify-center h-8 w-8 rounded-lg transition-colors disabled:opacity-30"
- style={{ background: 'var(--accent-subtle)', color: 'var(--accent)', border: '1px solid var(--accent-border)' }}
+ className="inline-flex items-center justify-center h-8 w-8 rounded-lg transition-colors disabled:opacity-30 bg-[#0A84FF]/10 text-[#0A84FF] border border-[#0A84FF]/20"
  >
  {savingQuestion === q.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
  </button>
@@ -730,15 +823,13 @@ function TripHelper({ trip, toast }: { trip: UpcomingTrip; toast: (msg: string) 
 function CalendarSection({ events }: { events: CalendarEvent[] }) {
  if (events.length === 0) {
  return (
- <Card>
- <CardContent className="p-5">
- <div className="flex items-center gap-2 mb-4">
- <CalendarIcon className="h-4 w-4 text-[var(--text-3)]" />
- <p className="text-[11px] uppercase tracking-[0.05em] text-[var(--text-3)]" style={{ fontWeight: 600 }}>This Week</p>
+ <div>
+ <div className="flex items-center gap-2 pb-3 mb-4 border-b border-white/[0.08]">
+ <CalendarIcon size={14} className="text-white/55" />
+ <p className="text-[13px] uppercase font-semibold tracking-wider text-white/55">This Week</p>
  </div>
- <p className="text-sm text-[var(--text-3)] text-center py-8">Nothing scheduled</p>
- </CardContent>
- </Card>
+ <p className="text-[14px] text-white/30 text-center py-8">Nothing scheduled</p>
+ </div>
  )
  }
 
@@ -751,42 +842,36 @@ function CalendarSection({ events }: { events: CalendarEvent[] }) {
  })
 
  return (
- <Card>
- <CardContent className="p-5">
- <div className="flex items-center gap-2 mb-4">
- <CalendarIcon className="h-4 w-4 text-[var(--text-3)]" />
- <p className="text-[11px] uppercase tracking-[0.05em] text-[var(--text-3)]" style={{ fontWeight: 600 }}>This Week</p>
+ <div>
+ <div className="flex items-center gap-2 pb-3 mb-4 border-b border-white/[0.08]">
+ <CalendarIcon size={14} className="text-white/55" />
+ <p className="text-[13px] uppercase font-semibold tracking-wider text-white/55">This Week</p>
  </div>
- <div className="space-y-4">
- {Object.entries(eventsByDay).map(([dayLabel, dayEvents]) => {
- const isToday = dayLabel.startsWith('Today')
- return (
- <div key={dayLabel}>
- <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }} className="mb-2">
+ <div>
+ {Object.entries(eventsByDay).map(([dayLabel, dayEvents], dayIdx) => (
+ <div key={dayLabel} className={dayIdx === 0 ? 'mt-6' : 'mt-5'}>
+ <p className="text-[14px] font-semibold text-white mb-2">
  {dayLabel}
  </p>
  <div className="space-y-1">
  {dayEvents.map((event, idx) => {
- const style = getCategoryStyle(event)
  const isAnne = ANNE_EMAILS.includes(event.organizer)
  return (
  <div key={idx} className={`flex items-start gap-3 py-1 ${isAnne ? 'opacity-40' : ''}`}>
- <span className="font-mono shrink-0 w-12" style={{ fontSize: 12, color: 'var(--text-3)', fontVariantNumeric: 'tabular-nums' }}>{formatEventTime(event)}</span>
- <span className="shrink-0 mt-1.5 w-2 h-2 rounded-full" style={{ background: 'var(--text-3)' }} />
- <span className="flex-1" style={{ fontSize: 14, color: 'var(--text-1)' }}>{event.title}</span>
+ <span className="font-mono shrink-0 w-12 text-[14px] text-white/30 tabular-nums">{formatEventTime(event)}</span>
+ <span className="shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-[#0A84FF]" />
+ <span className="flex-1 text-[14px] text-white">{event.title}</span>
  {event.location && (
- <span className="truncate max-w-[200px] text-right" style={{ fontSize: 12, color: 'var(--text-3)' }}>{event.location}</span>
+ <span className="truncate max-w-[200px] text-right text-[14px] text-white/30">{event.location}</span>
  )}
  </div>
  )
  })}
  </div>
  </div>
- )
- })}
+ ))}
  </div>
- </CardContent>
- </Card>
+ </div>
  )
 }
 
@@ -824,8 +909,7 @@ function HomeLocationSection({ toast }: { toast: (msg: string) => void }) {
  }
 
  return (
- <Card>
- <CardContent className="p-5">
+ <div className="py-4 border-b border-white/[0.08]">
  <div className="flex items-center gap-3">
  <Home className="h-4 w-4 text-[var(--text-2)] shrink-0" />
  <p className="text-[11px] uppercase tracking-[0.05em] text-[var(--text-3)] shrink-0">Home</p>
@@ -856,8 +940,7 @@ function HomeLocationSection({ toast }: { toast: (msg: string) => void }) {
  </>
  )}
  </div>
- </CardContent>
- </Card>
+ </div>
  )
 }
 
@@ -871,8 +954,7 @@ function CronJobsSection({ cronJobs, onAdd, onDelete }: {
  const [open, setOpen] = useState(false)
 
  return (
- <Card>
- <CardContent className="p-5">
+ <div className="py-4 border-b border-white/[0.08]">
  <div className="flex items-center justify-between mb-4">
  <div className="flex items-center gap-2">
  <Clock className="h-4 w-4 text-[var(--text-3)]" />
@@ -922,9 +1004,9 @@ function CronJobsSection({ cronJobs, onAdd, onDelete }: {
  return (
  <div key={job.id} className="group flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-150">
  <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: job.source === 'server' ? 'var(--accent, #06b6d4)' : 'var(--success, #10b981)' }} />
- <span className="text-xs text-[var(--text-2)] truncate flex-1 min-w-0">{job.name}</span>
- <code className="text-[10px] text-[var(--text-3)] font-mono shrink-0">{rawSchedule}</code>
- <span className="text-[10px] text-[var(--text-3)] shrink-0 hidden sm:inline">{job.schedule}</span>
+ <span className="text-[14px] text-[var(--text-2)] truncate flex-1 min-w-0">{job.name}</span>
+ <code className="text-[13px] text-[var(--text-3)] font-mono shrink-0">{rawSchedule}</code>
+ <span className="text-[13px] text-[var(--text-3)] shrink-0 hidden sm:inline">{job.schedule}</span>
  {job.source === 'crontab' && (
  <button
  onClick={() => onDelete(job.raw)}
@@ -938,8 +1020,7 @@ function CronJobsSection({ cronJobs, onAdd, onDelete }: {
  })}
  </div>
  )}
- </CardContent>
- </Card>
+ </div>
  )
 }
 
@@ -1043,19 +1124,18 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
  })() : ''
 
  return (
- <Card>
- <CardContent className="p-5">
- <div className="flex items-center justify-between mb-4">
+ <div className="mt-6">
+ <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.08]">
  <div className="flex items-center gap-2">
- <Gift className="h-4 w-4 text-[var(--text-3)]" />
- <p className="text-[11px] uppercase tracking-[0.05em] text-[var(--text-3)]">Birthdays</p>
- {living.length > 0 && <span className="text-[12px]" style={{ color: 'var(--text-2, var(--text-2))' }}>{living.length}</span>}
+ <GiftIcon size={14} className="text-white/55" />
+ <p className="text-[13px] uppercase font-semibold tracking-wider text-white/55">Birthdays</p>
+ {living.length > 0 && <span className="text-[13px] text-white/30 bg-white/[0.06] px-1.5 py-0.5 rounded-full font-medium">{living.length}</span>}
  </div>
  <Dialog open={open} onOpenChange={setOpen}>
  <DialogTrigger asChild>
- <Button variant="outline" size="sm" className="h-7 text-[11px] text-[var(--text-2)] border-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.04)]">
- <Plus className="h-3 w-3 mr-1" /> Add
- </Button>
+ <button className="text-[13px] font-medium text-[#0A84FF] hover:text-[#0A84FF]/80 transition-colors">
+ Add
+ </button>
  </DialogTrigger>
  <DialogContent className="">
  <DialogHeader><DialogTitle className="text-[var(--text-1)] ">Add Birthday</DialogTitle></DialogHeader>
@@ -1088,22 +1168,17 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
  return (
  <div
  key={b.id}
- className={`group flex items-center justify-between p-3 rounded-xl hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-150 ${isToday ? 'bg-[var(--accent-subtle)] border border-[var(--accent-border)]' : ''}`}
+ className={`group flex items-center justify-between py-2.5 px-1 hover:bg-white/[0.03] rounded-lg transition-colors duration-150 ${isToday ? 'bg-[#FF9F0A]/5' : ''}`}
  >
- <div className="flex flex-col gap-1">
- <div className="flex items-center gap-3">
- <span style={{ fontSize: 14, fontWeight: 500, color: isToday ? 'var(--accent)' : 'var(--text-1)' }}>{b.name}</span>
- <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{formatBirthdayDate(b.date)}</span>
+ <div className="flex flex-col gap-0.5 min-w-0">
+ <span className={`text-[14px] font-medium ${isToday ? 'text-[#FF9F0A]' : 'text-white'}`}>{b.name}</span>
+ <span className="text-[13px] text-white/30"><TextMorph as="span" className="inline-flex text-[13px] text-white/30">{countdown}</TextMorph>{age ? <> · <TextMorph as="span" className="inline-flex text-[13px] text-white/30">{age}</TextMorph></> : ''}</span>
  </div>
- <div className="flex items-center gap-2">
- <span style={{ fontSize: 12, color: isToday ? 'var(--accent)' : 'var(--text-3)' }}>{countdown}</span>
- {age && <span style={{ fontSize: 12, color: 'var(--text-3)' }}>&middot; {age}</span>}
- </div>
- </div>
- <div className="flex items-center gap-1">
+ <div className="flex items-center gap-2 shrink-0">
+ <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
  <Button
  variant="ghost" size="icon"
- className="opacity-0 group-hover:opacity-100 transition-opacity text-[var(--text-3)] hover:text-[var(--accent)] h-7 w-7"
+ className="text-white/30 hover:text-[#0A84FF] h-7 w-7"
  onClick={() => setMessageModal(b)}
  title="Birthday message"
  >
@@ -1111,15 +1186,15 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
  </Button>
  <Button
  variant="ghost" size="icon"
- className="opacity-0 group-hover:opacity-100 transition-opacity text-[var(--text-3)] hover:text-[var(--accent)] h-7 w-7"
+ className="text-white/30 hover:text-[#0A84FF] h-7 w-7"
  onClick={() => setGiftModal(b)}
  title="Gift ideas"
  >
- <Gift className="h-3.5 w-3.5" />
+ <LucideGift className="h-3.5 w-3.5" />
  </Button>
  <Button
  variant="ghost" size="icon"
- className={`transition-opacity text-[var(--text-3)] hover:text-[var(--accent)] h-7 w-7 ${sendingEmailId === b.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+ className={`text-white/30 hover:text-[#0A84FF] h-7 w-7 ${sendingEmailId === b.id ? '!opacity-100' : ''}`}
  disabled={sendingEmailId === b.id}
  onClick={async () => { setSendingEmailId(b.id); await onSendEmail(b); setSendingEmailId(null) }}
  title="Send email reminder"
@@ -1128,11 +1203,13 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
  </Button>
  <button
  onClick={() => hideBirthday(b.id)}
- className="opacity-0 group-hover:opacity-100 transition-opacity text-[var(--text-3)] hover:text-[var(--text-2)] h-7 w-7 flex items-center justify-center"
+ className="text-white/30 hover:text-white/55 h-7 w-7 flex items-center justify-center"
  title="Hide"
  >
  <X className="h-3 w-3" />
  </button>
+ </div>
+ <span className="text-[14px] text-white/30">{formatBirthdayDate(b.date)}</span>
  </div>
  </div>
  )
@@ -1192,7 +1269,6 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
  )}
  </div>
  )}
- </CardContent>
 
  {/* Message Modal */}
  <Dialog open={!!messageModal} onOpenChange={(v) => { if (!v) setMessageModal(null) }}>
@@ -1255,7 +1331,7 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
  )}
  </DialogContent>
  </Dialog>
- </Card>
+ </div>
  )
 }
 
@@ -1341,19 +1417,17 @@ function RemindersSection({ reminders, onUpdate, onRefresh }: {
  }
 
  return (
- <Card>
- <CardContent className="p-5">
- <div className="flex items-center justify-between mb-4">
+ <div>
+ <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.08]">
  <div className="flex items-center gap-2">
- <Clock className="h-4 w-4 text-[var(--text-3)]" />
- <p className="text-[11px] uppercase tracking-[0.05em] text-[var(--text-3)]">Reminders</p>
- {active.length > 0 && <span className="text-[12px]" style={{ color: 'var(--text-2, var(--text-2))' }}>{active.length}</span>}
+ <ClockIcon size={14} className="text-white/55" />
+ <p className="text-[13px] uppercase font-semibold tracking-wider text-white/55">Reminders</p>
  </div>
  <Dialog open={open} onOpenChange={setOpen}>
  <DialogTrigger asChild>
- <Button variant="outline" size="sm" className="h-7 text-[11px] text-[var(--text-2)] border-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.04)]">
- <Plus className="h-3 w-3 mr-1" /> Add
- </Button>
+ <button className="text-[13px] font-medium text-[#0A84FF] hover:text-[#0A84FF]/80 transition-colors">
+ Add
+ </button>
  </DialogTrigger>
  <DialogContent className="">
  <DialogHeader><DialogTitle className="text-[var(--text-1)] ">Add Reminder</DialogTitle></DialogHeader>
@@ -1384,11 +1458,11 @@ function RemindersSection({ reminders, onUpdate, onRefresh }: {
  </button>
  <div>
  <div className="flex items-center gap-2">
- <p className={`text-sm ${overdue ? 'text-rose-400' : 'text-[var(--text-2)]'}`}>{r.title}</p>
- {r.recurring && <span className="text-[12px]" style={{ color: 'var(--text-2, var(--text-2))' }}>{r.recurring}</span>}
+ <p className={`text-[14px] ${overdue ? 'text-rose-400' : 'text-[var(--text-2)]'}`}>{r.title}</p>
+ {r.recurring && <span className="text-[13px]" style={{ color: 'var(--text-2, var(--text-2))' }}>{r.recurring}</span>}
  </div>
  {r.due && (
- <p className={`text-xs flex items-center gap-1 mt-0.5 ${overdue ? 'text-rose-400/80' : 'text-[var(--text-3)]'}`}>
+ <p className={`text-[13px] flex items-center gap-1 mt-0.5 ${overdue ? 'text-rose-400/80' : 'text-[var(--text-3)]'}`}>
  <Clock className="h-3 w-3" />
  {countdown} &middot; {new Date(r.due).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
  </p>
@@ -1411,10 +1485,10 @@ function RemindersSection({ reminders, onUpdate, onRefresh }: {
  {done.map((r) => (
  <div key={r.id} className="group flex items-center justify-between p-3 rounded-xl hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-150">
  <div className="flex items-center gap-3">
- <button onClick={() => toggleDone(r.id)} className="h-4 w-4 rounded border border-[var(--accent-border)] bg-[var(--accent-subtle)] flex items-center justify-center shrink-0">
- <Check className="h-2.5 w-2.5 text-[var(--accent)]" />
+ <button onClick={() => toggleDone(r.id)} className="h-4 w-4 rounded border border-emerald-500/40 bg-emerald-500/20 flex items-center justify-center shrink-0">
+ <Check className="h-2.5 w-2.5 text-emerald-400" />
  </button>
- <span className="text-sm text-[var(--text-3)] line-through">{r.title}</span>
+ <span className="text-[14px] text-white/30 line-through">{r.title}</span>
  </div>
  <Button
  variant="ghost" size="icon"
@@ -1429,7 +1503,6 @@ function RemindersSection({ reminders, onUpdate, onRefresh }: {
  )}
  </div>
  )}
- </CardContent>
 
  {/* Edit Reminder Modal */}
  <Dialog open={!!editModal} onOpenChange={(v) => { if (!v) setEditModal(null) }}>
@@ -1484,7 +1557,7 @@ function RemindersSection({ reminders, onUpdate, onRefresh }: {
  </DialogFooter>
  </DialogContent>
  </Dialog>
- </Card>
+ </div>
  )
 }
 
@@ -1545,7 +1618,7 @@ function DayPlannerModal({ plan, open, onClose, toast }: { plan: DayPlan; open: 
  animate={{ opacity: 1, scale: 1, y: 0 }}
  exit={{ opacity: 0, scale: 0.95, y: 20 }}
  transition={{ duration: 0.2 }}
- className="relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border border-[var(--accent-border)] bg-[var(--bg-surface)]"
+ className="relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border border-[var(--accent-border)] bg-[rgba(255,255,255,0.04)]"
  onClick={e => e.stopPropagation()}
  >
  {/* Close button */}
@@ -1559,7 +1632,7 @@ function DayPlannerModal({ plan, open, onClose, toast }: { plan: DayPlan; open: 
  {/* Header */}
  <div className="p-6 pb-4">
  <div className="flex items-center gap-3 mb-1">
- <CalendarIcon className="h-5 w-5 text-[var(--accent)]" />
+ <LucideCalendar className="h-5 w-5 text-[var(--accent)]" />
  <h2 style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>{plan.title}</h2>
  </div>
  <div className="ml-8">
@@ -1584,7 +1657,7 @@ function DayPlannerModal({ plan, open, onClose, toast }: { plan: DayPlan; open: 
  </div>
  {/* Icon dot on line */}
  <div className="flex items-start shrink-0 -ml-1 mt-0.5">
- <span className="text-sm relative z-10 bg-[var(--bg-surface)] px-0.5">{stepTypeIcon(step.type)}</span>
+ <span className="text-sm relative z-10 bg-[rgba(255,255,255,0.04)] px-0.5">{stepTypeIcon(step.type)}</span>
  </div>
  {/* Content */}
  <div className="flex-1 min-w-0">
@@ -1827,7 +1900,7 @@ function IdeaCard({ idea, type, toast, onDidThis, weather, onOpenPlan }: { idea:
  disabled={planning}
  className="inline-flex items-center gap-1.5 text-xs text-[var(--text-2)] hover:text-[var(--accent-text)] bg-[var(--accent-subtle)] hover:bg-[var(--accent-subtle)] px-3 py-1.5 rounded-lg transition-colors border border-[var(--accent-border)] disabled:opacity-50"
  >
- {planning ? <Loader2 className="h-3 w-3 animate-spin" /> : <CalendarIcon className="h-3 w-3" />}
+ {planning ? <Loader2 className="h-3 w-3 animate-spin" /> : <LucideCalendar className="h-3 w-3" />}
  Plan this day
  </button>
  </div>
@@ -1880,13 +1953,13 @@ function WeatherBar({ weather }: { weather: WeekendWeather | null }) {
 
  return (
  <div className="flex flex-wrap items-center gap-3 sm:gap-4">
- <span className="text-xs uppercase tracking-widest text-[var(--text-3)] shrink-0">This weekend{homeCity ? ` — ${homeCity}` : ''}</span>
+ <span className="text-[13px] uppercase tracking-widest text-[var(--text-3)] shrink-0">This weekend{homeCity ? ` — ${homeCity}` : ''}</span>
  <div className="flex items-center gap-4 sm:gap-6 ml-auto">
  <div className="flex items-center gap-2">
  <WeatherIcon code={saturday.weatherCode} className="h-4 w-4 text-amber-400/80" />
- <span className="text-sm text-[var(--text-2)]">Sat</span>
- <span className="text-sm text-[var(--text-1)]">{Math.round(saturday.tempMax)}°</span>
- <span className="text-xs text-[var(--text-3)]">{Math.round(saturday.tempMin)}°</span>
+ <span className="text-[14px] text-[var(--text-2)]">Sat</span>
+ <span className="text-[14px] text-[var(--text-1)]">{Math.round(saturday.tempMax)}°</span>
+ <span className="text-[13px] text-[var(--text-3)]">{Math.round(saturday.tempMin)}°</span>
  {saturday.precipitation > 0 && (
  <span className="text-[10px] text-blue-400/60">{saturday.precipitation}mm</span>
  )}
@@ -1894,9 +1967,9 @@ function WeatherBar({ weather }: { weather: WeekendWeather | null }) {
  <div className="w-px h-4 bg-white/[0.08]" />
  <div className="flex items-center gap-2">
  <WeatherIcon code={sunday.weatherCode} className="h-4 w-4 text-amber-400/80" />
- <span className="text-sm text-[var(--text-2)]">Sun</span>
- <span className="text-sm text-[var(--text-1)]">{Math.round(sunday.tempMax)}°</span>
- <span className="text-xs text-[var(--text-3)]">{Math.round(sunday.tempMin)}°</span>
+ <span className="text-[14px] text-[var(--text-2)]">Sun</span>
+ <span className="text-[14px] text-[var(--text-1)]">{Math.round(sunday.tempMax)}°</span>
+ <span className="text-[13px] text-[var(--text-3)]">{Math.round(sunday.tempMin)}°</span>
  {sunday.precipitation > 0 && (
  <span className="text-[10px] text-blue-400/60">{sunday.precipitation}mm</span>
  )}
@@ -1912,7 +1985,7 @@ function LocalEventsScroll({ events }: { events: LocalEvent[] }) {
 
  return (
  <div>
- <p className="text-xs uppercase tracking-widest text-[var(--text-3)] mb-2">Local Events</p>
+ <p className="text-[13px] uppercase tracking-widest text-[var(--text-3)] mb-2">Local Events</p>
  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
  {events.map((event, i) => (
  <a
@@ -1921,12 +1994,12 @@ function LocalEventsScroll({ events }: { events: LocalEvent[] }) {
  target="_blank"
  rel="noopener noreferrer"
  className="shrink-0 flex items-center gap-2 hover:bg-[rgba(255,255,255,0.06)] transition-colors group"
- style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)' }}
+ style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}
  >
  <span className="text-sm">🎭</span>
- <p className="text-xs text-[var(--text-2)] group-hover:text-[var(--text-1)] truncate max-w-[180px] whitespace-nowrap">{event.title}</p>
+ <p className="text-[14px] text-[var(--text-2)] group-hover:text-[var(--text-1)] truncate max-w-[180px] whitespace-nowrap">{event.title}</p>
  {(event.location || event.driveTime) && (
- <span className="text-[10px] text-[var(--text-3)] whitespace-nowrap">{event.location}{event.driveTime ? ` · ${event.driveTime}` : ''}</span>
+ <span className="text-[13px] text-[var(--text-3)] whitespace-nowrap">{event.location}{event.driveTime ? ` · ${event.driveTime}` : ''}</span>
  )}
  <ExternalLink className="h-3 w-3 text-[var(--text-3)] group-hover:text-[var(--text-2)] shrink-0" />
  </a>
@@ -1950,7 +2023,7 @@ function TripHistorySection({ trips, expanded, onToggle }: { trips: Trip[]; expa
  className="flex items-center gap-2 mb-3 group"
  >
  <History className="h-3.5 w-3.5 text-[var(--text-3)]" />
- <span className="text-xs uppercase tracking-widest text-[var(--text-3)] group-hover:text-[var(--text-2)] transition-colors">
+ <span className="text-[13px] uppercase tracking-widest text-[var(--text-3)] group-hover:text-[var(--text-2)] transition-colors">
  Trip History
  </span>
  {trips.length > 0 && (
@@ -1962,12 +2035,12 @@ function TripHistorySection({ trips, expanded, onToggle }: { trips: Trip[]; expa
  <div className="space-y-1">
  {displayTrips.map((trip) => (
  <div key={trip.id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-[rgba(255,255,255,0.04)] transition-colors">
- <span className="text-xs text-[var(--text-3)] font-mono w-20 shrink-0">
+ <span className="text-[13px] text-[var(--text-3)] font-mono w-20 shrink-0">
  {new Date(trip.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
  </span>
- <span className="text-sm text-[var(--text-2)] flex-1 truncate">{trip.title}</span>
+ <span className="text-[14px] text-[var(--text-2)] flex-1 truncate">{trip.title}</span>
  {trip.location && (
- <span className="text-xs text-[var(--text-3)] truncate max-w-[120px]">{trip.location}</span>
+ <span className="text-[13px] text-[var(--text-3)] truncate max-w-[120px]">{trip.location}</span>
  )}
  {trip.rating && (
  <div className="flex items-center gap-0.5 shrink-0">
@@ -2033,10 +2106,10 @@ function IdeasSection({ type, ideas, content, lastUpdated, refreshing, refreshDi
  const hasIdeas = parsedIdeas.length > 0
 
  return (
- <div className="flex flex-col" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px', minHeight: '200px' }}>
+ <div className="flex flex-col" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '16px', minHeight: '200px' }}>
  <div className="flex items-center gap-2 mb-4">
  <Icon className={`h-4 w-4 text-[var(--text-2)] ${refreshing ? 'animate-spin' : ''}`} />
- <p className="text-[11px] uppercase tracking-[0.05em] text-[var(--text-3)]">{label}</p>
+ <p className="text-[13px] uppercase tracking-[0.05em] text-[var(--text-3)]">{label}</p>
  <div className="flex items-center gap-2 ml-auto">
  {lastUpdated && (
  <span className="text-[10px] text-[var(--text-3)]">Updated {lastUpdated}</span>
@@ -2168,8 +2241,7 @@ function EmailNotificationsSection({ toast }: { toast: (msg: string) => void }) 
  if (loading) return null
 
  return (
- <Card>
- <CardContent className="p-5">
+ <div className="py-4 border-b border-white/[0.08]">
  <div className="flex items-center gap-2 mb-4">
  <Mail className="h-4 w-4 text-[var(--text-3)]" />
  <p className="text-[11px] uppercase tracking-[0.05em] text-[var(--text-3)]">Email Notifications</p>
@@ -2236,8 +2308,7 @@ function EmailNotificationsSection({ toast }: { toast: (msg: string) => void }) 
  )
  })}
  </div>
- </CardContent>
- </Card>
+ </div>
  )
 }
 
@@ -2351,13 +2422,13 @@ function ContactDetail({ contact, onSave, onDelete, saving, toast }: {
  return (
   <div className="h-full flex flex-col">
    {/* Sticky header */}
-   <div className="shrink-0 px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
+   <div className="shrink-0 px-5 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
     <div className="flex items-center gap-3">
      <div className="h-10 w-10 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--bg-elevated)' }}>
       <span className="text-sm font-semibold" style={{ color: 'var(--text-2)' }}>{contactInitials(contact)}</span>
      </div>
      <div className="min-w-0 flex-1">
-      <h2 className="text-[15px] leading-snug" style={{ fontWeight: 600, color: 'var(--text-1)', letterSpacing: '-0.01em' }}>
+      <h2 className="text-[22px] leading-snug" style={{ fontWeight: 600, color: 'var(--text-1)', letterSpacing: '-0.02em' }}>
        {contact.firstName} {contact.lastName}
       </h2>
       <div className="flex items-center gap-2 mt-0.5">
@@ -2375,7 +2446,7 @@ function ContactDetail({ contact, onSave, onDelete, saving, toast }: {
      {!editing && (
       <button
        onClick={enterEdit}
-       className="shrink-0 h-8 w-8 flex items-center justify-center rounded-lg border border-[var(--border)] hover:bg-[rgba(255,255,255,0.04)] transition-colors"
+       className="shrink-0 h-8 w-8 flex items-center justify-center rounded-lg border border-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.04)] transition-colors"
        style={{ color: 'var(--text-2)' }}
        title="Edit contact"
       >
@@ -2448,7 +2519,7 @@ function ContactDetail({ contact, onSave, onDelete, saving, toast }: {
       ].map(({ label, value, icon: Icon }) => (
        <div key={label}>
         <p className="section-label mb-1">{label}</p>
-        <div className="flex items-center gap-2 text-[13px]" style={{ color: value ? 'var(--text-2)' : 'var(--text-3)' }}>
+        <div className="flex items-center gap-2 text-[14px]" style={{ color: value ? 'var(--text-2)' : 'var(--text-3)' }}>
          <Icon className="h-3.5 w-3.5 shrink-0" />
          <span className="flex-1 min-w-0 truncate">{value || 'Not set'}</span>
         </div>
@@ -2457,7 +2528,7 @@ function ContactDetail({ contact, onSave, onDelete, saving, toast }: {
       <div>
        <p className="section-label mb-1">Birthday</p>
        <div className="flex items-center gap-2">
-        <span className="text-[13px]" style={{ color: birthdayFormatted ? 'var(--text-2)' : 'var(--text-3)' }}>
+        <span className="text-[14px]" style={{ color: birthdayFormatted ? 'var(--text-2)' : 'var(--text-3)' }}>
          {birthdayFormatted || 'Not set'}{age !== null ? ` (${age})` : ''}
         </span>
         {daysUntil !== null && (
@@ -2469,7 +2540,7 @@ function ContactDetail({ contact, onSave, onDelete, saving, toast }: {
       </div>
       <div>
        <p className="section-label mb-1">Notes</p>
-       <p className="text-[13px] leading-relaxed" style={{ color: contact.notes ? 'var(--text-2)' : 'var(--text-3)' }}>
+       <p className="text-[14px] leading-relaxed" style={{ color: contact.notes ? 'var(--text-2)' : 'var(--text-3)' }}>
         {contact.notes || 'No notes'}
        </p>
       </div>
@@ -2493,7 +2564,7 @@ function ContactDetail({ contact, onSave, onDelete, saving, toast }: {
    </div>
 
    {/* Footer actions */}
-   <div className="shrink-0 px-5 py-3 border-t flex items-center gap-2 flex-wrap" style={{ borderColor: 'var(--border)' }}>
+   <div className="shrink-0 px-5 py-3 border-t flex items-center gap-2 flex-wrap" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
     {editing ? (
      <>
       <button
@@ -2508,7 +2579,7 @@ function ContactDetail({ contact, onSave, onDelete, saving, toast }: {
       <button
        onClick={() => setEditing(false)}
        className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-md transition-colors"
-       style={{ color: 'var(--text-2)', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)' }}
+       style={{ color: 'var(--text-2)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
       >
        <X className="h-3.5 w-3.5" />
        Cancel
@@ -2532,7 +2603,7 @@ function ContactDetail({ contact, onSave, onDelete, saving, toast }: {
          </DialogDescription>
         </DialogHeader>
         <DialogFooter className="gap-2 sm:gap-0">
-         <Button variant="outline" onClick={() => setDeleteOpen(false)} className="border-[var(--border)] text-[var(--text-2)]">Cancel</Button>
+         <Button variant="outline" onClick={() => setDeleteOpen(false)} className="border-[rgba(255,255,255,0.08)] text-[var(--text-2)]">Cancel</Button>
          <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
           {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Trash2 className="h-3.5 w-3.5 mr-1.5" />}
           Delete
@@ -2678,22 +2749,19 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
 
  return (
   <div
-   className="rounded-xl overflow-hidden"
+   className="flex flex-col md:flex-row"
    style={{
-    border: '1px solid var(--border)',
-    background: 'var(--bg-surface)',
-    height: 'calc(100vh - 190px)',
-    minHeight: 400,
+    height: 'calc(100vh - 100px)',
+    background: '#000',
    }}
   >
-   <div className="flex h-full flex-col md:flex-row">
-    {/* Left Panel */}
+    {/* Left Panel — 380px */}
     <div
-     className={`shrink-0 flex flex-col h-full md:border-r md:w-[40%] md:max-w-[500px] ${selectedContact ? 'hidden md:flex' : 'flex'}`}
-     style={{ borderColor: 'var(--border)' }}
+     className={`shrink-0 flex flex-col md:w-[380px] ${selectedContact ? 'hidden md:flex' : 'flex'}`}
+     style={{ borderRight: '1px solid rgba(255,255,255,0.08)', height: '100%' }}
     >
      {/* Search + Add */}
-     <div className="shrink-0 px-3 pt-3 pb-2 flex items-center gap-2">
+     <div className="shrink-0 px-5 pt-3 pb-2 flex items-center gap-2">
       <div className="relative flex-1">
        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5" style={{ color: 'var(--text-3)' }} />
        <input
@@ -2701,13 +2769,13 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
         value={search}
         onChange={e => setSearch(e.target.value)}
         placeholder="Search contacts..."
-        className="w-full pl-8 pr-3 py-2 rounded-lg text-[13px] transition-all duration-150 focus:outline-none"
-        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
+        className="w-full pl-8 pr-3 py-2 rounded-lg text-[14px] transition-all duration-150 focus:outline-none"
+        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: 'var(--text-1)' }}
        />
       </div>
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
        <DialogTrigger asChild>
-        <button className="shrink-0 h-[36px] w-[36px] flex items-center justify-center rounded-lg border border-[var(--border)] hover:bg-[rgba(255,255,255,0.04)] transition-colors" style={{ color: 'var(--text-2)' }}>
+        <button className="shrink-0 h-[36px] w-[36px] flex items-center justify-center rounded-lg border border-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.04)] transition-colors" style={{ color: 'var(--text-2)' }}>
          <Plus className="h-3.5 w-3.5" />
         </button>
        </DialogTrigger>
@@ -2787,12 +2855,12 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
      </div>
 
      {/* Contact count */}
-     <div className="shrink-0 px-3 pb-2">
-      <span className="text-[10px]" style={{ color: 'var(--text-3)' }}>{filtered.length} contact{filtered.length !== 1 ? 's' : ''}</span>
+     <div className="shrink-0 px-5 pb-2">
+      <span className="text-[13px]" style={{ color: 'var(--text-3)' }}>{filtered.length} contact{filtered.length !== 1 ? 's' : ''}</span>
      </div>
 
      {/* Scrollable contact list */}
-     <div className="flex-1 overflow-y-auto" style={{ borderTop: '1px solid var(--border)' }}>
+     <div className="flex-1 overflow-y-auto" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
       {filtered.length === 0 ? (
        <div className="flex flex-col items-center justify-center py-16 text-center px-4">
         <Users className="h-6 w-6 mb-3" style={{ color: 'rgba(255,255,255,0.08)' }} />
@@ -2807,7 +2875,7 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
          <button
           key={contact.id}
           onClick={() => setSelectedId(contact.id)}
-          className="w-full text-left flex items-center gap-2.5 px-3 transition-colors duration-100"
+          className="w-full text-left flex items-center gap-2.5 px-5 transition-colors duration-100"
           style={{
            height: 48,
            background: selectedId === contact.id ? 'var(--accent-subtle)' : 'transparent',
@@ -2820,14 +2888,14 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
           </div>
           {/* Name */}
           <span
-           className="text-[13px] truncate flex-1 min-w-0"
+           className="text-[14px] truncate flex-1 min-w-0"
            style={{ color: selectedId === contact.id ? 'var(--text-1)' : 'var(--text-2)', fontWeight: selectedId === contact.id ? 500 : 400 }}
           >
            {contact.lastName} {contact.firstName}
           </span>
           {/* Phone */}
           {contact.phone && (
-           <span className="text-[10px] tabular-nums shrink-0 hidden sm:inline" style={{ color: 'var(--text-3)' }}>
+           <span className="text-[13px] tabular-nums shrink-0 hidden sm:inline" style={{ color: 'var(--text-3)' }}>
             {contact.phone}
            </span>
           )}
@@ -2844,7 +2912,7 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
      {selectedContact && (
       <div
        className="md:hidden shrink-0 flex items-center gap-2 px-4 py-3 border-b"
-       style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)' }}
+       style={{ borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)' }}
       >
        <button
         onClick={() => setSelectedId(null)}
@@ -2874,7 +2942,6 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
       </div>
      )}
     </div>
-   </div>
   </div>
  )
 }
@@ -3063,13 +3130,9 @@ export default function LifePage() {
 
  return (
  <>
- <div className="container mx-auto px-6 py-6 pb-20 md:px-8 md:pb-8 space-y-6">
- {/* Header + Tabs */}
- <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
- <div>
- <h1 style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>Home</h1>
- <p className="text-sm mt-1" style={{ color: 'var(--text-2)' }}>Schedule, reminders, and personal admin</p>
- </div>
+ <div className="min-h-full">
+ {/* Sub-nav bar */}
+ <div className="border-b border-white/[0.08] px-5 md:px-6 py-2.5">
  <TabControl active={activeTab} onChange={setActiveTab} />
  </div>
 
@@ -3080,18 +3143,21 @@ export default function LifePage() {
  initial={{ opacity: 0, y: 8 }}
  animate={{ opacity: 1, y: 0 }}
  transition={{ duration: 0.15 }}
- className="grid grid-cols-1 md:grid-cols-2 gap-6"
  >
- {/* Trip Helper — full width at top */}
+ {/* Trip banner — full-bleed */}
  {upcomingTrip && <TripHelper trip={upcomingTrip} toast={addToast} />}
- {/* Left column: Calendar */}
- <div className="space-y-6">
+
+ {/* Two-column grid */}
+ <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 px-5 md:px-6 py-6">
+ {/* Left: This Week */}
+ <div>
  <CalendarSection events={calendar} />
  </div>
- {/* Right column: Reminders + Birthdays */}
- <div className="space-y-6">
+ {/* Right: Reminders + Birthdays */}
+ <div className="md:border-l md:border-white/[0.08] md:pl-12">
  <RemindersSection reminders={data.reminders} onUpdate={updateReminders} onRefresh={refreshReminders} />
  <BirthdaysSection birthdays={data.birthdays} onUpdate={updateBirthdays} onPatchBirthday={patchBirthday} onSendEmail={sendBirthdayEmail} toast={addToast} />
+ </div>
  </div>
  </motion.div>
  )}
@@ -3103,7 +3169,7 @@ export default function LifePage() {
  initial={{ opacity: 0, y: 8 }}
  animate={{ opacity: 1, y: 0 }}
  transition={{ duration: 0.15 }}
- className="space-y-4"
+ className="space-y-4 px-5 md:px-6 py-6"
  >
  {/* Weather Bar */}
  <WeatherBar weather={weather} />
@@ -3129,6 +3195,7 @@ export default function LifePage() {
  initial={{ opacity: 0, y: 8 }}
  animate={{ opacity: 1, y: 0 }}
  transition={{ duration: 0.15 }}
+ className=""
  >
  <ContactsSection toast={addToast} />
  </motion.div>

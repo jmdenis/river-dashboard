@@ -1,7 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { Loader2, Home, Check, Clock, Plus, Trash2, Mail, X, Shield, FileText, Settings, AlertTriangle, Key, Bug, Inbox, RefreshCw, ChevronRight, Upload, CheckCircle2, AlertCircle } from 'lucide-react'
-import { Card, CardContent } from '../components/ui/card'
+import { Loader2, MapPin, Check, Clock as LucideClock, Plus, Trash2, Mail, X, Shield as LucideShield, FileText, Settings, AlertTriangle, Key, Bug, Inbox, RefreshCw, ChevronRight, Upload, CheckCircle2, AlertCircle } from 'lucide-react'
+import { ShieldCheckIcon } from '../components/ui/shield-check-icon'
+import { BellIcon } from '../components/ui/bell-icon'
+import { ClockIcon } from '../components/ui/clock-icon'
+import { FileIcon } from '../components/ui/file-icon'
+import { MailIcon } from '../components/ui/mail-icon'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog'
@@ -13,7 +17,7 @@ import { lifeApi, type CronJob, type HomeSettings } from '../services/lifeApi'
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 const TOKEN = API_BASE_URL.split('/dash/')[1]?.split('/')[0] || ''
 
-// --- Segmented Control ---
+// --- Tab Control (matches LifePage style) ---
 type ProfileTabId = 'general' | 'notifications' | 'cron' | 'security' | 'docs'
 
 const PROFILE_TABS: { id: ProfileTabId; label: string }[] = [
@@ -26,12 +30,16 @@ const PROFILE_TABS: { id: ProfileTabId; label: string }[] = [
 
 function ProfileTabControl({ active, onChange }: { active: ProfileTabId; onChange: (id: ProfileTabId) => void }) {
   return (
-    <div className="segmented-control">
+    <div className="flex items-center gap-1">
       {PROFILE_TABS.map(tab => (
         <button
           key={tab.id}
           onClick={() => onChange(tab.id)}
-          className={`segmented-control-item ${active === tab.id ? 'active' : ''}`}
+          className={`text-[14px] font-medium px-3.5 py-1.5 rounded-lg transition-all duration-200 ${
+            active === tab.id
+              ? 'bg-white/10 text-white'
+              : 'text-white/40 hover:text-white/60 hover:bg-white/[0.04]'
+          }`}
         >
           {tab.label}
         </button>
@@ -50,8 +58,8 @@ function ToastContainer({ toasts }: { toasts: { id: number; message: string }[] 
           initial={{ opacity: 0, y: 20, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 20 }}
-          className="backdrop-blur-xl text-sm px-4 py-2.5 shadow-lg"
-          style={{ background: 'var(--glass-bg-active)', border: '1px solid var(--glass-border)', color: 'var(--text-1)', borderRadius: 'var(--glass-radius-sm)' }}
+          className="backdrop-blur-xl text-sm px-4 py-2.5"
+          style={{ background: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.08)', color: 'var(--text-1)', borderRadius: 12 }}
         >
           {t.message}
         </motion.div>
@@ -94,41 +102,41 @@ function HomeLocationSection({ toast }: { toast: (msg: string) => void }) {
   }
 
   return (
-    <Card>
-      <CardContent className="p-5">
-        <div className="flex items-center gap-3">
-          <Home className="h-4 w-4 text-[var(--text-2)] shrink-0" />
-          <p className="text-[11px] uppercase tracking-[0.05em] text-[var(--text-3)] shrink-0">Home</p>
-          {loading ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--text-3)] ml-auto" />
-          ) : (
-            <>
-              <Input
-                value={draft.homeAddress}
-                onChange={e => handleChange('homeAddress', e.target.value)}
-                className="h-8 text-xs bg-[rgba(255,255,255,0.04)] border-[rgba(255,255,255,0.1)] text-[var(--text-2)] placeholder:text-[var(--text-3)] flex-1 min-w-0"
-                placeholder="Address"
-              />
-              <Input
-                value={draft.homeCity}
-                onChange={e => handleChange('homeCity', e.target.value)}
-                className="h-8 text-xs bg-[rgba(255,255,255,0.04)] border-[rgba(255,255,255,0.1)] text-[var(--text-2)] placeholder:text-[var(--text-3)] w-32 shrink-0"
-                placeholder="City"
-              />
-              <Button
-                size="sm"
+    <div className="mb-8">
+      <div className="flex items-center gap-2 mb-3">
+        <MapPin className="h-3.5 w-3.5 text-white/55" />
+        <p className="text-[12px] font-semibold uppercase tracking-wider text-white/55">Home</p>
+      </div>
+      {loading ? (
+        <div className="flex justify-center py-6"><Loader2 className="h-4 w-4 animate-spin text-[var(--text-3)]" /></div>
+      ) : (
+        <div className="space-y-2.5">
+          <div className="flex items-center gap-2.5">
+            <input
+              value={draft.homeAddress}
+              onChange={e => handleChange('homeAddress', e.target.value)}
+              className="flex-1 min-w-0 bg-[#1C1C1E] rounded-[10px] px-3.5 py-3 text-[14px] text-[var(--text-1)] placeholder:text-[var(--text-3)] border-none outline-none focus:ring-1 focus:ring-white/20 transition-shadow"
+              placeholder="Address"
+            />
+            {dirty && (
+              <button
                 onClick={save}
-                disabled={saving || !dirty}
-                className="h-8 px-3 text-xs shrink-0 disabled:opacity-30"
-                style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)', color: 'var(--accent-text)' }}
+                disabled={saving}
+                className="h-10 w-10 shrink-0 flex items-center justify-center rounded-[10px] transition-all disabled:opacity-30"
+                style={{ background: 'var(--accent-subtle)', color: 'var(--accent-text)' }}
               >
-                {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-              </Button>
-            </>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              </button>
+            )}
+          </div>
+          {draft.homeCity && (
+            <span className="inline-block bg-[#1C1C1E] rounded-[10px] px-3.5 py-2.5 text-[14px] text-[var(--text-2)]">
+              {draft.homeCity}
+            </span>
           )}
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   )
 }
 
@@ -144,24 +152,22 @@ function OwnerSection({ toast }: { toast: (msg: string) => void }) {
   if (loading) return null
 
   return (
-    <Card>
-      <CardContent className="p-5">
-        <div className="flex items-center gap-2 mb-3">
-          <Settings className="h-4 w-4 text-[var(--text-2)]" />
-          <p className="text-[11px] uppercase tracking-[0.05em] text-[var(--text-3)]">Configuration</p>
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        <Settings className="h-3.5 w-3.5 text-white/55" />
+        <p className="text-[12px] font-semibold uppercase tracking-wider text-white/55">Configuration</p>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-[#1C1C1E] rounded-xl p-4">
+          <p className="text-[11px] uppercase tracking-wider text-white/30 mb-1">Owner</p>
+          <p className="text-[14px] text-[var(--text-1)]">Jean-Marc Denis</p>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="px-3 py-2 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.1)]">
-            <p className="text-[10px] uppercase tracking-[0.05em] text-[var(--text-3)] mb-0.5">Owner</p>
-            <p className="text-xs text-[var(--text-2)]">Jean-Marc Denis</p>
-          </div>
-          <div className="px-3 py-2 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.1)]">
-            <p className="text-[10px] uppercase tracking-[0.05em] text-[var(--text-3)] mb-0.5">Partner</p>
-            <p className="text-xs text-[var(--text-2)]">Anne</p>
-          </div>
+        <div className="bg-[#1C1C1E] rounded-xl p-4">
+          <p className="text-[11px] uppercase tracking-wider text-white/30 mb-1">Partner</p>
+          <p className="text-[14px] text-[var(--text-1)]">Anne</p>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 
@@ -241,75 +247,73 @@ function EmailNotificationsSection({ toast }: { toast: (msg: string) => void }) 
   if (loading) return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-[var(--text-3)]" /></div>
 
   return (
-    <Card>
-      <CardContent className="p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <Mail className="h-4 w-4 text-[var(--text-2)]" />
-          <p className="text-[11px] uppercase tracking-[0.05em] text-[var(--text-3)]">Email Notifications</p>
-          {saving && <Loader2 className="h-3 w-3 animate-spin ml-auto" style={{ color: 'var(--accent-text)' }} />}
-        </div>
-        <div className="space-y-1">
-          {EMAIL_TYPES.map(({ id, label, testId }) => {
-            const recipients = config?.recipients[id] || []
-            const tState = testId ? (testState[testId] || 'idle') : null
-            return (
-              <div key={id} className="group rounded-lg hover:bg-[rgba(255,255,255,0.04)] transition-colors px-2 py-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs text-[var(--text-2)] shrink-0 w-28 truncate" title={label}>{label}</span>
-                  {testId && (
+    <div>
+      <div className="flex items-center gap-2 mb-4">
+        <MailIcon size={14} className="text-white/40" />
+        <p className="text-[13px] uppercase tracking-wider text-white/40">Email Notifications</p>
+        {saving && <Loader2 className="h-3 w-3 animate-spin ml-auto" style={{ color: 'var(--accent-text)' }} />}
+      </div>
+      <div className="space-y-1">
+        {EMAIL_TYPES.map(({ id, label, testId }) => {
+          const recipients = config?.recipients[id] || []
+          const tState = testId ? (testState[testId] || 'idle') : null
+          return (
+            <div key={id} className="group hover:bg-[rgba(255,255,255,0.04)] transition-colors px-2 py-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[14px] font-normal text-white shrink-0 w-32 truncate" title={label}>{label}</span>
+                {testId && (
+                  <button
+                    onClick={() => sendTest(testId)}
+                    disabled={tState !== 'idle'}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[13px] font-medium transition-all border border-white/[0.08] hover:bg-[rgba(255,255,255,0.06)] text-[var(--text-3)] hover:text-[var(--text-2)] disabled:opacity-50 shrink-0"
+                  >
+                    {tState === 'sending' ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : tState === 'sent' ? <Check className="h-2.5 w-2.5 text-emerald-400" /> : <Mail className="h-2.5 w-2.5" />}
+                    {tState === 'sent' ? 'Sent' : 'Test'}
+                  </button>
+                )}
+                {!testId && <span className="w-[52px] shrink-0" />}
+                <div className="flex items-center gap-1 flex-wrap flex-1 min-w-0">
+                  {recipients.map(email => (
+                    <span key={email} className="inline-flex items-center gap-1 text-[13px]" style={{ color: 'var(--text-2)' }}>
+                      {email}
+                      <button onClick={() => removeRecipient(id, email)} className="text-[var(--text-3)] hover:text-rose-400 transition-colors">
+                        <X className="h-2.5 w-2.5" />
+                      </button>
+                    </span>
+                  ))}
+                  {addingFor === id ? (
+                    <div className="inline-flex items-center gap-1">
+                      <input
+                        autoFocus
+                        placeholder="email@..."
+                        value={newEmails[id] || ''}
+                        onChange={e => setNewEmails(prev => ({ ...prev, [id]: e.target.value }))}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') addRecipient(id)
+                          if (e.key === 'Escape') setAddingFor(null)
+                        }}
+                        onBlur={() => { if (!(newEmails[id] || '').trim()) setAddingFor(null) }}
+                        className="h-5 w-32 text-[12px] bg-[rgba(255,255,255,0.04)] border border-white/[0.08] rounded px-1.5 text-[var(--text-2)] placeholder:text-[var(--text-3)] outline-none focus:border-[var(--accent-border)]"
+                      />
+                      <button onClick={() => addRecipient(id)} className="text-[var(--text-3)] hover:text-[var(--accent-text)]">
+                        <Check className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
                     <button
-                      onClick={() => sendTest(testId)}
-                      disabled={tState !== 'idle'}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium transition-all border border-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.06)] text-[var(--text-3)] hover:text-[var(--text-2)] disabled:opacity-50 shrink-0"
+                      onClick={() => setAddingFor(id)}
+                      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[12px] text-[var(--text-3)] hover:text-[var(--text-2)] hover:bg-[rgba(255,255,255,0.04)] transition-colors"
                     >
-                      {tState === 'sending' ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : tState === 'sent' ? <Check className="h-2.5 w-2.5 text-emerald-400" /> : <Mail className="h-2.5 w-2.5" />}
-                      {tState === 'sent' ? 'Sent' : 'Test'}
+                      <Plus className="h-2.5 w-2.5" />
                     </button>
                   )}
-                  {!testId && <span className="w-[52px] shrink-0" />}
-                  <div className="flex items-center gap-1 flex-wrap flex-1 min-w-0">
-                    {recipients.map(email => (
-                      <span key={email} className="inline-flex items-center gap-1 text-[12px]" style={{ color: 'var(--text-2, var(--text-2))' }}>
-                        {email}
-                        <button onClick={() => removeRecipient(id, email)} className="text-[var(--text-3)] hover:text-rose-400 transition-colors">
-                          <X className="h-2.5 w-2.5" />
-                        </button>
-                      </span>
-                    ))}
-                    {addingFor === id ? (
-                      <div className="inline-flex items-center gap-1">
-                        <input
-                          autoFocus
-                          placeholder="email@..."
-                          value={newEmails[id] || ''}
-                          onChange={e => setNewEmails(prev => ({ ...prev, [id]: e.target.value }))}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') addRecipient(id)
-                            if (e.key === 'Escape') setAddingFor(null)
-                          }}
-                          onBlur={() => { if (!(newEmails[id] || '').trim()) setAddingFor(null) }}
-                          className="h-5 w-32 text-[10px] bg-[rgba(255,255,255,0.04)] border border-white/[0.1] rounded px-1.5 text-[var(--text-2)] placeholder:text-[var(--text-3)] outline-none focus:border-[var(--accent-border)]"
-                        />
-                        <button onClick={() => addRecipient(id)} className="text-[var(--text-3)] hover:text-[var(--accent-text)]">
-                          <Check className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setAddingFor(id)}
-                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] text-[var(--text-3)] hover:text-[var(--text-2)] hover:bg-[rgba(255,255,255,0.04)] transition-colors"
-                      >
-                        <Plus className="h-2.5 w-2.5" />
-                      </button>
-                    )}
-                  </div>
                 </div>
               </div>
-            )
-          })}
-        </div>
-      </CardContent>
-    </Card>
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
@@ -323,76 +327,74 @@ function CronJobsSection({ cronJobs, onAdd, onDelete }: {
   const [open, setOpen] = useState(false)
 
   return (
-    <Card>
-      <CardContent className="p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-[var(--text-2)]" />
-            <p className="text-[11px] uppercase tracking-[0.05em] text-[var(--text-3)]">Cron Jobs</p>
-            {cronJobs.length > 0 && <span className="text-[12px]" style={{ color: 'var(--text-2, var(--text-2))' }}>{cronJobs.length}</span>}
-          </div>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <button
-              onClick={() => setOpen(true)}
-              className="inline-flex items-center h-7 text-[11px] text-[var(--text-2)] border border-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.04)] rounded-md px-2.5"
-            >
-              <Plus className="h-3 w-3 mr-1" /> Add
-            </button>
-            <DialogContent className="">
-              <DialogHeader><DialogTitle style={{ color: 'var(--text-1)', fontWeight: 600 }}>Add Cron Job</DialogTitle></DialogHeader>
-              <Input
-                placeholder="* * * * * /path/to/command"
-                value={newLine}
-                onChange={(e) => setNewLine(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && newLine.trim()) {
-                    onAdd(newLine.trim())
-                    setNewLine('')
-                    setOpen(false)
-                  }
-                }}
-                className="bg-[rgba(255,255,255,0.04)] border-white/10 text-[var(--text-1)] font-mono text-xs"
-              />
-              <p className="text-xs text-[var(--text-3)]">Format: minute hour day month weekday command</p>
-              <DialogFooter>
-                <Button
-                  onClick={() => { onAdd(newLine.trim()); setNewLine(''); setOpen(false) }}
-                  disabled={!newLine.trim()}
-                  style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)', color: 'var(--accent-text)' }}
-                >
-                  Add
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <ClockIcon size={14} className="text-white/40" />
+          <p className="text-[13px] uppercase tracking-wider text-white/40">Cron Jobs</p>
+          {cronJobs.length > 0 && <span className="text-[13px] text-white/40">{cronJobs.length}</span>}
         </div>
-        {cronJobs.length === 0 ? (
-          <p className="text-xs text-[var(--text-3)] text-center py-4">No cron jobs</p>
-        ) : (
-          <div className="space-y-0.5">
-            {cronJobs.map((job) => {
-              const rawSchedule = job.raw.split(/\s+/).slice(0, 5).join(' ')
-              return (
-                <div key={job.id} className="group flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-150">
-                  <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: job.source === 'server' ? 'var(--accent)' : 'var(--success)' }} />
-                  <span className="text-xs text-[var(--text-2)] truncate flex-1 min-w-0">{job.name}</span>
-                  <code className="text-[10px] text-[var(--text-3)] font-mono shrink-0">{rawSchedule}</code>
-                  <span className="text-[10px] text-[var(--text-3)] shrink-0 hidden sm:inline">{job.schedule}</span>
-                  {job.source === 'crontab' && (
-                    <button
-                      onClick={() => onDelete(job.raw)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-[var(--text-3)] hover:text-rose-400/80 shrink-0 p-0.5"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <button
+            onClick={() => setOpen(true)}
+            className="inline-flex items-center h-7 text-[14px] text-[var(--text-2)] border border-white/[0.08] hover:bg-[rgba(255,255,255,0.04)] rounded-md px-2.5"
+          >
+            <Plus className="h-3 w-3 mr-1" /> Add
+          </button>
+          <DialogContent className="">
+            <DialogHeader><DialogTitle style={{ color: 'var(--text-1)', fontWeight: 600 }}>Add Cron Job</DialogTitle></DialogHeader>
+            <Input
+              placeholder="* * * * * /path/to/command"
+              value={newLine}
+              onChange={(e) => setNewLine(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newLine.trim()) {
+                  onAdd(newLine.trim())
+                  setNewLine('')
+                  setOpen(false)
+                }
+              }}
+              className="bg-[rgba(255,255,255,0.04)] border-white/[0.08] text-[var(--text-1)] font-mono text-xs"
+            />
+            <p className="text-xs text-[var(--text-3)]">Format: minute hour day month weekday command</p>
+            <DialogFooter>
+              <Button
+                onClick={() => { onAdd(newLine.trim()); setNewLine(''); setOpen(false) }}
+                disabled={!newLine.trim()}
+                style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)', color: 'var(--accent-text)' }}
+              >
+                Add
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+      {cronJobs.length === 0 ? (
+        <p className="text-xs text-[var(--text-3)] text-center py-4">No cron jobs</p>
+      ) : (
+        <div className="space-y-0.5">
+          {cronJobs.map((job) => {
+            const rawSchedule = job.raw.split(/\s+/).slice(0, 5).join(' ')
+            return (
+              <div key={job.id} className="group flex items-center gap-2 px-2 py-1.5 hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-150">
+                <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: job.source === 'server' ? 'var(--accent)' : 'var(--success)' }} />
+                <span className="text-[14px] font-normal text-white truncate flex-1 min-w-0 max-w-[500px]">{job.name}</span>
+                <code className="text-[13px] text-white/30 font-mono tabular-nums shrink-0">{rawSchedule}</code>
+                <span className="text-[13px] text-white/40 shrink-0 hidden sm:inline">{job.schedule}</span>
+                {job.source === 'crontab' && (
+                  <button
+                    onClick={() => onDelete(job.raw)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-[var(--text-3)] hover:text-rose-400/80 shrink-0 p-0.5"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -410,27 +412,25 @@ function EnvVarsSection() {
   const entries = Object.entries(vars)
 
   return (
-    <Card>
-      <CardContent className="p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <Key className="h-4 w-4 text-[var(--text-2)]" />
-          <p className="text-[11px] uppercase tracking-[0.05em] text-[var(--text-3)]">API Keys & Secrets</p>
-          <span className="text-[12px]" style={{ color: 'var(--text-2, var(--text-2))' }}>{entries.length}</span>
+    <div className="pb-6 border-b border-white/[0.08]">
+      <div className="flex items-center gap-2 mb-4">
+        <Key className="h-3.5 w-3.5 text-white/40" />
+        <p className="text-[13px] uppercase tracking-wider text-white/40">API Keys & Secrets</p>
+        <span className="text-[13px] text-white/40">{entries.length}</span>
+      </div>
+      {entries.length === 0 ? (
+        <p className="text-xs text-[var(--text-3)] text-center py-4">No environment variables found</p>
+      ) : (
+        <div className="space-y-0.5">
+          {entries.map(([key, masked]) => (
+            <div key={key} className="flex items-center gap-3 px-2 py-1.5 hover:bg-[rgba(255,255,255,0.04)] transition-colors">
+              <code className="text-[14px] text-[var(--text-2)] font-mono flex-1 min-w-0 truncate">{key}</code>
+              <code className="text-[14px] text-white/40 font-mono shrink-0">{masked}</code>
+            </div>
+          ))}
         </div>
-        {entries.length === 0 ? (
-          <p className="text-xs text-[var(--text-3)] text-center py-4">No environment variables found</p>
-        ) : (
-          <div className="space-y-0.5">
-            {entries.map(([key, masked]) => (
-              <div key={key} className="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-[rgba(255,255,255,0.04)] transition-colors">
-                <code className="text-xs text-[var(--text-2)] font-mono flex-1 min-w-0 truncate">{key}</code>
-                <code className="text-[11px] text-[var(--text-3)] font-mono shrink-0">{masked}</code>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      )}
+    </div>
   )
 }
 
@@ -444,18 +444,16 @@ function ConnectedServicesSection() {
   }, [])
 
   if (loading) return (
-    <Card>
-      <CardContent className="p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <RefreshCw className="h-4 w-4 text-[var(--text-2)]" />
-          <p className="text-[11px] uppercase tracking-[0.05em] text-[var(--text-3)]">Connected Services</p>
-        </div>
-        <div className="flex items-center justify-center py-6 gap-2">
-          <Loader2 className="h-4 w-4 animate-spin text-[var(--text-3)]" />
-          <span className="text-xs text-[var(--text-3)]">Testing connections...</span>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="pb-6 border-b border-white/[0.08]">
+      <div className="flex items-center gap-2 mb-4">
+        <RefreshCw className="h-3.5 w-3.5 text-white/40" />
+        <p className="text-[13px] uppercase tracking-wider text-white/40">Connected Services</p>
+      </div>
+      <div className="flex items-center justify-center py-6 gap-2">
+        <Loader2 className="h-4 w-4 animate-spin text-[var(--text-3)]" />
+        <span className="text-xs text-[var(--text-3)]">Testing connections...</span>
+      </div>
+    </div>
   )
 
   if (!status) return null
@@ -464,39 +462,37 @@ function ConnectedServicesSection() {
     { name: 'Gmail SMTP', connected: status.smtp.connected, detail: status.smtp.account || '', icon: Mail },
     { name: 'Gmail IMAP', connected: status.imap.connected, detail: '', icon: Inbox },
     { name: 'Gemini AI', connected: status.gemini.connected, detail: '', icon: RefreshCw },
-    { name: 'Google Calendar', connected: status.calendar.connected, detail: '', icon: Clock },
+    { name: 'Google Calendar', connected: status.calendar.connected, detail: '', icon: LucideClock },
     { name: 'Telegram', connected: status.telegram.connected, detail: status.telegram.username ? `@${status.telegram.username}` : '', icon: Mail },
     { name: 'GitHub', connected: status.github.connected, detail: '', icon: FileText },
   ]
 
   return (
-    <Card>
-      <CardContent className="p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <Shield className="h-4 w-4 text-[var(--text-2)]" />
-          <p className="text-[11px] uppercase tracking-[0.05em] text-[var(--text-3)]">Connected Services</p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {services.map(s => (
-            <div key={s.name} className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.1)]">
-              <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: s.connected ? 'var(--success, #10b981)' : 'var(--destructive, #ef4444)' }} />
-              <span className="text-xs text-[var(--text-2)] flex-1">{s.name}</span>
-              {s.detail && <span className="text-[10px] text-[var(--text-3)] truncate max-w-[140px]">{s.detail}</span>}
-              <span className="text-[10px] shrink-0" style={{ color: s.connected ? 'var(--success)' : 'var(--destructive)' }}>
-                {s.connected ? 'Connected' : 'Offline'}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div className="mt-4 pt-3 border-t border-[rgba(255,255,255,0.1)]">
-          <div className="flex items-center gap-2">
-            <Shield className="h-3.5 w-3.5 text-[var(--text-3)]" />
-            <span className="text-[11px] text-[var(--text-2)]">Auth: {status.auth.method}</span>
-            <span className="text-[10px] text-[var(--text-3)]">(user: {status.auth.user})</span>
+    <div className="pb-6 border-b border-white/[0.08]">
+      <div className="flex items-center gap-2 mb-4">
+        <ShieldCheckIcon size={14} className="text-white/40" />
+        <p className="text-[13px] uppercase tracking-wider text-white/40">Connected Services</p>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {services.map(s => (
+          <div key={s.name} className="flex items-center gap-2.5 px-3 py-2">
+            <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: s.connected ? 'var(--success, #10b981)' : 'var(--destructive, #ef4444)' }} />
+            <span className="text-[14px] text-[var(--text-2)] flex-1">{s.name}</span>
+            {s.detail && <span className="text-[14px] text-[var(--text-3)] truncate max-w-[140px]">{s.detail}</span>}
+            <span className="text-[14px] font-medium shrink-0" style={{ color: s.connected ? 'var(--success)' : 'var(--destructive)' }}>
+              {s.connected ? 'Connected' : 'Offline'}
+            </span>
           </div>
+        ))}
+      </div>
+      <div className="mt-4 pt-3 border-t border-white/[0.08]">
+        <div className="flex items-center gap-2">
+          <ShieldCheckIcon size={14} className="text-[var(--text-3)]" />
+          <span className="text-[13px] text-[var(--text-2)]">Auth: {status.auth.method}</span>
+          <span className="text-[12px] text-[var(--text-3)]">(user: {status.auth.user})</span>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 
@@ -535,35 +531,33 @@ function DangerZoneSection({ toast }: { toast: (msg: string) => void }) {
 
   return (
     <>
-      <Card className="border-rose-500/20">
-        <CardContent className="p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <AlertTriangle className="h-4 w-4 text-rose-400/60" />
-            <p className="text-[11px] uppercase tracking-[0.05em] text-rose-400/60">Danger Zone</p>
-          </div>
-          <div className="space-y-2">
-            {actions.map(a => (
-              <div key={a.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-[rgba(255,255,255,0.1)] hover:border-rose-500/20 transition-colors">
-                <div className="flex items-center gap-2.5">
-                  <a.icon className="h-3.5 w-3.5 text-[var(--text-3)]" />
-                  <div>
-                    <p className="text-xs text-[var(--text-2)]">{a.label}</p>
-                    <p className="text-[10px] text-[var(--text-3)]">{a.description}</p>
-                  </div>
+      <div className="pt-2">
+        <div className="flex items-center gap-2 mb-4">
+          <AlertTriangle className="h-3.5 w-3.5 text-rose-400/60" />
+          <p className="text-[13px] uppercase tracking-wider text-white/40">Danger Zone</p>
+        </div>
+        <div className="space-y-2">
+          {actions.map(a => (
+            <div key={a.id} className="flex items-center justify-between px-3 py-2.5 border-b border-white/[0.08] hover:bg-[rgba(255,255,255,0.02)] transition-colors">
+              <div className="flex items-center gap-2.5">
+                <a.icon className="h-3.5 w-3.5 text-[var(--text-3)]" />
+                <div>
+                  <p className="text-[14px] text-[var(--text-2)]">{a.label}</p>
+                  <p className="text-[14px] text-white/40">{a.description}</p>
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setConfirmAction(a.id)}
-                  className="h-7 text-[11px] text-rose-400/60 border-rose-500/20 hover:bg-rose-500/10 hover:text-rose-400"
-                >
-                  Execute
-                </Button>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setConfirmAction(a.id)}
+                className="h-7 text-[13px] text-rose-400/60 border-rose-500/20 hover:bg-rose-500/10 hover:text-rose-400"
+              >
+                Execute
+              </Button>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <Dialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>
         <DialogContent className="">
@@ -574,7 +568,7 @@ function DangerZoneSection({ toast }: { toast: (msg: string) => void }) {
             Are you sure you want to {actions.find(a => a.id === confirmAction)?.label.toLowerCase()}? This action cannot be undone.
           </p>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setConfirmAction(null)} className="text-[var(--text-2)] border-[rgba(255,255,255,0.1)]">
+            <Button variant="outline" onClick={() => setConfirmAction(null)} className="text-[var(--text-2)] border-white/[0.08]">
               Cancel
             </Button>
             <Button
@@ -694,51 +688,50 @@ function DocsSection({ toast }: { toast: (msg: string) => void }) {
         <div className="flex items-center gap-2 mb-4">
           <button
             onClick={() => { setSelectedDoc(null); setDocContent('') }}
-            className="text-xs text-[var(--text-2)] hover:text-[var(--text-2)] transition-colors"
+            className="text-xs text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors"
           >
             Docs
           </button>
           <ChevronRight className="h-3 w-3 text-[var(--text-3)]" />
           <span className="text-xs text-[var(--text-2)]">{selectedDoc}</span>
         </div>
-        <Card>
-          <CardContent className="pt-6">
-            {docLoading ? (
-              <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-[var(--text-3)]" /></div>
-            ) : (
-              <>
-                {docModified && (
-                  <p className="text-xs text-[var(--text-3)] mb-4">
-                    Last modified: {new Date(docModified).toLocaleString()}
-                  </p>
-                )}
-                <div className="prose prose-invert prose-sm max-w-none prose-headings:text-[var(--text-1)] prose-headings:font-medium prose-a:text-[var(--accent-text)] prose-strong:text-[var(--text-1)] prose-code:text-[var(--accent-text)] prose-p:text-[var(--text-2)] prose-li:text-[var(--text-2)]">
-                  <ReactMarkdown>{docContent}</ReactMarkdown>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+        <div className="pt-4">
+          {docLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-[var(--text-3)]" /></div>
+          ) : (
+            <>
+              {docModified && (
+                <p className="text-xs text-[var(--text-3)] mb-4">
+                  Last modified: {new Date(docModified).toLocaleString()}
+                </p>
+              )}
+              <div className="prose prose-invert prose-sm max-w-none prose-headings:text-[var(--text-1)] prose-headings:font-medium prose-a:text-[var(--accent-text)] prose-strong:text-[var(--text-1)] prose-code:text-[var(--accent-text)] prose-p:text-[var(--text-2)] prose-li:text-[var(--text-2)]">
+                <ReactMarkdown>{docContent}</ReactMarkdown>
+              </div>
+            </>
+          )}
+        </div>
       </motion.div>
     )
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Upload zone */}
       <div
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className="p-8 text-center cursor-pointer transition-all duration-150 rounded-xl"
+        className="p-8 text-center cursor-pointer transition-all duration-150 border-b border-white/[0.08]"
         style={{
-          border: dragOver ? '2px dashed var(--accent)' : '2px dashed var(--border)',
+          borderStyle: dragOver ? 'dashed' : undefined,
+          borderColor: dragOver ? 'var(--accent)' : undefined,
           background: dragOver ? 'var(--accent-subtle)' : 'transparent',
         }}
       >
         <Upload className="h-5 w-5 mx-auto mb-2" style={{ color: dragOver ? 'var(--accent-text)' : 'var(--text-3)' }} />
-        <p className="text-xs" style={{ color: 'var(--text-2)' }}>
+        <p className="text-[14px] text-white/40">
           {dragOver ? 'Drop files here' : 'Drop files here or click to browse'}
         </p>
         <input ref={fileInputRef} type="file" multiple onChange={handleFileSelect} className="hidden" />
@@ -763,38 +756,36 @@ function DocsSection({ toast }: { toast: (msg: string) => void }) {
       )}
 
       {/* Docs list */}
-      <Card>
-        <CardContent className="p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <FileText className="h-4 w-4 text-[var(--text-2)]" />
-            <p className="text-[11px] uppercase tracking-[0.05em] text-[var(--text-3)]">Markdown Files</p>
-            <span className="text-[12px]" style={{ color: 'var(--text-2, var(--text-2))' }}>{docs.length}</span>
+      <div>
+        <div className="flex items-center gap-2 mb-4">
+          <FileIcon size={14} className="text-white/40" />
+          <p className="text-[13px] uppercase tracking-wider text-white/40">Markdown Files</p>
+          <span className="text-[13px] text-white/40">{docs.length}</span>
+        </div>
+        {docs.length === 0 ? (
+          <p className="text-xs text-[var(--text-3)] text-center py-4">No .md files found</p>
+        ) : (
+          <div className="space-y-0.5">
+            {docs.map(doc => (
+              <button
+                key={doc.name}
+                onClick={() => openDoc(doc.name)}
+                className="w-full flex items-center gap-3 px-2 py-2 hover:bg-[rgba(255,255,255,0.04)] transition-colors text-left group"
+              >
+                <FileText className="h-3.5 w-3.5 text-[var(--text-3)] shrink-0" />
+                <span className="text-[14px] font-mono text-[var(--text-2)] flex-1 truncate group-hover:text-[var(--text-1)] transition-colors">{doc.name}</span>
+                <span className="text-[14px] text-white/30 tabular-nums shrink-0">
+                  {doc.size < 1024 ? `${doc.size}B` : `${(doc.size / 1024).toFixed(1)}KB`}
+                </span>
+                <span className="text-[14px] text-white/30 tabular-nums shrink-0">
+                  {new Date(doc.modified).toLocaleDateString()}
+                </span>
+                <ChevronRight className="h-3 w-3 text-[rgba(255,255,255,0.15)] group-hover:text-[var(--text-3)] transition-colors shrink-0" />
+              </button>
+            ))}
           </div>
-          {docs.length === 0 ? (
-            <p className="text-xs text-[var(--text-3)] text-center py-4">No .md files found</p>
-          ) : (
-            <div className="space-y-0.5">
-              {docs.map(doc => (
-                <button
-                  key={doc.name}
-                  onClick={() => openDoc(doc.name)}
-                  className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-[rgba(255,255,255,0.04)] transition-colors text-left group"
-                >
-                  <FileText className="h-3.5 w-3.5 text-[var(--text-3)] shrink-0" />
-                  <span className="text-xs text-[var(--text-2)] flex-1 truncate group-hover:text-[var(--text-1)] transition-colors">{doc.name}</span>
-                  <span className="text-[10px] text-[var(--text-3)] shrink-0">
-                    {doc.size < 1024 ? `${doc.size}B` : `${(doc.size / 1024).toFixed(1)}KB`}
-                  </span>
-                  <span className="text-[10px] text-[rgba(255,255,255,0.15)] shrink-0">
-                    {new Date(doc.modified).toLocaleDateString()}
-                  </span>
-                  <ChevronRight className="h-3 w-3 text-[rgba(255,255,255,0.15)] group-hover:text-[var(--text-3)] transition-colors shrink-0" />
-                </button>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        )}
+      </div>
     </div>
   )
 }
@@ -831,49 +822,56 @@ export default function ProfilePage() {
 
   return (
     <>
-      <div className="container mx-auto px-6 py-6 pb-20 md:px-8 md:pb-8 space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>Settings</h1>
-            <p className="text-sm mt-1" style={{ color: 'var(--text-2)' }}>Settings, notifications, and security</p>
-          </div>
+      <div className="min-h-full">
+        {/* Sub-nav bar */}
+        <div className="border-b border-white/[0.08] px-5 md:px-6 py-2.5">
           <ProfileTabControl active={activeTab} onChange={setActiveTab} />
         </div>
 
         {activeTab === 'general' && (
-          <motion.div key="general" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }} className="space-y-4">
-            <HomeLocationSection toast={addToast} />
-            <OwnerSection toast={addToast} />
+          <motion.div key="general" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }} className="px-5 md:px-6 py-6">
+            <div className="max-w-[680px]">
+              <HomeLocationSection toast={addToast} />
+              <OwnerSection toast={addToast} />
+            </div>
           </motion.div>
         )}
 
         {activeTab === 'notifications' && (
-          <motion.div key="notifications" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }}>
-            <EmailNotificationsSection toast={addToast} />
+          <motion.div key="notifications" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }} className="px-5 md:px-6 py-6">
+            <div className="max-w-3xl">
+              <EmailNotificationsSection toast={addToast} />
+            </div>
           </motion.div>
         )}
 
         {activeTab === 'cron' && (
-          <motion.div key="cron" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }}>
-            {cronLoading ? (
-              <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-[var(--text-3)]" /></div>
-            ) : (
-              <CronJobsSection cronJobs={cronJobs} onAdd={addCron} onDelete={deleteCron} />
-            )}
+          <motion.div key="cron" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }} className="px-5 md:px-6 py-6">
+            <div className="max-w-3xl">
+              {cronLoading ? (
+                <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-[var(--text-3)]" /></div>
+              ) : (
+                <CronJobsSection cronJobs={cronJobs} onAdd={addCron} onDelete={deleteCron} />
+              )}
+            </div>
           </motion.div>
         )}
 
         {activeTab === 'security' && (
-          <motion.div key="security" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }} className="space-y-4">
-            <EnvVarsSection />
-            <ConnectedServicesSection />
-            <DangerZoneSection toast={addToast} />
+          <motion.div key="security" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }} className="px-5 md:px-6 py-6 space-y-6">
+            <div className="max-w-3xl space-y-6">
+              <EnvVarsSection />
+              <ConnectedServicesSection />
+              <DangerZoneSection toast={addToast} />
+            </div>
           </motion.div>
         )}
 
         {activeTab === 'docs' && (
-          <motion.div key="docs" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }}>
-            <DocsSection toast={addToast} />
+          <motion.div key="docs" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }} className="px-5 md:px-6 py-6">
+            <div className="max-w-3xl">
+              <DocsSection toast={addToast} />
+            </div>
           </motion.div>
         )}
       </div>

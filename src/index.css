@@ -17,8 +17,8 @@
 
   /* Text hierarchy — Apple label / secondaryLabel / tertiaryLabel */
   --text-1: #FFFFFF;
-  --text-2: rgba(235, 235, 245, 0.6);
-  --text-3: rgba(235, 235, 245, 0.3);
+  --text-2: rgba(255, 255, 255, 0.55);
+  --text-3: rgba(255, 255, 255, 0.30);
 
   /* Accent — Apple systemBlue dark */
   --accent: #0A84FF;
@@ -29,7 +29,7 @@
 
   /* Semantic — Apple system colors dark */
   --success: #30D158;
-  --warning: #FFD60A;
+  --warning: #FF9F0A;
   --destructive: #FF453A;
 
   /* Borders — Apple separator / systemGray3 / opaqueSeparator */
@@ -102,7 +102,7 @@
   body {
     background: var(--bg-base);
     color: var(--text-1);
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', sans-serif;
     font-size: 14px;
     font-weight: 500;
     -webkit-font-smoothing: antialiased;
@@ -124,8 +124,8 @@
 
 .segmented-control {
   display: inline-flex;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   padding: 3px;
 }
@@ -142,7 +142,7 @@
 }
 
 .segmented-control-item.active {
-  background: var(--bg-elevated);
+  background: rgba(255, 255, 255, 0.08);
   color: var(--text-1);
 }
 

@@ -1,92 +1,141 @@
+import { useState } from 'react'
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
-import { Terminal, Home, BookOpen, Settings } from 'lucide-react'
+import { Upload, Terminal, House, BookOpen, Settings, type LucideIcon } from 'lucide-react'
+import UploadModal from './UploadModal'
 
-const FULL_BLEED_ROUTES = ['/ops', '/knowledge']
+const FULL_BLEED_ROUTES = ['/ops', '/knowledge', '/home', '/settings']
+
+const NAV_ITEMS: { name: string; href: string; Icon: LucideIcon }[] = [
+  { name: 'Ops', href: '/ops', Icon: Terminal },
+  { name: 'Home', href: '/home', Icon: House },
+  { name: 'Knowledge', href: '/knowledge', Icon: BookOpen },
+  { name: 'Settings', href: '/settings', Icon: Settings },
+]
 
 export default function Layout() {
   const location = useLocation()
   const isFullBleed = FULL_BLEED_ROUTES.includes(location.pathname)
-
-  const navigation = [
-    { name: 'Ops', href: '/ops', icon: Terminal },
-    { name: 'Home', href: '/home', icon: Home },
-    { name: 'Knowledge', href: '/knowledge', icon: BookOpen },
-    { name: 'Settings', href: '/settings', icon: Settings },
-  ]
+  const [uploadOpen, setUploadOpen] = useState(false)
 
   return (
     <div className="min-h-screen flex flex-col relative">
+      {/* Desktop top bar */}
       <header
-        className="sticky top-0 z-50 w-full"
+        className="sticky top-0 z-50 w-full border-b border-white/[0.08]"
         style={{
-          background: 'var(--glass-bg)',
-          backdropFilter: 'blur(24px) saturate(140%)',
-          WebkitBackdropFilter: 'blur(24px) saturate(140%)',
-          borderBottom: '1px solid var(--glass-border)',
-          height: '48px',
+          background: 'rgba(0, 0, 0, 0.80)',
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          height: '56px',
         }}
       >
-        <div className="container flex h-full items-center justify-between px-6 md:px-8">
-          <span style={{ fontSize: 14, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>River</span>
+        <div className="flex h-full items-center px-5 md:px-6">
+          {/* River logo */}
+          <span
+            className="mr-8"
+            style={{
+              fontSize: '19px',
+              fontWeight: 700,
+              letterSpacing: '-0.02em',
+              color: 'var(--text-1)',
+            }}
+          >
+            River
+          </span>
 
+          {/* Desktop tabs */}
           <nav className="hidden md:flex items-center gap-1">
-            {navigation.map((item) => {
-              const Icon = item.icon
-              return (
-                <NavLink
-                  key={item.name}
-                  to={item.href}
-                  className="relative flex items-center gap-1.5 text-sm px-3 py-1.5 transition-colors duration-200"
-                  style={({ isActive }) => ({
-                    color: isActive ? 'var(--text-1)' : 'var(--text-3)',
-                    fontWeight: isActive ? 500 : 400,
-                  })}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.name}
-                </NavLink>
-              )
-            })}
+            {NAV_ITEMS.map((item) => (
+              <NavLink
+                key={item.name}
+                to={item.href}
+                className={({ isActive }) =>
+                  `group relative flex items-center gap-2 text-[14px] font-medium transition-all duration-200 ${
+                    isActive
+                      ? 'bg-white/[0.1] rounded-xl px-4 py-2'
+                      : 'rounded-xl px-4 py-2 hover:bg-white/[0.05]'
+                  }`
+                }
+                style={({ isActive }) => ({
+                  color: isActive ? '#ffffff' : 'rgba(255,255,255,0.5)',
+                  minWidth: '80px',
+                  justifyContent: 'center',
+                })}
+              >
+                {({ isActive }) => (
+                  <>
+                    <item.Icon
+                      size={20}
+                      className={`shrink-0 transition-opacity duration-200 ${isActive ? 'opacity-100' : 'opacity-50 group-hover:opacity-100'}`}
+                      strokeWidth={2}
+                    />
+                    {item.name}
+                  </>
+                )}
+              </NavLink>
+            ))}
           </nav>
 
-          <div className="w-8" />
+          <div className="flex-1" />
+
+          {/* Version badge */}
+          <span
+            className="hidden md:inline text-[11px] font-mono tabular-nums mr-3"
+            style={{ color: 'rgba(255,255,255,0.30)' }}
+          >
+            v2
+          </span>
+
+          {/* Upload button */}
+          <button
+            onClick={() => setUploadOpen(!uploadOpen)}
+            className="hidden md:flex items-center gap-1.5 text-[13px] font-medium px-3 py-1.5 rounded-lg transition-all duration-200 hover:bg-white/[0.06]"
+            style={{ color: 'rgba(255,255,255,0.55)' }}
+          >
+            <Upload className="h-3.5 w-3.5" />
+            Upload
+          </button>
         </div>
       </header>
 
-      <main className={isFullBleed ? 'flex-1 overflow-hidden' : 'container mx-auto px-6 py-6 pb-20 md:px-8 md:pb-8'}>
+      <UploadModal open={uploadOpen} onOpenChange={setUploadOpen} />
+
+      <main className={isFullBleed ? 'flex-1 overflow-hidden' : 'flex-1 px-5 py-6 pb-20 md:px-6 md:pb-8'}>
         <AnimatePresence mode="wait">
           <Outlet key={location.pathname} />
         </AnimatePresence>
       </main>
 
+      {/* Mobile bottom tab bar */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-50"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-white/[0.08]"
         style={{
-          background: 'var(--glass-bg)',
-          backdropFilter: 'blur(24px) saturate(140%)',
-          WebkitBackdropFilter: 'blur(24px) saturate(140%)',
-          borderTop: '1px solid var(--glass-border)',
+          background: 'rgba(0, 0, 0, 0.80)',
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         }}
       >
-        <div className="flex items-center justify-around py-2">
-          {navigation.map((item) => {
-            const Icon = item.icon
-            return (
-              <NavLink
-                key={item.name}
-                to={item.href}
-                className="flex flex-col items-center gap-1 px-3 py-1.5 text-xs transition-colors duration-200"
-                style={({ isActive }) => ({
-                  color: isActive ? 'var(--text-1)' : 'var(--text-3)',
-                  fontWeight: isActive ? 500 : 400,
-                })}
-              >
-                <Icon className="h-5 w-5" />
-                <span>{item.name}</span>
-              </NavLink>
-            )
-          })}
+        <div className="flex items-center justify-around pt-2 pb-1.5">
+          {NAV_ITEMS.map((item) => (
+            <NavLink
+              key={item.name}
+              to={item.href}
+              className="group flex flex-col items-center gap-0.5 px-3 py-1 transition-colors duration-200"
+              style={({ isActive }) => ({
+                color: isActive ? '#0A84FF' : 'rgba(255,255,255,0.4)',
+                fontWeight: isActive ? 500 : 400,
+              })}
+            >
+              {({ isActive }) => (
+                <>
+                  <item.Icon size={20} className="shrink-0" strokeWidth={2} />
+                  <span className="text-[11px]">{item.name}</span>
+                </>
+              )}
+            </NavLink>
+          ))}
         </div>
       </nav>
     </div>

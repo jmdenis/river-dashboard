@@ -2,10 +2,12 @@ import { useEffect, useState, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { opsApi, type InboxItem, type IntegrationProposal } from '../services/opsApi'
 import {
-  Search, ExternalLink, BookOpen, Mail,
+  Search, ExternalLink,
   RefreshCw, Loader2, Play, Copy, Check,
   Save, X, ChevronLeft, Trash2,
+  Mail,
 } from 'lucide-react'
+import { MailIcon, type MailIconHandle } from '../components/ui/mail-icon'
 
 type FilterTab = 'all' | 'actionable' | 'saved' | 'executed' | 'dismissed'
 
@@ -88,41 +90,16 @@ function formatCategory(cat: string): string {
   return cat.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
-/* ────────────────────────────────────────────────────────── */
-/*  Left Panel: List Item                                     */
-/* ────────────────────────────────────────────────────────── */
-
-function ListItem({ item, isActive, onClick }: {
-  item: InboxItem
-  isActive: boolean
-  onClick: () => void
-}) {
-  const emoji = categoryEmojis[item.analysis?.category || ''] || categoryEmojis['other']
-  const title = cleanTitle(item)
-  const date = relativeDate(item.date)
-
-  return (
-    <button
-      onClick={onClick}
-      className="w-full text-left flex items-center gap-2.5 px-3 transition-colors duration-100"
-      style={{
-        height: 48,
-        background: isActive ? 'var(--accent-subtle)' : 'transparent',
-        borderLeft: isActive ? '2px solid var(--accent)' : '2px solid transparent',
-      }}
-    >
-      <span className="text-sm shrink-0 leading-none">{emoji}</span>
-      <span
-        className="text-[13px] truncate flex-1 min-w-0"
-        style={{ color: isActive ? 'var(--text-1)' : 'var(--text-2)', fontWeight: isActive ? 500 : 400 }}
-      >
-        {title}
-      </span>
-      <span className="text-[10px] tabular-nums shrink-0" style={{ color: 'var(--text-3)' }}>
-        {date}
-      </span>
-    </button>
-  )
+function sourceName(item: InboxItem): string {
+  const from = item.from || ''
+  // Extract name part before <email>
+  const match = from.match(/^([^<]+)/)
+  if (match) {
+    const name = match[1].trim().replace(/"/g, '')
+    if (name) return name
+  }
+  // Fallback to category
+  return formatCategory(item.analysis?.category || 'other')
 }
 
 /* ────────────────────────────────────────────────────────── */
@@ -143,56 +120,41 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
   onDelete: (id: string) => void
 }) {
   const a = item.analysis
-  const rel = a?.relevance || { openclaw: 0, claude: 0, ai: 0, meta: 0, webdev: 0 }
   const proposal = a?.integrationProposal as IntegrationProposal | null
   const rrCmd = item.rr_command || proposal?.rrCommand || null
   const showRrCmd = rrCmd && !isVagueProposal(item)
-  const emoji = categoryEmojis[a?.category || ''] || categoryEmojis['other']
   const title = cleanTitle(item)
-  const category = formatCategory(a?.category || 'other')
+  const source = sourceName(item)
   const fullDate = new Date(item.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
 
   return (
     <div className="h-full flex flex-col">
-      {/* Sticky header */}
-      <div className="shrink-0 px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
-        <div className="flex items-start gap-2">
-          <span className="text-base mt-0.5">{emoji}</span>
-          <div className="min-w-0 flex-1">
-            <h2 className="text-[15px] leading-snug" style={{ fontWeight: 600, color: 'var(--text-1)', letterSpacing: '-0.01em' }}>
-              {title}
-            </h2>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>{category}</span>
-              <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>&middot;</span>
-              <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>{fullDate}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
-        {/* From */}
-        <div>
-          <p className="section-label mb-1">From</p>
-          <p className="text-[13px]" style={{ color: 'var(--text-2)' }}>{item.from}</p>
+      <div className="flex-1 overflow-y-auto px-6 py-6">
+        {/* Source + date */}
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-[13px] font-medium text-[#0A84FF]">{source}</span>
+          <span className="text-[13px] text-white/30 tabular-nums">{fullDate}</span>
         </div>
+
+        {/* Title */}
+        <h2 className="text-[22px] font-semibold leading-tight tracking-[-0.02em] text-white mb-5">
+          {title}
+        </h2>
 
         {/* Summary */}
-        <div>
-          <p className="section-label mb-1.5">Summary</p>
-          <p className="text-[13px] leading-relaxed" style={{ color: 'var(--text-2)' }}>{a?.summary}</p>
-        </div>
+        {a?.summary && (
+          <p className="text-[14px] leading-relaxed text-white/55 mb-6">{a.summary}</p>
+        )}
 
         {/* Key Takeaways */}
         {a?.keyTakeaways && a.keyTakeaways.length > 0 && (
-          <div>
-            <p className="section-label mb-1.5">Key Takeaways</p>
+          <div className="mb-6">
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-white/30 mb-2">Key Takeaways</p>
             <ul className="space-y-1.5">
               {a.keyTakeaways.map((t, i) => (
-                <li key={i} className="text-[13px] pl-3.5 relative" style={{ color: 'var(--text-2)' }}>
-                  <span className="absolute left-0 top-[8px] h-[5px] w-[5px] rounded-full" style={{ background: 'var(--accent)' }} />
+                <li key={i} className="text-[14px] pl-3.5 relative text-white/55">
+                  <span className="absolute left-0 top-[8px] h-[5px] w-[5px] rounded-full bg-[#0A84FF]" />
                   {t}
                 </li>
               ))}
@@ -202,19 +164,16 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
 
         {/* Video verdict */}
         {a?.videoVerdict && (
-          <div>
-            <p className="section-label mb-1.5">Verdict</p>
-            <p className="text-[13px] italic" style={{ color: 'var(--text-2)' }}>{a.videoVerdict}</p>
+          <div className="mb-6">
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-white/30 mb-2">Verdict</p>
+            <p className="text-[14px] italic text-white/55">{a.videoVerdict}</p>
           </div>
         )}
 
         {/* Integration Proposal */}
         {proposal && (
-          <div
-            className="rounded-lg p-4 space-y-2.5"
-            style={{ border: '1px solid var(--accent-border)', background: 'var(--accent-subtle)' }}
-          >
-            <p className="section-label" style={{ color: 'var(--accent-text)' }}>Integration Proposal</p>
+          <div className="rounded-lg p-4 space-y-2.5 mb-6 border border-[#0A84FF]/20 bg-[#0A84FF]/[0.05]">
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-[#0A84FF]">Integration Proposal</p>
             <div className="grid gap-2">
               {([
                 ['WHAT', proposal.what],
@@ -223,10 +182,10 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
                 ['CONNECTS', proposal.connectsTo],
               ] as [string, string][]).map(([label, value]) => (
                 <div key={label} className="flex gap-2.5">
-                  <span className="text-[10px] uppercase tracking-wider w-[68px] shrink-0 pt-0.5" style={{ fontWeight: 600, color: 'var(--accent-muted)' }}>
+                  <span className="text-[10px] uppercase tracking-wider w-[68px] shrink-0 pt-0.5 font-semibold text-[#0A84FF]/60">
                     {label}
                   </span>
-                  <span className="text-[13px] leading-relaxed" style={{ color: 'var(--accent-text)' }}>
+                  <span className="text-[14px] leading-relaxed text-white/55">
                     {value}
                   </span>
                 </div>
@@ -237,19 +196,15 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
 
         {/* rr command */}
         {showRrCmd && (
-          <div>
-            <p className="section-label mb-1.5">Command</p>
-            <pre
-              className="text-[12px] font-mono px-3 py-2.5 rounded-md whitespace-pre-wrap break-all mb-2"
-              style={{ color: 'var(--text-2)', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}
-            >
+          <div className="mb-6">
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-white/30 mb-2">Command</p>
+            <pre className="text-[12px] font-mono px-3 py-2.5 rounded-md whitespace-pre-wrap break-all mb-2 text-white/55 bg-white/[0.03] border border-white/[0.08]">
               {rrCmd}
             </pre>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => onCopy(rrCmd!, item.id)}
-                className="flex items-center gap-1.5 text-xs px-2.5 py-2.5 rounded-md transition-colors shrink-0"
-                style={{ background: 'var(--bg-surface)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
+                className="flex items-center gap-1.5 text-xs px-2.5 py-2.5 rounded-md transition-colors shrink-0 bg-white/[0.04] text-white/55 border border-white/[0.08]"
                 title="Copy command"
               >
                 {copiedId === item.id
@@ -262,9 +217,9 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
                 disabled={executingId === item.id || executedId === item.id}
                 className="flex items-center gap-1.5 text-xs px-3 py-2.5 rounded-md transition-colors duration-150 shrink-0 disabled:opacity-50"
                 style={{
-                  background: executedId === item.id ? 'rgba(16,185,129,0.1)' : 'var(--accent-subtle)',
-                  color: executedId === item.id ? 'rgb(52,211,153)' : 'var(--accent)',
-                  border: executedId === item.id ? '1px solid rgba(16,185,129,0.3)' : '1px solid var(--accent-border)',
+                  background: executedId === item.id ? 'rgba(16,185,129,0.1)' : 'rgba(10,132,255,0.15)',
+                  color: executedId === item.id ? 'rgb(52,211,153)' : '#0A84FF',
+                  border: executedId === item.id ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(10,132,255,0.2)',
                 }}
               >
                 {executingId === item.id
@@ -280,12 +235,11 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
 
         {/* No rr_command but has integrationProposal */}
         {!showRrCmd && proposal && (
-          <div>
-            <p className="section-label mb-1.5">Command</p>
+          <div className="mb-6">
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-white/30 mb-2">Command</p>
             <button
               disabled
-              className="flex items-center gap-1.5 text-xs px-3 py-2.5 rounded-md opacity-50 cursor-not-allowed"
-              style={{ background: 'var(--bg-surface)', color: 'var(--text-3)', border: '1px solid var(--border)' }}
+              className="flex items-center gap-1.5 text-xs px-3 py-2.5 rounded-md opacity-50 cursor-not-allowed bg-white/[0.04] text-white/30 border border-white/[0.08]"
               title="No executable command available"
             >
               <Play className="h-3.5 w-3.5" />
@@ -295,66 +249,72 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
         )}
 
         {/* Relevance */}
-        <div>
-          <p className="section-label mb-1.5">Relevance</p>
-          <div className="flex items-center gap-3 flex-wrap">
-            {Object.entries(rel).map(([k, v]) => (
-              <span key={k} className="text-[12px]" style={{ color: 'var(--text-2)' }}>
-                {k}: {v}
-              </span>
-            ))}
+        {a?.relevance && (
+          <div className="mb-6">
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-white/30 mb-2">Relevance</p>
+            <div className="flex items-center gap-3 flex-wrap">
+              {Object.entries(a.relevance).map(([k, v]) => (
+                <span key={k} className="text-[13px] text-white/55">
+                  {k}: {v}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
-      </div>
+        )}
 
-      {/* Footer actions */}
-      <div className="shrink-0 px-5 py-3 border-t flex items-center gap-2 flex-wrap" style={{ borderColor: 'var(--border)' }}>
+        {/* Source link */}
         {item.urls && item.urls.length > 0 && (
           <a
             href={item.urls[0]}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-md transition-colors"
-            style={{ color: 'var(--accent-text)', background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}
+            className="inline-flex items-center gap-1.5 text-xs text-[#0A84FF] hover:underline mb-6"
           >
             <ExternalLink className="h-3.5 w-3.5" />
-            Open link
+            Open source
           </a>
         )}
-        <button
-          onClick={() => onRecheck(item.id)}
-          disabled={recheckingId === item.id}
-          className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-md transition-colors disabled:opacity-50"
-          style={{ color: 'var(--text-2)', background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
-        >
-          {recheckingId === item.id
-            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            : <RefreshCw className="h-3.5 w-3.5" />}
-          Recheck
-        </button>
+      </div>
+
+      {/* Footer actions */}
+      <div className="shrink-0 px-6 py-3 border-t border-white/[0.08] flex items-center gap-2 flex-wrap">
         <button
           onClick={() => onSave(item.id)}
-          className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-md transition-colors"
-          style={{ color: 'var(--text-2)', background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
+          className="inline-flex items-center gap-1.5 text-[13px] font-medium px-4 py-2 rounded-full transition-colors bg-[#0A84FF]/15 text-[#0A84FF]"
         >
           <Save className="h-3.5 w-3.5" />
           Save
         </button>
         <button
           onClick={() => onDismiss(item.id)}
-          className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-md transition-colors"
-          style={{ color: 'var(--text-3)', background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
+          className="inline-flex items-center gap-1.5 text-[13px] font-medium px-4 py-2 rounded-full transition-colors border border-white/12 text-white/55 hover:bg-white/[0.04]"
         >
           <X className="h-3.5 w-3.5" />
           Dismiss
         </button>
         <button
+          onClick={() => onExecute(item.id)}
+          disabled={executingId === item.id || executedId === item.id}
+          className="inline-flex items-center gap-1.5 text-[13px] font-medium px-4 py-2 rounded-full transition-colors border border-white/12 text-white/55 hover:bg-white/[0.04] disabled:opacity-50"
+        >
+          <Play className="h-3.5 w-3.5" />
+          {executedId === item.id ? 'Executed' : 'Execute'}
+        </button>
+        <div className="flex-1" />
+        <button
+          onClick={() => onRecheck(item.id)}
+          disabled={recheckingId === item.id}
+          className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-full transition-colors disabled:opacity-50 text-white/30 hover:text-white/55"
+        >
+          {recheckingId === item.id
+            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            : <RefreshCw className="h-3.5 w-3.5" />}
+        </button>
+        <button
           onClick={() => onDelete(item.id)}
-          className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-md transition-colors"
-          style={{ color: 'var(--destructive)', background: 'transparent', border: '1px solid transparent' }}
+          className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-full transition-colors text-white/30 hover:text-rose-400"
         >
           <Trash2 className="h-3.5 w-3.5" />
-          Delete
         </button>
       </div>
     </div>
@@ -502,132 +462,138 @@ export default function KnowledgePage() {
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="skeleton h-8 w-48 rounded-lg" />
-        <div className="skeleton h-4 w-72 rounded-lg" />
+      <div className="p-6 space-y-4">
+        <div className="skeleton h-10 w-full rounded-xl" />
+        <div className="skeleton h-5 w-72 rounded-lg" />
         <div className="skeleton h-10 w-full rounded-xl" />
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="skeleton h-20 w-full rounded-2xl" />
+          <div key={i} className="skeleton h-16 w-full mb-2 rounded-2xl" />
         ))}
       </div>
     )
   }
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div>
-        <div className="flex items-center gap-2.5">
-          <BookOpen className="h-5 w-5" style={{ color: 'var(--text-3)' }} />
-          <h1 style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>Knowledge</h1>
-        </div>
-        <p className="text-sm mt-1 ml-[30px]" style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-2)' }}>
-          Articles, videos, and insights processed by River
-        </p>
-      </div>
-
-      {/* Two-panel layout */}
+    <>
+      {/* Full-bleed two-panel layout */}
       <div
-        className="rounded-xl overflow-hidden"
+        className="flex flex-col md:flex-row"
         style={{
-          border: '1px solid var(--border)',
-          background: 'var(--bg-surface)',
-          height: 'calc(100vh - 190px)',
-          minHeight: 400,
+          height: 'calc(100vh - 52px)',
+          background: '#000',
         }}
       >
-        <div className="flex h-full">
-          {/* Left Panel */}
-          <div
-            className="shrink-0 flex flex-col h-full border-r"
-            style={{ width: '40%', maxWidth: 500, borderColor: 'var(--border)' }}
-          >
-            {/* Search */}
-            <div className="shrink-0 px-3 pt-3 pb-2">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5" style={{ color: 'var(--text-3)' }} />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search..."
-                  className="w-full pl-8 pr-3 py-2 rounded-lg text-[13px] transition-all duration-150 focus:outline-none"
-                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', color: 'var(--text-1)' }}
-                />
-              </div>
+        {/* Left Panel — 380px */}
+        <div
+          className={`shrink-0 flex flex-col md:w-[380px] ${selectedItem ? 'hidden md:flex' : 'flex'}`}
+          style={{ borderRight: '1px solid rgba(255,255,255,0.08)', height: '100%' }}
+        >
+          {/* Search */}
+          <div className="shrink-0 px-5 pt-3 pb-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search..."
+                className="w-full pl-9 pr-3 py-2.5 rounded-[10px] text-[14px] bg-[#1C1C1E] text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-[#0A84FF]/50 transition-all duration-150"
+              />
             </div>
+          </div>
 
-            {/* Filter tabs */}
-            <div className="shrink-0 px-3 pb-2">
-              <div className="flex gap-0.5 rounded-lg p-[2px]" style={{ background: 'rgba(255,255,255,0.03)' }}>
-                {filters.map((f) => (
+          {/* Filter chips */}
+          <div className="shrink-0 px-5 pb-2.5 flex flex-wrap gap-1.5 overflow-hidden">
+            {filters.map(f => (
+              <button
+                key={f.key}
+                onClick={() => setFilter(f.key)}
+                className="text-[13px] font-medium px-2.5 py-1 rounded-full transition-all duration-200"
+                style={filter === f.key
+                  ? { background: 'rgba(255,255,255,0.10)', color: '#fff' }
+                  : { color: 'rgba(255,255,255,0.30)' }
+                }
+              >
+                {f.label}{counts[f.key] > 0 ? ` ${counts[f.key]}` : ''}
+              </button>
+            ))}
+          </div>
+
+          {/* Article list */}
+          <div className="flex-1 overflow-y-auto">
+            {filteredItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center px-5">
+                <MailIcon size={24} className="mb-3 text-white/[0.08]" isAnimated={false} />
+                <p className="text-[13px] text-white/30">
+                  {nonJunk.length === 0 ? 'No articles yet' : 'No matches'}
+                </p>
+              </div>
+            ) : (
+              filteredItems.map(item => {
+                const isSelected = selectedId === item.id
+                const title = cleanTitle(item)
+                const source = sourceName(item)
+                const date = relativeDate(item.date)
+                const summary = item.analysis?.summary || ''
+
+                return (
                   <button
-                    key={f.key}
-                    onClick={() => setFilter(f.key)}
-                    className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-md transition-all duration-200 flex-1 justify-center"
-                    style={filter === f.key
-                      ? { background: 'rgba(255,255,255,0.08)', color: 'var(--text-1)' }
-                      : { color: 'var(--text-3)' }
-                    }
+                    key={item.id}
+                    onClick={() => setSelectedId(item.id)}
+                    className="w-full text-left px-5 py-3.5 transition-colors duration-100 border-b border-white/[0.08]"
+                    style={{
+                      background: isSelected ? 'rgba(10, 132, 255, 0.12)' : 'transparent',
+                    }}
                   >
-                    {f.label}
-                    {counts[f.key] > 0 && (
-                      <span className="text-[9px] tabular-nums" style={{ color: filter === f.key ? 'var(--text-2)' : 'var(--text-3)' }}>
-                        {counts[f.key]}
-                      </span>
+                    {/* Source + date */}
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-[13px] font-medium text-[#0A84FF] truncate">{source}</span>
+                      <span className="text-[13px] tabular-nums shrink-0 ml-2 text-white/30">{date}</span>
+                    </div>
+                    {/* Title */}
+                    <p
+                      className="text-[14px] font-medium truncate"
+                      style={{ color: isSelected ? '#fff' : 'rgba(255,255,255,0.85)' }}
+                    >
+                      {title}
+                    </p>
+                    {/* Summary */}
+                    {summary && (
+                      <p className="text-[14px] text-white/55 line-clamp-2 mt-0.5 leading-snug">
+                        {summary}
+                      </p>
                     )}
                   </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Scrollable list */}
-            <div className="flex-1 overflow-y-auto" style={{ borderTop: '1px solid var(--border)' }}>
-              {filteredItems.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-                  <Mail className="h-6 w-6 mb-3" style={{ color: 'rgba(255,255,255,0.08)' }} />
-                  <p className="text-[13px]" style={{ color: 'var(--text-3)' }}>
-                    {nonJunk.length === 0 ? 'No articles yet' : 'No matches'}
-                  </p>
-                </div>
-              ) : (
-                filteredItems.map((item) => (
-                  <ListItem
-                    key={item.id}
-                    item={item}
-                    isActive={selectedId === item.id}
-                    onClick={() => setSelectedId(item.id)}
-                  />
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Right Panel (desktop) */}
-          <div className="flex-1 min-w-0 hidden md:flex flex-col">
-            {selectedItem ? (
-              <DetailView
-                item={selectedItem}
-                onRecheck={handleRecheck}
-                recheckingId={recheckingId}
-                onExecute={handleExecute}
-                executingId={executingId}
-                executedId={executedId}
-                onCopy={handleCopy}
-                copiedId={copiedId}
-                onDismiss={handleDismiss}
-                onSave={handleSave}
-                onDelete={handleDelete}
-              />
-            ) : (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center">
-                  <Mail className="h-8 w-8 mx-auto mb-3" style={{ color: 'rgba(255,255,255,0.06)' }} />
-                  <p className="text-[13px]" style={{ color: 'var(--text-3)' }}>Select an article</p>
-                </div>
-              </div>
+                )
+              })
             )}
           </div>
+        </div>
+
+        {/* Right Panel */}
+        <div className={`flex-1 min-w-0 ${selectedItem ? 'hidden md:flex' : 'hidden md:flex'} flex-col`}>
+          {selectedItem ? (
+            <DetailView
+              item={selectedItem}
+              onRecheck={handleRecheck}
+              recheckingId={recheckingId}
+              onExecute={handleExecute}
+              executingId={executingId}
+              executedId={executedId}
+              onCopy={handleCopy}
+              copiedId={copiedId}
+              onDismiss={handleDismiss}
+              onSave={handleSave}
+              onDelete={handleDelete}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <MailIcon size={40} className="mx-auto mb-3" style={{ opacity: 0.15, color: '#fff' }} isAnimated={false} />
+                <p className="text-[14px] text-white/30">Select an article</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -636,20 +602,16 @@ export default function KnowledgePage() {
         {selectedItem && (
           <motion.div
             className="md:hidden fixed inset-0 z-40 flex flex-col"
-            style={{ background: 'var(--bg-base)' }}
+            style={{ background: '#000', top: 52 }}
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           >
-            <div
-              className="shrink-0 flex items-center gap-2 px-4 py-3 border-b"
-              style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)' }}
-            >
+            <div className="shrink-0 flex items-center gap-2 px-4 py-3 border-b border-white/[0.08]">
               <button
                 onClick={() => setSelectedId(null)}
-                className="flex items-center gap-1 text-[13px]"
-                style={{ color: 'var(--accent-text)' }}
+                className="flex items-center gap-1 text-[13px] text-[#0A84FF]"
               >
                 <ChevronLeft className="h-4 w-4" />
                 Back
@@ -673,6 +635,6 @@ export default function KnowledgePage() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   )
 }
