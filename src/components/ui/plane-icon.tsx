@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import type { HTMLMotionProps, Variants } from "motion/react";
 import { motion, useAnimation, useReducedMotion } from "motion/react";
 import { forwardRef, useCallback, useImperativeHandle, useRef } from "react";
+import { animations } from '../../designTokens';
 
 export interface PlaneIconHandle {
  startAnimation: () => void;
@@ -62,14 +63,8 @@ const PlaneIcon = forwardRef<PlaneIconHandle, PlaneIconProps>(
   const planeVariants: Variants = {
    normal: { x: 0, y: 0, rotate: 0 },
    animate: {
-    x: [0, 2, 0],
-    y: [0, -2, 0],
-    rotate: [0, -5, 0],
-    transition: {
-     duration: 0.6 * duration,
-     ease: "easeInOut",
-     repeat: 0,
-    },
+    ...animations.planeFloat.keyframes,
+    transition: animations.planeFloat.transition,
    },
   };
 

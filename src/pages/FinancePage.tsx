@@ -4,14 +4,18 @@ import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
 import { Loader2 } from 'lucide-react'
 import { ResponsiveContainer, PieChart, Pie, Cell, BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart as RechartsAreaChart, Area } from 'recharts'
+import { tokens } from '../designTokens'
 
 const COLORS = ['hsl(263, 70%, 58%)', 'hsl(160, 60%, 45%)', 'hsl(43, 74%, 66%)', 'hsl(0, 70%, 55%)', 'hsl(220, 70%, 50%)', 'hsl(280, 65%, 60%)', 'hsl(330, 65%, 55%)', 'hsl(173, 58%, 39%)', 'hsl(30, 80%, 55%)', 'hsl(190, 60%, 50%)']
+
+/** Reusable style for card stat values (20px semibold with tight tracking) */
+const statValue: React.CSSProperties = { fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null
   return (
     <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-2 text-sm">
-      {label && <p className="mb-1" style={{ fontWeight: 500, color: 'var(--text-1)' }}>{label}</p>}
+      {label && <p className="mb-1" style={{ fontWeight: 500, color: tokens.colors.textPrimary }}>{label}</p>}
       {payload.map((entry: any, i: number) => (
         <p key={i} style={{ color: entry.color }} className="text-xs">
           {entry.name}: {typeof entry.value === 'number' ? `€${entry.value.toLocaleString('fr-FR')}` : entry.value}
@@ -69,30 +73,30 @@ export default function FinancePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>Financial Intelligence</h1>
+        <h1 style={{ ...statValue, color: tokens.colors.textPrimary }}>Financial Intelligence</h1>
         <p className="text-[var(--text-2)]">Comprehensive financial overview</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="pb-2"><p className="text-sm text-[var(--text-2)]">Total Income</p></CardHeader>
-          <CardContent><p className="text-green-400" style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }}>{'\u20AC'}{totalIncome.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</p></CardContent>
+          <CardContent><p className="text-green-400" style={statValue}>{'\u20AC'}{totalIncome.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</p></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><p className="text-sm text-[var(--text-2)]">Total Expenses</p></CardHeader>
-          <CardContent><p style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>{'\u20AC'}{totalExpenses.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</p></CardContent>
+          <CardContent><p style={{ ...statValue, color: tokens.colors.textPrimary }}>{'\u20AC'}{totalExpenses.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</p></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><p className="text-sm text-[var(--text-2)]">Savings Rate</p></CardHeader>
-          <CardContent><p style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>{savingsRate.toFixed(1)}%</p></CardContent>
+          <CardContent><p style={{ ...statValue, color: tokens.colors.textPrimary }}>{savingsRate.toFixed(1)}%</p></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><p className="text-sm text-[var(--text-2)]">Subscriptions</p></CardHeader>
-          <CardContent><p className="text-amber-400" style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }}>{'\u20AC'}{subscriptions.totals.total_monthly.toLocaleString('fr-FR')}/mo</p></CardContent>
+          <CardContent><p className="text-amber-400" style={statValue}>{'\u20AC'}{subscriptions.totals.total_monthly.toLocaleString('fr-FR')}/mo</p></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><p className="text-sm text-[var(--text-2)]">Potential Savings</p></CardHeader>
-          <CardContent><p className="text-green-400" style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }}>{'\u20AC'}{potentialSavings.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}/yr</p></CardContent>
+          <CardContent><p className="text-green-400" style={statValue}>{'\u20AC'}{potentialSavings.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}/yr</p></CardContent>
         </Card>
       </div>
 
@@ -168,15 +172,15 @@ export default function FinancePage() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-2"><p className="text-sm text-[var(--text-2)]">Total Annual Waste</p></CardHeader>
-          <CardContent><p className="text-red-400" style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }}>{'\u20AC'}{waste.totals.total_annual_waste.toLocaleString('fr-FR')}</p></CardContent>
+          <CardContent><p className="text-red-400" style={statValue}>{'\u20AC'}{waste.totals.total_annual_waste.toLocaleString('fr-FR')}</p></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><p className="text-sm text-[var(--text-2)]">Bank Fees</p></CardHeader>
-          <CardContent><p style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>{'\u20AC'}{waste.totals.breakdown.bank_fees.toLocaleString('fr-FR')}</p></CardContent>
+          <CardContent><p style={{ ...statValue, color: tokens.colors.textPrimary }}>{'\u20AC'}{waste.totals.breakdown.bank_fees.toLocaleString('fr-FR')}</p></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><p className="text-sm text-[var(--text-2)]">Small Forgotten Charges</p></CardHeader>
-          <CardContent><p style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>{'\u20AC'}{waste.totals.breakdown.small_forgotten_charges.toLocaleString('fr-FR')}</p></CardContent>
+          <CardContent><p style={{ ...statValue, color: tokens.colors.textPrimary }}>{'\u20AC'}{waste.totals.breakdown.small_forgotten_charges.toLocaleString('fr-FR')}</p></CardContent>
         </Card>
       </div>
 
@@ -251,8 +255,8 @@ export default function FinancePage() {
               { title: 'Cancel Forgotten Charges', description: 'Remove unused subscriptions', savings: waste.totals.breakdown.small_forgotten_charges },
             ].sort((a, b) => b.savings - a.savings).map((action, i) => (
               <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
-                <div><p style={{ fontWeight: 600, color: 'var(--text-1)' }}>{action.title}</p><p className="text-sm text-[var(--text-2)]">{action.description}</p></div>
-                <div className="text-green-400" style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }}>{'\u20AC'}{action.savings.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}/yr</div>
+                <div><p style={{ fontWeight: 600, color: tokens.colors.textPrimary }}>{action.title}</p><p className="text-sm text-[var(--text-2)]">{action.description}</p></div>
+                <div className="text-green-400" style={statValue}>{'\u20AC'}{action.savings.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}/yr</div>
               </div>
             ))}
           </div>

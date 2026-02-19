@@ -4,10 +4,11 @@ import { opsApi, type InboxItem, type IntegrationProposal } from '../services/op
 import {
   Search, ExternalLink,
   RefreshCw, Loader2, Play, Copy, Check,
-  Save, X, ChevronLeft, Trash2,
-  Mail,
+  Bookmark, X, ChevronLeft, Trash2,
+  Mail, CheckSquare, Square, CheckCheck,
 } from 'lucide-react'
 import { MailIcon, type MailIconHandle } from '../components/ui/mail-icon'
+import { tokens, styles } from '../designTokens'
 
 type FilterTab = 'all' | 'actionable' | 'saved' | 'executed' | 'dismissed'
 
@@ -156,46 +157,52 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
       <div className="flex-1 overflow-y-auto px-6 py-6">
         {/* Source + date + category badge */}
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-[13px] font-medium text-[#0A84FF]">{source}</span>
-          <span className="text-[13px] text-white/30 tabular-nums">{fullDate}</span>
+          <span className="text-[13px] font-medium" style={{ color: tokens.colors.accent }}>{source}</span>
+          <span className="text-[13px] tabular-nums" style={{ color: tokens.colors.textQuaternary }}>{fullDate}</span>
           {a?.category && (
-            <span className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-white/[0.06] text-white/40 border border-white/[0.08]">
+            <span
+              className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full"
+              style={{ background: tokens.colors.surface, color: tokens.colors.textTertiary, border: '1px solid ' + tokens.colors.innerHighlight }}
+            >
               {categoryEmojis[a.category] || '\u{1F4E8}'} {formatCategory(a.category)}
             </span>
           )}
         </div>
 
         {/* Title */}
-        <h2 className="text-[22px] font-semibold leading-tight tracking-[-0.02em] text-white mb-5">
+        <h2 className="text-[22px] font-semibold leading-tight tracking-[-0.02em] mb-5" style={{ color: tokens.colors.textPrimary }}>
           {title}
         </h2>
 
         {/* Summary as bullet points */}
         {summaryBullets.length > 0 ? (
           <div className="mb-6">
-            <p className="text-[11px] uppercase tracking-wider font-semibold text-white/30 mb-2">Summary</p>
+            <p style={{ ...tokens.typography.micro, color: tokens.colors.textQuaternary, marginBottom: 8 }}>Summary</p>
             <ul className="space-y-1.5">
               {summaryBullets.map((s, i) => (
-                <li key={i} className="text-[14px] pl-3.5 relative text-white/55 leading-relaxed">
-                  <span className="absolute left-0 top-[9px] h-[5px] w-[5px] rounded-full bg-[#0A84FF]" />
+                <li key={i} className="text-[14px] pl-3.5 relative leading-relaxed" style={{ color: tokens.colors.textSecondary }}>
+                  <span className="absolute left-0 top-[9px] h-[5px] w-[5px] rounded-full" style={{ background: tokens.colors.accent }} />
                   {s}
                 </li>
               ))}
             </ul>
           </div>
         ) : a?.summary ? (
-          <p className="text-[14px] leading-relaxed text-white/55 mb-6">{a.summary}</p>
+          <p className="text-[14px] leading-relaxed mb-6" style={{ color: tokens.colors.textSecondary }}>{a.summary}</p>
         ) : null}
 
         {/* Action Items */}
         {actionItems.length > 0 && (
           <div className="mb-6">
-            <p className="text-[11px] uppercase tracking-wider font-semibold text-white/30 mb-2">Action Items</p>
+            <p style={{ ...tokens.typography.micro, color: tokens.colors.textQuaternary, marginBottom: 8 }}>Action Items</p>
             <ul className="space-y-1.5">
               {actionItems.map((ai, i) => (
-                <li key={i} className="text-[14px] pl-3.5 relative text-white/55 leading-relaxed">
+                <li key={i} className="text-[14px] pl-3.5 relative leading-relaxed" style={{ color: tokens.colors.textSecondary }}>
                   <span className="absolute left-0 top-[9px] h-[5px] w-[5px] rounded-full bg-emerald-400" />
-                  <span className="text-[11px] uppercase tracking-wider font-semibold mr-1.5 px-1.5 py-0.5 rounded bg-white/[0.06] text-white/40">
+                  <span
+                    className="text-[11px] uppercase tracking-wider font-semibold mr-1.5 px-1.5 py-0.5 rounded"
+                    style={{ background: tokens.colors.surface, color: tokens.colors.textTertiary }}
+                  >
                     {ai.assignee}
                   </span>
                   {ai.action}
@@ -208,15 +215,18 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
         {/* Video verdict */}
         {a?.videoVerdict && (
           <div className="mb-6">
-            <p className="text-[11px] uppercase tracking-wider font-semibold text-white/30 mb-2">Verdict</p>
-            <p className="text-[14px] italic text-white/55">{a.videoVerdict}</p>
+            <p style={{ ...tokens.typography.micro, color: tokens.colors.textQuaternary, marginBottom: 8 }}>Verdict</p>
+            <p className="text-[14px] italic" style={{ color: tokens.colors.textSecondary }}>{a.videoVerdict}</p>
           </div>
         )}
 
         {/* Integration Plan / Proposal */}
         {proposal && (
-          <div className="rounded-lg p-4 space-y-2.5 mb-6 border border-[#0A84FF]/20 bg-[#0A84FF]/[0.05]">
-            <p className="text-[11px] uppercase tracking-wider font-semibold text-[#0A84FF]">Integration Plan</p>
+          <div
+            className="rounded-lg p-4 space-y-2.5 mb-6"
+            style={{ border: `1px solid ${tokens.colors.accent}33`, background: `${tokens.colors.accent}0D` }}
+          >
+            <p style={{ ...tokens.typography.micro, color: tokens.colors.accent }}>Integration Plan</p>
             <div className="grid gap-2">
               {([
                 ['WHERE', proposal.connectsTo],
@@ -226,10 +236,13 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
                 ['WHAT', proposal.what],
               ] as [string, string | undefined][]).filter(([, v]) => v).map(([label, value]) => (
                 <div key={label} className="flex gap-2.5">
-                  <span className="text-[10px] uppercase tracking-wider w-[68px] shrink-0 pt-0.5 font-semibold text-[#0A84FF]/60">
+                  <span
+                    className="text-[10px] uppercase tracking-wider w-[68px] shrink-0 pt-0.5 font-semibold"
+                    style={{ color: `${tokens.colors.accent}99` }}
+                  >
                     {label}
                   </span>
-                  <span className="text-[14px] leading-relaxed text-white/55">
+                  <span className="text-[14px] leading-relaxed" style={{ color: tokens.colors.textSecondary }}>
                     {value}
                   </span>
                 </div>
@@ -241,14 +254,18 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
         {/* rr command */}
         {showRrCmd && (
           <div className="mb-6">
-            <p className="text-[11px] uppercase tracking-wider font-semibold text-white/30 mb-2">Command</p>
-            <pre className="text-[12px] font-mono px-3 py-2.5 rounded-md whitespace-pre-wrap break-all mb-2 text-white/55 bg-white/[0.03] border border-white/[0.08]">
+            <p style={{ ...tokens.typography.micro, color: tokens.colors.textQuaternary, marginBottom: 8 }}>Command</p>
+            <pre
+              className="text-[12px] font-mono px-3 py-2.5 rounded-md whitespace-pre-wrap break-all mb-2"
+              style={{ color: tokens.colors.textSecondary, background: 'rgba(255,255,255,0.03)', border: '1px solid ' + tokens.colors.innerHighlight }}
+            >
               {rrCmd}
             </pre>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => onCopy(rrCmd!, item.id)}
-                className="flex items-center gap-1.5 text-xs px-2.5 py-2.5 rounded-md transition-colors shrink-0 bg-white/[0.04] text-white/55 border border-white/[0.08]"
+                className="flex items-center gap-1.5 text-xs px-2.5 py-2.5 rounded-md transition-colors shrink-0"
+                style={{ background: 'rgba(255,255,255,0.04)', color: tokens.colors.textSecondary, border: '1px solid ' + tokens.colors.innerHighlight }}
                 title="Copy command"
               >
                 {copiedId === item.id
@@ -261,9 +278,9 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
                 disabled={executingId === item.id || executedId === item.id}
                 className="flex items-center gap-1.5 text-xs px-3 py-2.5 rounded-md transition-colors duration-150 shrink-0 disabled:opacity-50"
                 style={{
-                  background: executedId === item.id ? 'rgba(16,185,129,0.1)' : 'rgba(10,132,255,0.15)',
-                  color: executedId === item.id ? 'rgb(52,211,153)' : '#0A84FF',
-                  border: executedId === item.id ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(10,132,255,0.2)',
+                  background: executedId === item.id ? 'rgba(16,185,129,0.1)' : `${tokens.colors.accent}26`,
+                  color: executedId === item.id ? 'rgb(52,211,153)' : tokens.colors.accent,
+                  border: executedId === item.id ? '1px solid rgba(16,185,129,0.3)' : `1px solid ${tokens.colors.accent}33`,
                 }}
               >
                 {executingId === item.id
@@ -280,10 +297,11 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
         {/* No rr_command but has integrationProposal */}
         {!showRrCmd && proposal && (
           <div className="mb-6">
-            <p className="text-[11px] uppercase tracking-wider font-semibold text-white/30 mb-2">Command</p>
+            <p style={{ ...tokens.typography.micro, color: tokens.colors.textQuaternary, marginBottom: 8 }}>Command</p>
             <button
               disabled
-              className="flex items-center gap-1.5 text-xs px-3 py-2.5 rounded-md opacity-50 cursor-not-allowed bg-white/[0.04] text-white/30 border border-white/[0.08]"
+              className="flex items-center gap-1.5 text-xs px-3 py-2.5 rounded-md opacity-50 cursor-not-allowed"
+              style={{ background: 'rgba(255,255,255,0.04)', color: tokens.colors.textQuaternary, border: '1px solid ' + tokens.colors.innerHighlight }}
               title="No executable command available"
             >
               <Play className="h-3.5 w-3.5" />
@@ -295,7 +313,7 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
         {/* Relevance scores */}
         {a?.relevance && (
           <div className="mb-6">
-            <p className="text-[11px] uppercase tracking-wider font-semibold text-white/30 mb-2">Relevance</p>
+            <p style={{ ...tokens.typography.micro, color: tokens.colors.textQuaternary, marginBottom: 8 }}>Relevance</p>
             <div className="flex items-center gap-3 flex-wrap">
               {Object.entries(a.relevance).map(([k, v]) => {
                 const color = (v as number) > 7 ? 'text-emerald-400' : (v as number) >= 4 ? 'text-amber-400' : 'text-white/30'
@@ -315,7 +333,8 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
             href={item.urls[0]}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-[13px] text-[#0A84FF] hover:underline mb-6"
+            className="inline-flex items-center gap-1.5 text-[13px] hover:underline mb-6"
+            style={{ color: tokens.colors.accent }}
           >
             <ExternalLink className="h-3.5 w-3.5" />
             Open source
@@ -324,17 +343,19 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
       </div>
 
       {/* Footer actions */}
-      <div className="shrink-0 px-6 py-3 border-t border-white/[0.08] flex items-center gap-2 flex-wrap">
+      <div className="shrink-0 px-6 py-3 flex items-center gap-2 flex-wrap" style={{ borderTop: '1px solid ' + tokens.colors.innerHighlight }}>
         <button
           onClick={() => onSave(item.id)}
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium px-4 py-2 rounded-full transition-colors bg-[#0A84FF]/15 text-[#0A84FF]"
+          className="inline-flex items-center gap-1.5 text-[13px] font-medium px-4 py-2 rounded-full transition-colors"
+          style={{ background: `${tokens.colors.accent}26`, color: tokens.colors.accent }}
         >
-          <Save className="h-3.5 w-3.5" />
-          Save
+          <Bookmark className="h-3.5 w-3.5" />
+          Bookmark
         </button>
         <button
           onClick={() => onDismiss(item.id)}
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium px-4 py-2 rounded-full transition-colors border border-white/12 text-white/55 hover:bg-white/[0.04]"
+          className="inline-flex items-center gap-1.5 text-[13px] font-medium px-4 py-2 rounded-full transition-colors hover:bg-white/[0.04]"
+          style={{ border: '1px solid ' + tokens.colors.border, color: tokens.colors.textSecondary }}
         >
           <X className="h-3.5 w-3.5" />
           Dismiss
@@ -342,7 +363,8 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
         <button
           onClick={() => onExecute(item.id)}
           disabled={executingId === item.id || executedId === item.id}
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium px-4 py-2 rounded-full transition-colors border border-white/12 text-white/55 hover:bg-white/[0.04] disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 text-[13px] font-medium px-4 py-2 rounded-full transition-colors hover:bg-white/[0.04] disabled:opacity-50"
+          style={{ border: '1px solid ' + tokens.colors.border, color: tokens.colors.textSecondary }}
         >
           <Play className="h-3.5 w-3.5" />
           {executedId === item.id ? 'Executed' : 'Execute'}
@@ -351,7 +373,8 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
         <button
           onClick={() => onRecheck(item.id)}
           disabled={recheckingId === item.id}
-          className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-full transition-colors disabled:opacity-50 text-white/30 hover:text-white/55"
+          className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-full transition-colors disabled:opacity-50"
+          style={{ color: tokens.colors.textQuaternary }}
         >
           {recheckingId === item.id
             ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -359,7 +382,8 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
         </button>
         <button
           onClick={() => onDelete(item.id)}
-          className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-full transition-colors text-white/30 hover:text-rose-400"
+          className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-full transition-colors hover:text-rose-400"
+          style={{ color: tokens.colors.textQuaternary }}
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>
@@ -382,6 +406,8 @@ export default function KnowledgePage() {
   const [executingId, setExecutingId] = useState<string | null>(null)
   const [executedId, setExecutedId] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [deletingBatch, setDeletingBatch] = useState(false)
 
   useEffect(() => {
     opsApi.getInboxRecent(100)
@@ -499,10 +525,45 @@ export default function KnowledgePage() {
     } catch {}
   }, [filteredItems])
 
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+
+  const toggleSelectAll = useCallback(() => {
+    setSelectedIds(prev => {
+      const allVisible = new Set(filteredItems.map(i => i.id))
+      const allSelected = filteredItems.every(i => prev.has(i.id))
+      return allSelected ? new Set() : allVisible
+    })
+  }, [filteredItems])
+
+  const handleBatchDelete = useCallback(async () => {
+    if (selectedIds.size === 0) return
+    const count = selectedIds.size
+    if (!window.confirm(`Delete ${count} article${count > 1 ? 's' : ''} permanently?`)) return
+    setDeletingBatch(true)
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map(id =>
+          fetch(`/api/inbox/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {})
+        )
+      )
+      setItems(prev => prev.filter(i => !selectedIds.has(i.id)))
+      if (selectedId && selectedIds.has(selectedId)) setSelectedId(null)
+      setSelectedIds(new Set())
+    } catch {}
+    setDeletingBatch(false)
+  }, [selectedIds, selectedId])
+
   const filters: { key: FilterTab; label: string }[] = [
     { key: 'all', label: 'All' },
     { key: 'actionable', label: 'Actionable' },
-    { key: 'saved', label: 'Saved' },
+    { key: 'saved', label: 'Bookmarked' },
     { key: 'executed', label: 'Executed' },
     { key: 'dismissed', label: 'Dismissed' },
   ]
@@ -527,18 +588,18 @@ export default function KnowledgePage() {
         className="flex flex-col md:flex-row"
         style={{
           height: 'calc(100vh - 52px)',
-          background: '#000',
+          background: tokens.colors.bg,
         }}
       >
         {/* Left Panel — 380px */}
         <div
           className={`shrink-0 flex flex-col md:w-[380px] ${selectedItem ? 'hidden md:flex' : 'flex'}`}
-          style={{ borderRight: '1px solid rgba(255,255,255,0.08)', height: '100%' }}
+          style={{ borderRight: '1px solid ' + tokens.colors.innerHighlight, height: '100%' }}
         >
           {/* Search */}
           <div className="shrink-0 px-5 pt-3 pb-2">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: tokens.colors.textTertiary }} />
               <input
                 type="text"
                 value={search}
@@ -557,8 +618,8 @@ export default function KnowledgePage() {
                 onClick={() => setFilter(f.key)}
                 className="text-[13px] font-medium px-2.5 py-1 rounded-full transition-all duration-200"
                 style={filter === f.key
-                  ? { background: 'rgba(255,255,255,0.10)', color: '#fff' }
-                  : { color: 'rgba(255,255,255,0.30)' }
+                  ? { background: tokens.colors.border, color: tokens.colors.textPrimary }
+                  : { color: tokens.colors.textQuaternary }
                 }
               >
                 {f.label}{counts[f.key] > 0 ? ` ${counts[f.key]}` : ''}
@@ -567,54 +628,109 @@ export default function KnowledgePage() {
           </div>
 
           {/* Article list */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto relative">
             {filteredItems.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center px-5">
                 <MailIcon size={24} className="mb-3 text-white/[0.08]" isAnimated={false} />
-                <p className="text-[13px] text-white/30">
+                <p className="text-[13px]" style={{ color: tokens.colors.textQuaternary }}>
                   {nonJunk.length === 0 ? 'No articles yet' : 'No matches'}
                 </p>
               </div>
             ) : (
               filteredItems.map(item => {
-                const isSelected = selectedId === item.id
+                const isActive = selectedId === item.id
+                const isChecked = selectedIds.has(item.id)
                 const title = cleanTitle(item)
                 const source = sourceName(item)
                 const date = relativeDate(item.date)
                 const summary = item.analysis?.summary || ''
 
                 return (
-                  <button
+                  <div
                     key={item.id}
-                    onClick={() => setSelectedId(item.id)}
-                    className="w-full text-left px-5 py-3.5 transition-colors duration-100 border-b border-white/[0.08]"
+                    className="flex items-stretch transition-colors duration-100"
                     style={{
-                      background: isSelected ? 'rgba(10, 132, 255, 0.12)' : 'transparent',
+                      background: isActive ? `${tokens.colors.accent}1F` : isChecked ? `${tokens.colors.accent}0F` : 'transparent',
+                      borderBottom: '1px solid ' + tokens.colors.innerHighlight,
                     }}
                   >
-                    {/* Source + date */}
-                    <div className="flex items-center justify-between mb-0.5">
-                      <span className="text-[13px] font-medium text-[#0A84FF] truncate">{source}</span>
-                      <span className="text-[13px] tabular-nums shrink-0 ml-2 text-white/30">{date}</span>
-                    </div>
-                    {/* Title */}
-                    <p
-                      className="text-[14px] font-medium truncate"
-                      style={{ color: isSelected ? '#fff' : 'rgba(255,255,255,0.85)' }}
+                    {/* Checkbox area */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleSelect(item.id) }}
+                      className="shrink-0 w-10 flex items-center justify-center hover:bg-white/[0.04] transition-colors"
+                      aria-label={isChecked ? 'Deselect' : 'Select'}
                     >
-                      {title}
-                    </p>
-                    {/* Summary */}
-                    {summary && (
-                      <p className="text-[14px] text-white/55 line-clamp-2 mt-0.5 leading-snug">
-                        {summary}
+                      {isChecked
+                        ? <CheckSquare className="h-4 w-4" style={{ color: tokens.colors.accent }} />
+                        : <Square className="h-4 w-4 text-white/20 hover:text-white/40" />}
+                    </button>
+                    {/* Content area */}
+                    <button
+                      onClick={() => setSelectedId(item.id)}
+                      className="flex-1 min-w-0 text-left pr-5 py-3.5"
+                    >
+                      {/* Source + date */}
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-[13px] font-medium truncate" style={{ color: tokens.colors.accent }}>{source}</span>
+                        <span className="text-[13px] tabular-nums shrink-0 ml-2" style={{ color: tokens.colors.textQuaternary }}>{date}</span>
+                      </div>
+                      {/* Title */}
+                      <p
+                        className="text-[14px] font-medium truncate"
+                        style={{ color: isActive ? tokens.colors.textPrimary : 'rgba(255,255,255,0.85)' }}
+                      >
+                        {title}
                       </p>
-                    )}
-                  </button>
+                      {/* Summary */}
+                      {summary && (
+                        <p className="text-[14px] line-clamp-2 mt-0.5 leading-snug" style={{ color: tokens.colors.textSecondary }}>
+                          {summary}
+                        </p>
+                      )}
+                    </button>
+                  </div>
                 )
               })
             )}
           </div>
+
+          {/* Floating action bar */}
+          <AnimatePresence>
+            {selectedIds.size > 0 && (
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 20, opacity: 0 }}
+                transition={{ type: 'spring', damping: 22, stiffness: 300 }}
+                className="shrink-0 px-4 py-2.5 flex items-center gap-2"
+                style={{ background: 'rgba(28, 28, 30, 0.85)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderTop: '1px solid ' + tokens.colors.innerHighlight }}
+              >
+                <span className="text-[13px] font-medium text-white/70 tabular-nums">
+                  {selectedIds.size} selected
+                </span>
+                <button
+                  onClick={toggleSelectAll}
+                  className="text-[12px] px-2.5 py-1.5 rounded-md transition-colors"
+                  style={{ color: tokens.colors.accent }}
+                >
+                  {filteredItems.length > 0 && filteredItems.every(i => selectedIds.has(i.id))
+                    ? 'Deselect all'
+                    : 'Select all'}
+                </button>
+                <div className="flex-1" />
+                <button
+                  onClick={handleBatchDelete}
+                  disabled={deletingBatch}
+                  className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-md transition-colors bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 disabled:opacity-50"
+                >
+                  {deletingBatch
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    : <Trash2 className="h-3.5 w-3.5" />}
+                  Delete
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Right Panel */}
@@ -636,8 +752,8 @@ export default function KnowledgePage() {
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
-                <MailIcon size={40} className="mx-auto mb-3" style={{ opacity: 0.15, color: '#fff' }} isAnimated={false} />
-                <p className="text-[14px] text-white/30">Select an article</p>
+                <MailIcon size={40} className="mx-auto mb-3" style={{ opacity: 0.15, color: tokens.colors.textPrimary }} isAnimated={false} />
+                <p className="text-[14px]" style={{ color: tokens.colors.textQuaternary }}>Select an article</p>
               </div>
             </div>
           )}
@@ -649,16 +765,17 @@ export default function KnowledgePage() {
         {selectedItem && (
           <motion.div
             className="md:hidden fixed inset-0 z-40 flex flex-col"
-            style={{ background: '#000', top: 52 }}
+            style={{ background: tokens.colors.bg, top: 52 }}
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           >
-            <div className="shrink-0 flex items-center gap-2 px-4 py-3 border-b border-white/[0.08]">
+            <div className="shrink-0 flex items-center gap-2 px-4 py-3" style={{ borderBottom: '1px solid ' + tokens.colors.innerHighlight }}>
               <button
                 onClick={() => setSelectedId(null)}
-                className="flex items-center gap-1 text-[13px] text-[#0A84FF]"
+                className="flex items-center gap-1 text-[13px]"
+                style={{ color: tokens.colors.accent }}
               >
                 <ChevronLeft className="h-4 w-4" />
                 Back

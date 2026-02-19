@@ -13,6 +13,7 @@ import { Progress } from '../components/ui/progress'
 import ReactMarkdown from 'react-markdown'
 import { profileApi, type SecurityStatus, type DocFile } from '../services/profileApi'
 import { lifeApi, type CronJob, type HomeSettings } from '../services/lifeApi'
+import { tokens, styles } from '../designTokens'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 const TOKEN = API_BASE_URL.split('/dash/')[1]?.split('/')[0] || ''
@@ -35,11 +36,8 @@ function ProfileTabControl({ active, onChange }: { active: ProfileTabId; onChang
         <button
           key={tab.id}
           onClick={() => onChange(tab.id)}
-          className={`text-[14px] font-medium px-3.5 py-1.5 rounded-lg transition-all duration-200 ${
-            active === tab.id
-              ? 'bg-white/10 text-white'
-              : 'text-white/40 hover:text-white/60 hover:bg-white/[0.04]'
-          }`}
+          style={active === tab.id ? styles.segmentedButtonActive : styles.segmentedButtonInactive}
+          className="hover:text-white/60 hover:bg-white/[0.04]"
         >
           {tab.label}
         </button>
@@ -59,7 +57,7 @@ function ToastContainer({ toasts }: { toasts: { id: number; message: string }[] 
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 20 }}
           className="backdrop-blur-xl text-sm px-4 py-2.5"
-          style={{ background: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.08)', color: 'var(--text-1)', borderRadius: 12 }}
+          style={{ background: 'rgba(0,0,0,0.8)', border: '1px solid ' + tokens.colors.innerHighlight, color: 'var(--text-1)', borderRadius: tokens.radii.md }}
         >
           {t.message}
         </motion.div>
@@ -102,7 +100,7 @@ function HomeLocationSection({ toast }: { toast: (msg: string) => void }) {
   }
 
   return (
-    <div className="mb-8">
+    <div>
       <div className="flex items-center gap-2 mb-3">
         <MapPin className="h-3.5 w-3.5 text-white/55" />
         <p className="text-[12px] font-semibold uppercase tracking-wider text-white/55">Home</p>
@@ -412,7 +410,7 @@ function EnvVarsSection() {
   const entries = Object.entries(vars)
 
   return (
-    <div className="pb-6 border-b border-white/[0.08]">
+    <div>
       <div className="flex items-center gap-2 mb-4">
         <Key className="h-3.5 w-3.5 text-white/40" />
         <p className="text-[13px] uppercase tracking-wider text-white/40">API Keys & Secrets</p>
@@ -444,7 +442,7 @@ function ConnectedServicesSection() {
   }, [])
 
   if (loading) return (
-    <div className="pb-6 border-b border-white/[0.08]">
+    <div>
       <div className="flex items-center gap-2 mb-4">
         <RefreshCw className="h-3.5 w-3.5 text-white/40" />
         <p className="text-[13px] uppercase tracking-wider text-white/40">Connected Services</p>
@@ -468,7 +466,7 @@ function ConnectedServicesSection() {
   ]
 
   return (
-    <div className="pb-6 border-b border-white/[0.08]">
+    <div>
       <div className="flex items-center gap-2 mb-4">
         <ShieldCheckIcon size={14} className="text-white/40" />
         <p className="text-[13px] uppercase tracking-wider text-white/40">Connected Services</p>
@@ -485,7 +483,7 @@ function ConnectedServicesSection() {
           </div>
         ))}
       </div>
-      <div className="mt-4 pt-3 border-t border-white/[0.08]">
+      <div className="mt-4 pt-3" style={{ borderTop: '1px solid ' + tokens.colors.innerHighlight }}>
         <div className="flex items-center gap-2">
           <ShieldCheckIcon size={14} className="text-[var(--text-3)]" />
           <span className="text-[13px] text-[var(--text-2)]">Auth: {status.auth.method}</span>
@@ -538,7 +536,7 @@ function DangerZoneSection({ toast }: { toast: (msg: string) => void }) {
         </div>
         <div className="space-y-2">
           {actions.map(a => (
-            <div key={a.id} className="flex items-center justify-between px-3 py-2.5 border-b border-white/[0.08] hover:bg-[rgba(255,255,255,0.02)] transition-colors">
+            <div key={a.id} className="flex items-center justify-between px-3 py-2.5 hover:bg-[rgba(255,255,255,0.02)] transition-colors" style={{ borderBottom: '1px solid ' + tokens.colors.innerHighlight }}>
               <div className="flex items-center gap-2.5">
                 <a.icon className="h-3.5 w-3.5 text-[var(--text-3)]" />
                 <div>
@@ -716,18 +714,21 @@ function DocsSection({ toast }: { toast: (msg: string) => void }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Upload zone */}
       <div
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className="p-8 text-center cursor-pointer transition-all duration-150 border-b border-white/[0.08]"
+        className="p-8 text-center cursor-pointer transition-all duration-150"
         style={{
-          borderStyle: dragOver ? 'dashed' : undefined,
-          borderColor: dragOver ? 'var(--accent)' : undefined,
-          background: dragOver ? 'var(--accent-subtle)' : 'transparent',
+          background: dragOver ? 'var(--accent-subtle)' : tokens.colors.surface,
+          border: dragOver ? '1px dashed var(--accent)' : '1px solid ' + tokens.colors.border,
+          borderRadius: tokens.radii.xl,
+          boxShadow: 'inset 0 1px 0 0 ' + tokens.colors.innerHighlight,
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
         }}
       >
         <Upload className="h-5 w-5 mx-auto mb-2" style={{ color: dragOver ? 'var(--accent-text)' : 'var(--text-3)' }} />
@@ -756,7 +757,7 @@ function DocsSection({ toast }: { toast: (msg: string) => void }) {
       )}
 
       {/* Docs list */}
-      <div>
+      <div style={styles.glassCard}>
         <div className="flex items-center gap-2 mb-4">
           <FileIcon size={14} className="text-white/40" />
           <p className="text-[13px] uppercase tracking-wider text-white/40">Markdown Files</p>
@@ -770,7 +771,7 @@ function DocsSection({ toast }: { toast: (msg: string) => void }) {
               <button
                 key={doc.name}
                 onClick={() => openDoc(doc.name)}
-                className="w-full flex items-center gap-3 px-2 py-2 hover:bg-[rgba(255,255,255,0.04)] transition-colors text-left group"
+                className="w-full flex items-center gap-3 px-2 py-2 hover:bg-[rgba(255,255,255,0.04)] transition-colors text-left group rounded-lg"
               >
                 <FileText className="h-3.5 w-3.5 text-[var(--text-3)] shrink-0" />
                 <span className="text-[14px] font-mono text-[var(--text-2)] flex-1 truncate group-hover:text-[var(--text-1)] transition-colors">{doc.name}</span>
@@ -824,15 +825,19 @@ export default function ProfilePage() {
     <>
       <div className="min-h-full">
         {/* Sub-nav bar */}
-        <div className="border-b border-white/[0.08] px-5 md:px-6 py-2.5">
+        <div className="border-b border-white/[0.08] px-5 md:px-6 pt-2 pb-2.5">
           <ProfileTabControl active={activeTab} onChange={setActiveTab} />
         </div>
 
         {activeTab === 'general' && (
           <motion.div key="general" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }} className="px-5 md:px-6 py-6">
-            <div className="max-w-[680px]">
-              <HomeLocationSection toast={addToast} />
-              <OwnerSection toast={addToast} />
+            <div className="max-w-[680px] space-y-4">
+              <div style={styles.glassCard}>
+                <HomeLocationSection toast={addToast} />
+              </div>
+              <div style={styles.glassCard}>
+                <OwnerSection toast={addToast} />
+              </div>
             </div>
           </motion.div>
         )}
@@ -840,7 +845,9 @@ export default function ProfilePage() {
         {activeTab === 'notifications' && (
           <motion.div key="notifications" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }} className="px-5 md:px-6 py-6">
             <div className="max-w-3xl">
-              <EmailNotificationsSection toast={addToast} />
+              <div style={styles.glassCard}>
+                <EmailNotificationsSection toast={addToast} />
+              </div>
             </div>
           </motion.div>
         )}
@@ -848,21 +855,29 @@ export default function ProfilePage() {
         {activeTab === 'cron' && (
           <motion.div key="cron" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }} className="px-5 md:px-6 py-6">
             <div className="max-w-3xl">
-              {cronLoading ? (
-                <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-[var(--text-3)]" /></div>
-              ) : (
-                <CronJobsSection cronJobs={cronJobs} onAdd={addCron} onDelete={deleteCron} />
-              )}
+              <div style={styles.glassCard}>
+                {cronLoading ? (
+                  <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-[var(--text-3)]" /></div>
+                ) : (
+                  <CronJobsSection cronJobs={cronJobs} onAdd={addCron} onDelete={deleteCron} />
+                )}
+              </div>
             </div>
           </motion.div>
         )}
 
         {activeTab === 'security' && (
-          <motion.div key="security" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }} className="px-5 md:px-6 py-6 space-y-6">
-            <div className="max-w-3xl space-y-6">
-              <EnvVarsSection />
-              <ConnectedServicesSection />
-              <DangerZoneSection toast={addToast} />
+          <motion.div key="security" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }} className="px-5 md:px-6 py-6 space-y-4">
+            <div className="max-w-3xl space-y-4">
+              <div style={styles.glassCard}>
+                <EnvVarsSection />
+              </div>
+              <div style={styles.glassCard}>
+                <ConnectedServicesSection />
+              </div>
+              <div style={styles.glassCard}>
+                <DangerZoneSection toast={addToast} />
+              </div>
             </div>
           </motion.div>
         )}

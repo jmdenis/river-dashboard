@@ -4,6 +4,7 @@ import { TextMorph } from 'torph/react'
 import { opsApi, type Task, type SystemInfo } from '../services/opsApi'
 import { Loader2, RotateCcw, Trash2, Check, X, ArrowDownToLine, Sparkles, ToggleLeft, ToggleRight, Send, ChevronLeft } from 'lucide-react'
 import { TerminalIcon } from '../components/ui/terminal-icon'
+import { tokens } from '../designTokens'
 
 // --- Helpers ---
 function formatTime(ts: string): string {
@@ -56,11 +57,11 @@ function TaskDetail({ task, onDelete, logContent, logLoading, logNotFound }: {
     : []
 
   const statusColor: Record<string, string> = {
-    running: '#0A84FF',
-    done: '#30D158',
-    failed: '#FF453A',
-    queued: 'rgba(255,255,255,0.30)',
-    cancelled: 'rgba(255,255,255,0.30)',
+    running: tokens.colors.accent,
+    done: tokens.colors.green,
+    failed: tokens.colors.red,
+    queued: tokens.colors.textQuaternary,
+    cancelled: tokens.colors.textQuaternary,
   }
 
   useEffect(() => {
@@ -79,7 +80,7 @@ function TaskDetail({ task, onDelete, logContent, logLoading, logNotFound }: {
             className={`inline-block h-2 w-2 rounded-full shrink-0${task.status === 'running' ? ' animate-pulse' : ''}`}
             style={{ background: statusColor[task.status] || statusColor.queued }}
           />
-          <TextMorph as="span" className="inline-flex text-[13px] font-medium capitalize" style={{ color: statusColor[task.status] || 'rgba(255,255,255,0.30)' }}>
+          <TextMorph as="span" className="inline-flex text-[13px] font-medium capitalize" style={{ color: statusColor[task.status] || tokens.colors.textQuaternary }}>
             {task.status}
           </TextMorph>
           <span className="text-[13px] text-white/30">&middot;</span>
@@ -397,13 +398,13 @@ export default function OpsPage() {
         className="flex flex-col md:flex-row"
         style={{
           height: 'calc(100vh - 52px)',
-          background: '#000',
+          background: tokens.colors.bg,
         }}
       >
         {/* Left Panel — 380px */}
         <div
           className={`shrink-0 flex flex-col md:w-[380px] ${selectedTask ? 'hidden md:flex' : 'flex'}`}
-          style={{ borderRight: '1px solid rgba(255,255,255,0.08)', height: '100%' }}
+          style={{ borderRight: `1px solid ${tokens.colors.innerHighlight}`, height: '100%' }}
         >
           {/* System stats — single line */}
           {systemInfo && (
@@ -447,10 +448,10 @@ export default function OpsPage() {
                         className="flex items-center gap-1 text-[11px] transition-colors duration-150 text-white/55"
                       >
                         {batchMode
-                          ? <ToggleRight className="h-3.5 w-3.5 text-[#0A84FF]" />
+                          ? <ToggleRight className="h-3.5 w-3.5" style={{ color: tokens.colors.accent }} />
                           : <ToggleLeft className="h-3.5 w-3.5 text-white/30" />
                         }
-                        <span className={batchMode ? 'text-[#0A84FF]' : ''}>Batch</span>
+                        <span style={batchMode ? { color: tokens.colors.accent } : undefined}>Batch</span>
                       </button>
                       {batchMode && <span className="text-[10px] text-white/30">Separate with ---</span>}
                     </div>
@@ -460,14 +461,6 @@ export default function OpsPage() {
                       rows={batchMode ? 6 : 2}
                       placeholder={quickTaskFocused ? 'Enter a task...' : placeholderSuggestions[placeholderIndex]}
                       className="w-full bg-[#1C1C1E] rounded-[10px] px-3.5 py-2.5 text-[13px] text-white font-mono placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-[#0A84FF]/50 resize-none transition-all duration-150"
-                      onFocus={() => setQuickTaskFocused(true)}
-                      onBlur={() => setQuickTaskFocused(false)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                          e.preventDefault()
-                          handleQuickTask()
-                        }
-                      }}
                     />
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] text-white/30">
@@ -476,7 +469,8 @@ export default function OpsPage() {
                       <button
                         onClick={handleQuickTask}
                         disabled={!quickTaskText.trim() || quickTaskState === 'loading'}
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#0A84FF] text-white text-[13px] font-medium hover:brightness-110 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150"
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-white text-[13px] font-medium hover:brightness-110 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150"
+                        style={{ background: tokens.colors.accent }}
                       >
                         {quickTaskState === 'loading' ? <Loader2 className="h-3 w-3 animate-spin" /> :
                          quickTaskState === 'success' ? <Check className="h-3 w-3" /> :
@@ -498,8 +492,8 @@ export default function OpsPage() {
                 onClick={() => setFilter(f.key)}
                 className="text-[13px] font-medium px-3 py-1 rounded-full transition-all duration-200"
                 style={filter === f.key
-                  ? { background: 'rgba(255,255,255,0.10)', color: '#fff' }
-                  : { color: 'rgba(255,255,255,0.30)' }
+                  ? { background: tokens.colors.border, color: tokens.colors.textPrimary }
+                  : { color: tokens.colors.textQuaternary }
                 }
               >
                 {f.label}{' '}<TextMorph as="span" className="inline-flex">{f.count > 0 ? `${f.count}` : ''}</TextMorph>
@@ -514,7 +508,7 @@ export default function OpsPage() {
             >
               {cleanupState === 'loading' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
               {cleanupCount !== null && cleanupCount > 0 && (
-                <span className="absolute -top-1 -right-1 text-[8px] rounded-full h-3 min-w-[12px] flex items-center justify-center px-0.5 animate-fade-in-fast text-white bg-[#0A84FF]">
+                <span className="absolute -top-1 -right-1 text-[8px] rounded-full h-3 min-w-[12px] flex items-center justify-center px-0.5 animate-fade-in-fast text-white" style={{ background: tokens.colors.accent }}>
                   {cleanupCount}
                 </span>
               )}
@@ -534,11 +528,11 @@ export default function OpsPage() {
               filteredTasks.map(task => {
                 const isSelected = selectedTaskId === task.id
                 const dotColor: Record<string, string> = {
-                  running: '#0A84FF',
-                  done: '#30D158',
-                  failed: '#FF453A',
-                  queued: 'rgba(255,255,255,0.30)',
-                  cancelled: 'rgba(255,255,255,0.30)',
+                  running: tokens.colors.accent,
+                  done: tokens.colors.green,
+                  failed: tokens.colors.red,
+                  queued: tokens.colors.textQuaternary,
+                  cancelled: tokens.colors.textQuaternary,
                 }
                 return (
                   <button
@@ -554,7 +548,7 @@ export default function OpsPage() {
                     </span>
                     <span
                       className="text-[14px] truncate flex-1 min-w-0"
-                      style={{ color: isSelected ? '#fff' : 'rgba(255,255,255,0.85)', fontWeight: isSelected ? 500 : 400 }}
+                      style={{ color: isSelected ? tokens.colors.textPrimary : 'rgba(255,255,255,0.85)', fontWeight: isSelected ? 500 : 400 }}
                     >
                       {task.title}
                     </span>
@@ -584,7 +578,7 @@ export default function OpsPage() {
               {/* Empty state */}
               <div className="flex-1 flex items-center justify-center">
                 <div className="text-center">
-                  <TerminalIcon size={40} className="mx-auto mb-3" style={{ opacity: 0.20, color: '#fff' }} isAnimated={false} />
+                  <TerminalIcon size={40} className="mx-auto mb-3" style={{ opacity: 0.20, color: tokens.colors.textPrimary }} isAnimated={false} />
                   <p className="text-[14px] text-white/30">Select a task to view details</p>
                 </div>
               </div>
@@ -617,7 +611,7 @@ export default function OpsPage() {
                   <>
                     <span className="text-white/30">&middot;</span>
                     <div className="flex items-center gap-1.5 text-xs">
-                      <span className={`h-1.5 w-1.5 rounded-full${oclawVersion.upToDate ? '' : ' animate-pulse'}`} style={{ background: oclawVersion.upToDate ? '#30D158' : 'rgba(255,255,255,0.30)' }} />
+                      <span className={`h-1.5 w-1.5 rounded-full${oclawVersion.upToDate ? '' : ' animate-pulse'}`} style={{ background: oclawVersion.upToDate ? tokens.colors.green : tokens.colors.textQuaternary }} />
                       <span className="text-white/30">v{oclawVersion.current.replace(/^v/, '')}</span>
                       {!oclawVersion.upToDate && (
                         <button
@@ -646,7 +640,7 @@ export default function OpsPage() {
         {selectedTask && (
           <motion.div
             className="md:hidden fixed inset-0 z-40 flex flex-col"
-            style={{ background: '#000', top: 52 }}
+            style={{ background: tokens.colors.bg, top: 52 }}
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
@@ -655,7 +649,8 @@ export default function OpsPage() {
             <div className="shrink-0 flex items-center gap-2 px-4 py-3 border-b border-white/[0.08]">
               <button
                 onClick={() => setSelectedTaskId(null)}
-                className="flex items-center gap-1 text-[13px] text-[#0A84FF]"
+                className="flex items-center gap-1 text-[13px]"
+                style={{ color: tokens.colors.accent }}
               >
                 <ChevronLeft className="h-4 w-4" />
                 Back

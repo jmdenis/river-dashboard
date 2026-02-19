@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Upload, Terminal, Home, BookOpen, Settings, type LucideIcon } from 'lucide-react'
 
 import UploadModal from './UploadModal'
+import { tokens, styles } from '../designTokens'
 
 const ICON_HOVER: Record<string, object> = {
   Ops: { y: -1 },
@@ -41,15 +42,7 @@ export default function Layout() {
       >
         <div className="flex h-full items-center px-5 md:px-6">
           {/* River logo */}
-          <span
-            className="mr-8"
-            style={{
-              fontSize: '19px',
-              fontWeight: 700,
-              letterSpacing: '-0.02em',
-              color: 'var(--text-1)',
-            }}
-          >
+          <span className="mr-8" style={styles.brand}>
             River
           </span>
 
@@ -69,7 +62,7 @@ export default function Layout() {
                   }`
                 }
                 style={({ isActive }) => ({
-                  color: isActive ? '#ffffff' : 'rgba(255,255,255,0.5)',
+                  color: isActive ? tokens.colors.textPrimary : tokens.colors.textSecondary,
                   minWidth: '80px',
                   justifyContent: 'center',
                 })}
@@ -99,7 +92,7 @@ export default function Layout() {
           {/* Version badge */}
           <span
             className="hidden md:inline text-[11px] font-mono tabular-nums mr-3"
-            style={{ color: 'rgba(255,255,255,0.30)' }}
+            style={{ color: tokens.colors.textQuaternary }}
           >
             v2
           </span>
@@ -108,7 +101,7 @@ export default function Layout() {
           <button
             onClick={() => setUploadOpen(!uploadOpen)}
             className="hidden md:flex items-center gap-1.5 text-[13px] font-medium px-3 py-1.5 rounded-lg transition-all duration-200 hover:bg-white/[0.06]"
-            style={{ color: 'rgba(255,255,255,0.55)' }}
+            style={{ color: tokens.colors.textSecondary }}
           >
             <Upload className="h-3.5 w-3.5" />
             Upload
@@ -141,7 +134,7 @@ export default function Layout() {
               to={item.href}
               className="group flex flex-col items-center gap-0.5 px-3 py-1 transition-colors duration-200"
               style={({ isActive }) => ({
-                color: isActive ? '#0A84FF' : 'rgba(255,255,255,0.4)',
+                color: isActive ? tokens.colors.accent : tokens.colors.textTertiary,
                 fontWeight: isActive ? 500 : 400,
               })}
             >
