@@ -431,6 +431,10 @@ export default function OpsPage() {
   // Version
   const [oclawVersion, setOclawVersion] = useState<{ current: string; latest: string; upToDate: boolean } | null>(null)
 
+  // Git status
+  const [gitStatus, setGitStatus] = useState<{ changedFiles: number; clean: boolean } | null>(null)
+  const [committing, setCommitting] = useState(false)
+
   // Quick task
   const [quickTaskText, setQuickTaskText] = useState('')
   const [status, setStatus] = useState<'idle' | 'expanding' | 'queuing'>('idle')
@@ -477,10 +481,11 @@ export default function OpsPage() {
   const [bulkKilling, setBulkKilling] = useState(false)
 
   const loadData = () => {
-    Promise.all([opsApi.getTasks(), opsApi.getSystemInfo()])
-      .then(([tasksData, sysData]) => {
+    Promise.all([opsApi.getTasks(), opsApi.getSystemInfo(), opsApi.getGitStatus()])
+      .then(([tasksData, sysData, gitData]) => {
         setTasks(tasksData)
         setSystemInfo(sysData)
+        setGitStatus(gitData)
       })
       .catch((error) => console.error('Failed to load data:', error))
       .finally(() => setLoading(false))
@@ -661,6 +666,23 @@ export default function OpsPage() {
   }
 
 
+  const handleGitCommit = async () => {
+    if (committing) return
+    setCommitting(true)
+    try {
+      const result = await opsApi.gitCommit()
+      if (result.ok) {
+        toast.success('Committed')
+        setGitStatus({ changedFiles: 0, clean: true })
+      } else {
+        toast.error(result.error || 'Commit failed')
+      }
+    } catch {
+      toast.error('Commit failed')
+    }
+    setCommitting(false)
+  }
+
   const queueDirectly = async (text: string) => {
     const now = Date.now()
     if (lastSubmitRef.current && lastSubmitRef.current.text === text && now - lastSubmitRef.current.time < 10000) {
@@ -781,18 +803,45 @@ export default function OpsPage() {
 
   const taskListPanel = (
     <>
-      {/* System stats bar */}
+      {/* ROW 1: Stats bar */}
       {systemInfo && (
-        <div className="shrink-0 px-4 flex items-center gap-6" style={{ height: 24 }}>
-          <span className="text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>
+        <div
+          className="shrink-0 px-4 py-2 flex items-center justify-between"
+          style={{ borderBottom: '1px solid ' + tokens.colors.border }}
+        >
+          <span className="text-xs" style={{ color: 'rgba(255,255,255,0.30)' }}>
             CPU {Math.round(systemInfo.cpu)}% · MEM {Math.round(systemInfo.mem)}% · Disk {Math.round(systemInfo.disk)}% · Up {formatUptime(systemInfo.uptime).short}
             {oclawVersion ? ` · v${oclawVersion.current}` : ''}
           </span>
+          <div className="flex items-center gap-2">
+            {gitStatus && (
+              <>
+                <span className="text-xs" style={{ color: gitStatus.clean ? 'rgba(255,255,255,0.30)' : 'rgba(255,255,255,0.50)' }}>
+                  {gitStatus.clean ? 'clean' : `${gitStatus.changedFiles} changed`}
+                </span>
+                {!gitStatus.clean && (
+                  <button
+                    onClick={handleGitCommit}
+                    disabled={committing}
+                    className="flex items-center gap-1 text-xs transition-colors"
+                    style={{ color: tokens.colors.accent }}
+                  >
+                    {committing ? (
+                      <Loading03Icon className="h-3 w-3 animate-spin" strokeWidth={1.5} />
+                    ) : (
+                      <Tick02Icon className="h-3 w-3" strokeWidth={1.5} />
+                    )}
+                    Commit
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Filter tabs */}
-      <div className="shrink-0 px-4 flex items-center gap-4 overflow-x-auto overflow-y-hidden whitespace-nowrap scrollbar-hide" style={{ height: 36, WebkitOverflowScrolling: 'touch' }}>
+      {/* ROW 2: Filter bar */}
+      <div className="shrink-0 px-4 py-2 flex items-center gap-4 overflow-x-auto overflow-y-hidden whitespace-nowrap scrollbar-hide" style={{ borderBottom: '1px solid ' + tokens.colors.borderSubtle, WebkitOverflowScrolling: 'touch' }}>
         {([
           { key: 'all' as const, label: 'All', count: tasks.length },
           { key: 'running' as const, label: 'Running', count: runningCount },
