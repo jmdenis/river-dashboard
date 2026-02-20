@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence } from 'motion/react'
-import { Upload02Icon, CommandLineIcon, Home01Icon, BookOpen01Icon, Settings01Icon, FolderOpenIcon } from 'hugeicons-react'
+import { Upload02Icon, CommandLineIcon, Home01Icon, BookOpen01Icon, Settings01Icon } from 'hugeicons-react'
 
 import UploadModal from './UploadModal'
 import { AnimatedIcon } from './AnimatedIcon'
@@ -11,7 +11,6 @@ import { tokens } from '../designTokens'
 const NAV_ITEMS: { name: string; value: string; href: string; Icon: React.ComponentType<any> }[] = [
   { name: 'Ops', value: 'ops', href: '/ops', Icon: CommandLineIcon },
   { name: 'Home', value: 'home', href: '/home', Icon: Home01Icon },
-  { name: 'Files', value: 'files', href: '/files', Icon: FolderOpenIcon },
   { name: 'Knowledge', value: 'knowledge', href: '/knowledge', Icon: BookOpen01Icon },
   { name: 'Settings', value: 'settings', href: '/settings', Icon: Settings01Icon },
 ]
