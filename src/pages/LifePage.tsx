@@ -26,6 +26,8 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '.
 import { Label } from '../components/ui/label'
 import { Textarea } from '../components/ui/textarea'
 import { Separator } from '../components/ui/separator'
+import { TwoPanelLayout } from '../components/TwoPanelLayout'
+import { PanelToolbar, ToolbarAction } from '../components/PanelToolbar'
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs'
 import {
   AlertDialog,
@@ -2166,13 +2168,14 @@ function contactInitials(c: Contact): string {
  return ((c.firstName?.[0] || '') + (c.lastName?.[0] || '')).toUpperCase() || '?'
 }
 
-// --- Contact Detail (Sheet Panel) ---
-function ContactDetail({ contact, onSave, onDelete, saving, toast }: {
+// --- Contact Detail (Right Panel, inline) ---
+function ContactDetailPanel({ contact, onSave, onDelete, saving, toast, onBack }: {
  contact: Contact
  onSave: (id: string, updates: Partial<Contact>) => Promise<void>
  onDelete: (id: string) => Promise<void>
  saving: string | null
  toast: (msg: string) => void
+ onBack?: () => void
 }) {
  const [editing, setEditing] = useState(false)
  const [deleteOpen, setDeleteOpen] = useState(false)
@@ -2256,39 +2259,30 @@ function ContactDetail({ contact, onSave, onDelete, saving, toast }: {
 
  return (
   <div className="h-full flex flex-col">
-   {/* Header */}
-   <SheetHeader className="p-5" style={{ borderBottom: `1px solid ${tokens.colors.border}` }}>
-    <div className="flex items-center gap-3">
-     <Avatar size="lg">
-      <AvatarFallback className="bg-[var(--surface)] text-[var(--text-2)]">{contactInitials(contact)}</AvatarFallback>
-     </Avatar>
-     <div className="min-w-0 flex-1">
-      <SheetTitle className="text-[var(--text-1)] text-[20px] tracking-tight">
-       {contact.firstName} {contact.lastName}
-      </SheetTitle>
-      <div className="flex items-center gap-2 mt-0.5">
-       {contact.relationship && (
-        <Badge variant="secondary" className={getTagColor(contact.relationship).bg + ' ' + getTagColor(contact.relationship).text + ' ' + getTagColor(contact.relationship).border + ' border'}>
-         {contact.relationship}
-        </Badge>
-       )}
-       {contact.tags.map(tag => (
-        <Badge key={tag} variant="secondary">{tag}</Badge>
-       ))}
-      </div>
-     </div>
-     {!editing && (
-      <Button variant="ghost" size="icon-sm" onClick={enterEdit} title="Edit contact" className="text-[var(--text-2)]">
-       <AnimatedIcon icon={PencilEdit02Icon} strokeWidth={1.5} className="h-3.5 w-3.5" />
-      </Button>
-     )}
-    </div>
-   </SheetHeader>
+   {/* Toolbar */}
+   <PanelToolbar
+    title={`${contact.firstName} ${contact.lastName}`}
+    onBack={onBack}
+    actions={
+     <>
+      {!editing && (
+       <ToolbarAction icon={PencilEdit02Icon} label="Edit" onClick={enterEdit} />
+      )}
+      {editing && (
+       <>
+        <ToolbarAction icon={Tick02Icon} label="Save" onClick={saveEdit} disabled={saving === contact.id || !editFirstName.trim()} />
+        <ToolbarAction icon={Cancel01Icon} label="Cancel" onClick={() => setEditing(false)} />
+        <ToolbarAction icon={Delete02Icon} label="Delete" onClick={() => setDeleteOpen(true)} destructive />
+       </>
+      )}
+     </>
+    }
+   />
 
    {/* Scrollable content */}
-   <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
+   <div className="flex-1 overflow-y-auto p-6">
     {editing ? (
-     <>
+     <div className="flex flex-col gap-5 max-w-md">
       <div className="grid grid-cols-2 gap-3">
        <div className="space-y-1.5">
         <Label className="text-[var(--text-3)]">First Name</Label>
@@ -2350,129 +2344,115 @@ function ContactDetail({ contact, onSave, onDelete, saving, toast }: {
         })}
        </div>
       </div>
-     </>
+     </div>
     ) : (
      <>
-      {[
-       { label: 'Phone', value: contact.phone, icon: SmartPhone01Icon },
-       { label: 'Email', value: contact.email, icon: Mail01Icon },
-      ].map(({ label, value, icon: Ic }) => (
-       <div key={label} className="space-y-1">
-        <Label className="text-[var(--text-3)]">{label}</Label>
-        <div className="flex items-center gap-2 text-[13px]" style={{ color: value ? tokens.colors.textSecondary : tokens.colors.textTertiary }}>
-         <AnimatedIcon icon={Ic} strokeWidth={1.5} className="h-3.5 w-3.5" />
-         <span className="flex-1 min-w-0 truncate">{value || 'Not set'}</span>
+      {/* Large avatar + name header */}
+      <div className="flex items-start gap-4 mb-6">
+       <div className="w-14 h-14 rounded-full bg-white/[0.08] flex items-center justify-center shrink-0">
+        <span className="text-xl font-semibold" style={{ color: tokens.colors.textSecondary }}>{contactInitials(contact)}</span>
+       </div>
+       <div className="min-w-0 flex-1 pt-1">
+        <h2 className="text-xl font-semibold" style={{ color: tokens.colors.textPrimary }}>{contact.firstName} {contact.lastName}</h2>
+        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+         {contact.relationship && (
+          <Badge variant="secondary" className={getTagColor(contact.relationship).bg + ' ' + getTagColor(contact.relationship).text + ' ' + getTagColor(contact.relationship).border + ' border'}>
+           {contact.relationship}
+          </Badge>
+         )}
+         {contact.tags.map(tag => (
+          <Badge key={tag} variant="secondary">{tag}</Badge>
+         ))}
         </div>
        </div>
-      ))}
-      <div className="space-y-1">
-       <Label className="text-[var(--text-3)]">Birthday</Label>
-       <div className="flex items-center gap-2">
-        <span className="text-[13px]" style={{ color: birthdayFormatted ? tokens.colors.textSecondary : tokens.colors.textTertiary }}>
-         {birthdayFormatted || 'Not set'}{age !== null ? ` (${age})` : ''}
-        </span>
-        {daysUntil !== null && (
-         <Badge variant={daysUntil === 0 ? 'default' : 'secondary'} className="text-[10px]">
-          {daysUntil === 0 ? 'Today!' : daysUntil === 1 ? 'Tomorrow' : `in ${daysUntil} days`}
-         </Badge>
+      </div>
+
+      {/* Detail sections */}
+      <div className="flex flex-col gap-5">
+       {/* Birthday */}
+       <div className="space-y-1">
+        <span className="text-[11px] font-medium uppercase tracking-wider" style={{ color: tokens.colors.textTertiary }}>Birthday</span>
+        <div className="flex items-center gap-2">
+         <span className="text-[13px]" style={{ color: birthdayFormatted ? tokens.colors.textSecondary : tokens.colors.textTertiary }}>
+          {birthdayFormatted || 'Not set'}{age !== null ? ` (turns ${age})` : ''}
+         </span>
+         {daysUntil !== null && (
+          <Badge variant={daysUntil === 0 ? 'default' : 'secondary'} className="text-[10px]">
+           {daysUntil === 0 ? 'Today!' : daysUntil === 1 ? 'Tomorrow' : `in ${daysUntil} days`}
+          </Badge>
+         )}
+        </div>
+       </div>
+
+       {/* Phone */}
+       <div className="space-y-1">
+        <span className="text-[11px] font-medium uppercase tracking-wider" style={{ color: tokens.colors.textTertiary }}>Phone</span>
+        {contact.phone ? (
+         <a href={`tel:${contact.phone}`} className="flex items-center gap-2 text-[13px] hover:underline" style={{ color: tokens.colors.accent }}>
+          <AnimatedIcon icon={SmartPhone01Icon} strokeWidth={1.5} className="h-3.5 w-3.5" />
+          {contact.phone}
+         </a>
+        ) : (
+         <span className="text-[13px]" style={{ color: tokens.colors.textTertiary }}>Not set</span>
         )}
        </div>
-      </div>
-      <div className="space-y-1">
-       <Label className="text-[var(--text-3)]">Notes</Label>
-       <p className="text-[13px] leading-relaxed" style={{ color: contact.notes ? tokens.colors.textSecondary : tokens.colors.textTertiary }}>
-        {contact.notes || 'No notes'}
-       </p>
-      </div>
-      <div className="space-y-2">
-       <Label className="text-[var(--text-3)]">Tags</Label>
-       <div className="flex flex-wrap gap-1.5">
-        {contact.tags.length > 0 ? contact.tags.map(tag => (
-         <Badge key={tag} variant="secondary">{tag}</Badge>
-        )) : (
-         <span className="text-[12px] text-[var(--text-3)]">No tags</span>
-        )}
-       </div>
+
+       {/* Email */}
+       {contact.email && (
+        <div className="space-y-1">
+         <span className="text-[11px] font-medium uppercase tracking-wider" style={{ color: tokens.colors.textTertiary }}>Email</span>
+         <a href={`mailto:${contact.email}`} className="flex items-center gap-2 text-[13px] hover:underline" style={{ color: tokens.colors.accent }}>
+          <AnimatedIcon icon={Mail01Icon} strokeWidth={1.5} className="h-3.5 w-3.5" />
+          {contact.email}
+         </a>
+        </div>
+       )}
+
+       {/* Notes */}
+       {contact.notes && (
+        <div className="space-y-1">
+         <span className="text-[11px] font-medium uppercase tracking-wider" style={{ color: tokens.colors.textTertiary }}>Notes</span>
+         <p className="text-[13px] leading-relaxed" style={{ color: tokens.colors.textSecondary }}>
+          {contact.notes}
+         </p>
+        </div>
+       )}
       </div>
      </>
     )}
    </div>
 
-   {/* Footer actions */}
-   <SheetFooter className="p-4 flex-row gap-2 flex-wrap" style={{ borderTop: `1px solid ${tokens.colors.border}` }}>
-    {editing ? (
-     <>
-      <Button variant="outline" size="sm" onClick={saveEdit} disabled={saving === contact.id || !editFirstName.trim()} className="bg-[var(--accent-subtle)] border-[var(--accent-border)] text-[var(--accent)]">
-       {saving === contact.id ? <Loading03Icon strokeWidth={1.5} className="h-3.5 w-3.5 animate-spin" /> : <AnimatedIcon icon={Tick02Icon} className="h-3.5 w-3.5" />}
-       Save
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => setEditing(false)} className="text-[var(--text-2)]">
-       <AnimatedIcon icon={Cancel01Icon} strokeWidth={1.5} className="h-3.5 w-3.5" /> Cancel
-      </Button>
-      <div className="flex-1" />
-      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="text-red-400 bg-red-500/[0.08] border-red-500/20 hover:bg-red-500/15">
-         <AnimatedIcon icon={Delete02Icon} strokeWidth={1.5} className="h-3.5 w-3.5" /> Delete
-        </Button>
-       </DialogTrigger>
-       <DialogContent style={{ background: '#1E1E20', borderColor: tokens.colors.border }}>
-        <DialogHeader>
-         <DialogTitle className="text-[var(--text-1)]">Delete contact</DialogTitle>
-         <DialogDescription className="text-[var(--text-2)]">
-          Are you sure you want to delete <strong>{contact.firstName} {contact.lastName}</strong>? This action cannot be undone.
-         </DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="gap-2 sm:gap-0">
-         <Button variant="outline" onClick={() => setDeleteOpen(false)} className="text-[var(--text-2)]">Cancel</Button>
-         <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-          {deleting ? <Loading03Icon strokeWidth={1.5} className="h-3.5 w-3.5 animate-spin" /> : <AnimatedIcon icon={Delete02Icon} className="h-3.5 w-3.5" />}
-          Delete
-         </Button>
-        </DialogFooter>
-       </DialogContent>
-      </Dialog>
-     </>
-    ) : (
-     <>
-      {contact.phone && (
-       <Button variant="outline" size="sm" asChild className="text-emerald-400 bg-emerald-500/[0.08] border-emerald-500/20">
-        <a href={`tel:${contact.phone}`}><AnimatedIcon icon={SmartPhone01Icon} strokeWidth={1.5} className="h-3.5 w-3.5" /> Call</a>
-       </Button>
-      )}
-      {contact.email && (
-       <Button variant="outline" size="sm" asChild className="bg-[var(--accent-subtle)] border-[var(--accent-border)] text-[var(--accent)]">
-        <a href={`mailto:${contact.email}`}><AnimatedIcon icon={Mail01Icon} strokeWidth={1.5} className="h-3.5 w-3.5" /> Email</a>
-       </Button>
-      )}
-      <Button variant="ghost" size="sm" onClick={enterEdit} className="text-[var(--text-2)] ml-auto">
-       <AnimatedIcon icon={PencilEdit02Icon} strokeWidth={1.5} className="h-3.5 w-3.5" /> Edit
-      </Button>
-     </>
-    )}
-   </SheetFooter>
+   {/* Delete confirmation */}
+   <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+    <AlertDialogContent style={{ background: '#1E1E20', borderColor: tokens.colors.border }}>
+     <AlertDialogHeader>
+      <AlertDialogTitle className="text-[var(--text-1)]">Delete contact</AlertDialogTitle>
+      <AlertDialogDescription className="text-[var(--text-2)]">
+       Are you sure you want to delete <strong>{contact.firstName} {contact.lastName}</strong>? This action cannot be undone.
+      </AlertDialogDescription>
+     </AlertDialogHeader>
+     <AlertDialogFooter className="gap-2 sm:gap-0">
+      <AlertDialogCancel className="text-[var(--text-2)]">Cancel</AlertDialogCancel>
+      <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-red-500 hover:bg-red-600 text-white">
+       {deleting ? <Loading03Icon strokeWidth={1.5} className="h-3.5 w-3.5 animate-spin" /> : <AnimatedIcon icon={Delete02Icon} className="h-3.5 w-3.5" />}
+       Delete
+      </AlertDialogAction>
+     </AlertDialogFooter>
+    </AlertDialogContent>
+   </AlertDialog>
   </div>
  )
 }
 
-// --- Contacts Section (DataGrid + Sheet + Autocomplete) ---
+// --- Contacts Section (Two-panel Gmail-style layout) ---
 function ContactsSection({ toast }: { toast: (msg: string) => void }) {
  const [contacts, setContacts] = useState<Contact[]>([])
  const [loading, setLoading] = useState(true)
  const [search, setSearch] = useState('')
  const [selectedId, setSelectedId] = useState<string | null>(null)
- const [sheetOpen, setSheetOpen] = useState(false)
+ const [mobileDetailOpen, setMobileDetailOpen] = useState(false)
  const [addOpen, setAddOpen] = useState(false)
  const [saving, setSaving] = useState<string | null>(null)
- const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768)
-
- useEffect(() => {
-  const mq = window.matchMedia('(max-width: 767px)')
-  const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
-  mq.addEventListener('change', handler)
-  return () => mq.removeEventListener('change', handler)
- }, [])
- const [sorting, setSorting] = useState<SortingState>([{ id: 'lastName', desc: false }])
 
  // Add form state
  const [newFirstName, setNewFirstName] = useState('')
@@ -2502,107 +2482,23 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
   )
  }, [contacts, search])
 
+ const sorted = useMemo(() => {
+  return [...filtered].sort((a, b) => {
+   const aName = `${a.lastName} ${a.firstName}`.toLowerCase()
+   const bName = `${b.lastName} ${b.firstName}`.toLowerCase()
+   return aName.localeCompare(bName)
+  })
+ }, [filtered])
+
  const selectedContact = useMemo(
   () => contacts.find(c => c.id === selectedId) || null,
   [contacts, selectedId]
  )
 
- const openContactSheet = useCallback((id: string) => {
+ const selectContact = useCallback((id: string) => {
   setSelectedId(id)
-  setSheetOpen(true)
+  setMobileDetailOpen(true)
  }, [])
-
- // DataGrid columns
- const columns = useMemo<ColumnDef<Contact>[]>(() => [
-  {
-   id: 'avatar',
-   header: '',
-   cell: ({ row }) => (
-    <Avatar size="sm">
-     <AvatarFallback className="bg-[var(--bg-surface)] text-[var(--text-2)] text-[10px]">{contactInitials(row.original)}</AvatarFallback>
-    </Avatar>
-   ),
-   size: 40,
-   enableSorting: false,
-  },
-  {
-   accessorKey: 'lastName',
-   header: ({ column }) => <DataGridColumnHeader column={column} title="Name" />,
-   cell: ({ row }) => (
-    <span className="font-medium text-[var(--text-1)] text-[13px]">
-     {row.original.lastName}{row.original.lastName && row.original.firstName ? ' ' : ''}{row.original.firstName}
-    </span>
-   ),
-   sortingFn: (a, b) => {
-    const aName = `${a.original.lastName} ${a.original.firstName}`.toLowerCase()
-    const bName = `${b.original.lastName} ${b.original.firstName}`.toLowerCase()
-    return aName.localeCompare(bName)
-   },
-  },
-  {
-   accessorKey: 'relationship',
-   header: ({ column }) => <DataGridColumnHeader column={column} title="Relationship" />,
-   cell: ({ row }) => {
-    const rel = row.original.relationship
-    if (!rel) return null
-    const colors = getTagColor(rel)
-    return <Badge variant="secondary" className={`${colors.bg} ${colors.text} ${colors.border} border text-[11px]`}>{rel}</Badge>
-   },
-   size: 120,
-  },
-  {
-   accessorKey: 'birthday',
-   header: ({ column }) => <DataGridColumnHeader column={column} title="Birthday" />,
-   cell: ({ row }) => {
-    if (!row.original.birthday) return <span className="text-[var(--text-3)] text-[12px]">—</span>
-    const formatted = formatBirthdayDate(row.original.birthday)
-    const days = daysUntilBirthday(row.original.birthday)
-    return (
-     <div className="flex items-center gap-1.5">
-      <span className="text-[var(--text-2)] text-[12px]">{formatted}</span>
-      {days <= 7 && <Badge variant="default" className="text-[10px] px-1.5 py-0">{days === 0 ? 'Today!' : days === 1 ? 'Tomorrow' : `${days}d`}</Badge>}
-     </div>
-    )
-   },
-   size: 130,
-   sortingFn: (a, b) => {
-    const aDays = a.original.birthday ? daysUntilBirthday(a.original.birthday) : 999
-    const bDays = b.original.birthday ? daysUntilBirthday(b.original.birthday) : 999
-    return aDays - bDays
-   },
-  },
-  {
-   accessorKey: 'phone',
-   header: 'Phone',
-   cell: ({ row }) => <span className="text-[var(--text-2)] text-[12px] tabular-nums">{row.original.phone || '—'}</span>,
-   size: 140,
-   enableSorting: false,
-  },
-  {
-   id: 'actions',
-   header: '',
-   cell: ({ row }) => (
-    <div className="flex gap-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity">
-     <Button variant="ghost" size="icon-xs" onClick={(e) => { e.stopPropagation(); openContactSheet(row.original.id) }} className="text-[var(--text-3)] hover:text-[var(--text-2)]">
-      <AnimatedIcon icon={PencilEdit02Icon} strokeWidth={1.5} className="h-3 w-3" />
-     </Button>
-    </div>
-   ),
-   size: 40,
-   enableSorting: false,
-  },
- ], [openContactSheet])
-
- const table = useReactTable({
-  data: filtered,
-  columns,
-  getCoreRowModel: getCoreRowModel(),
-  getSortedRowModel: getSortedRowModel(),
-  getPaginationRowModel: getPaginationRowModel(),
-  state: { sorting },
-  onSortingChange: setSorting,
-  initialState: { pagination: { pageSize: 20 } },
- })
 
  const resetAddForm = () => {
   setNewFirstName(''); setNewLastName(''); setNewBirthday(''); setNewPhone('')
@@ -2627,6 +2523,7 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
     giftHistory: [],
    })
    setContacts(prev => [...prev, contact])
+   setSelectedId(contact.id)
    resetAddForm()
    setAddOpen(false)
    toast('Contact added')
@@ -2652,7 +2549,7 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
   await lifeApi.deleteContact(id)
   setContacts(prev => prev.filter(c => c.id !== id))
   setSelectedId(null)
-  setSheetOpen(false)
+  setMobileDetailOpen(false)
   toast('Contact deleted')
  }
 
@@ -2660,173 +2557,107 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
   setNewTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
  }
 
- // Autocomplete search suggestions (top 8)
- const searchSuggestions = useMemo(() => {
-  if (!search.trim()) return []
-  return filtered.slice(0, 8)
- }, [filtered, search])
-
- return (
-  <div className="flex flex-col p-4 md:p-6" style={{ minHeight: 'calc(100vh - 100px)' }}>
-   {/* Search bar + Add button */}
-   <div className="flex items-center gap-3 mb-4">
+ /* ── Left Panel: scrollable contact list ── */
+ const leftPanel = (
+  <div className="flex flex-col h-full">
+   {/* Search bar */}
+   <div className="shrink-0 p-3 flex items-center gap-2" style={{ borderBottom: '1px solid ' + tokens.colors.borderSubtle }}>
     <div className="flex-1 relative">
-     <Autocomplete
+     <Search01Icon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5" style={{ color: tokens.colors.textTertiary }} />
+     <Input
       value={search}
-      onValueChange={(val) => {
-       setSearch(val)
-       // If a full name match, open the sheet
-       const match = filtered.find(c => `${c.firstName} ${c.lastName}`.toLowerCase() === val.toLowerCase() || `${c.lastName} ${c.firstName}`.toLowerCase() === val.toLowerCase())
-       if (match) openContactSheet(match.id)
-      }}
-     >
-      <AutocompleteInput
-       placeholder="Search contacts by name, phone, email..."
-       showClear
-       size="default"
-       className="text-[var(--text-1)] placeholder:text-[var(--text-3)]"
-       style={{ background: '#1E1E20', borderColor: tokens.colors.border }}
-      />
-      <AutocompleteContent style={{ background: '#1E1E20', borderColor: tokens.colors.border }}>
-       <AutocompleteList>
-        {searchSuggestions.map(c => (
-         <AutocompleteItem key={c.id} value={`${c.firstName} ${c.lastName}`} className="text-[var(--text-2)]">
-          <div className="flex items-center gap-2.5">
-           <Avatar size="sm">
-            <AvatarFallback className="bg-[var(--bg-surface)] text-[var(--text-3)] text-[10px]">{contactInitials(c)}</AvatarFallback>
-           </Avatar>
-           <div className="flex-1 min-w-0">
-            <span className="text-[13px] text-[var(--text-1)]">{c.firstName} {c.lastName}</span>
-            {c.phone && <span className="text-[11px] text-[var(--text-3)] ml-2">{c.phone}</span>}
-           </div>
-           {c.relationship && <Badge variant="secondary" className="text-[10px]">{c.relationship}</Badge>}
-          </div>
-         </AutocompleteItem>
-        ))}
-        <AutocompleteEmpty className="text-[var(--text-3)]">No contacts found</AutocompleteEmpty>
-       </AutocompleteList>
-      </AutocompleteContent>
-     </Autocomplete>
+      onChange={e => setSearch(e.target.value)}
+      placeholder="Search contacts..."
+      className="pl-8 h-8 text-[13px] text-[var(--text-1)] placeholder:text-[var(--text-3)] bg-transparent border-0 focus-visible:ring-0"
+     />
     </div>
-    <Button variant="ghost" size="sm" onClick={() => setAddOpen(true)} className="text-[var(--accent)] hover:bg-[var(--accent-subtle)] shrink-0">
-     <AnimatedIcon icon={UserAdd01Icon} strokeWidth={1.5} className="h-3.5 w-3.5" /> Add
+    <Button variant="ghost" size="icon-sm" onClick={() => setAddOpen(true)} className="text-[var(--accent)] shrink-0" title="Add contact">
+     <AnimatedIcon icon={UserAdd01Icon} strokeWidth={1.5} className="h-3.5 w-3.5" />
     </Button>
    </div>
 
-   {/* Contact count */}
-   <div className="mb-3">
-    <span className="text-[12px] text-[var(--text-3)]">{filtered.length} contact{filtered.length !== 1 ? 's' : ''}</span>
+   {/* Count */}
+   <div className="shrink-0 px-3 py-1.5">
+    <span className="text-[11px]" style={{ color: tokens.colors.textTertiary }}>{sorted.length} contact{sorted.length !== 1 ? 's' : ''}</span>
    </div>
 
-   {/* Mobile: simple list view */}
-   <div className="md:hidden flex flex-col">
+   {/* Scrollable list */}
+   <div className="flex-1 overflow-y-auto">
     {loading ? (
-     <div className="flex justify-center py-12"><Loading03Icon strokeWidth={1.5} className="h-5 w-5 animate-spin text-[var(--text-3)]" /></div>
-    ) : filtered.length === 0 ? (
-     <div className="flex flex-col items-center justify-center py-12 text-center">
-      <AnimatedIcon icon={UserMultiple02Icon} strokeWidth={1.5} className="h-6 w-6 mb-3" style={{ color: tokens.colors.border }} />
-      <p className="text-[13px] text-[var(--text-3)]">{search ? 'No contacts matching your search' : 'No contacts yet'}</p>
+     <div className="flex justify-center py-12"><Loading03Icon strokeWidth={1.5} className="h-5 w-5 animate-spin" style={{ color: tokens.colors.textTertiary }} /></div>
+    ) : sorted.length === 0 ? (
+     <div className="flex flex-col items-center justify-center py-12 text-center px-4">
+      <AnimatedIcon icon={UserMultiple02Icon} strokeWidth={1.5} className="h-6 w-6 mb-3" style={{ color: tokens.colors.textQuaternary }} />
+      <p className="text-[13px]" style={{ color: tokens.colors.textTertiary }}>{search ? 'No matches' : 'No contacts yet'}</p>
      </div>
     ) : (
-     filtered.map(c => (
-      <motion.div
-       key={c.id}
-       whileHover={{ backgroundColor: tokens.colors.surfaceHover }}
-       className="flex items-center gap-3 px-4 py-3"
-       style={{ borderBottom: `1px solid ${tokens.colors.borderSubtle}` }}
-       onClick={() => openContactSheet(c.id)}
-      >
-       <Avatar className="h-10 w-10 shrink-0">
-        <AvatarFallback className="bg-[#1E1E20] text-[12px]">{contactInitials(c)}</AvatarFallback>
-       </Avatar>
-       <div className="flex-1 min-w-0">
-        <div className="text-[13px] truncate">{c.firstName} {c.lastName}</div>
-        <div className="text-[12px]" style={{ color: tokens.colors.textTertiary }}>{c.relationship || c.phone || ''}</div>
-       </div>
-       <AnimatedIcon icon={ArrowRight01Icon} strokeWidth={1.5} className="h-4 w-4" style={{ color: tokens.colors.textQuaternary }} />
-      </motion.div>
-     ))
+     <motion.div variants={{ hidden: {}, show: { transition: { staggerChildren: 0.015 } } }} initial="hidden" animate="show">
+      {sorted.map(c => {
+       const isActive = c.id === selectedId
+       const bdayText = c.birthday ? formatBirthdayDate(c.birthday) : ''
+       const rel = c.relationship
+       const colors = rel ? getTagColor(rel) : null
+       return (
+        <motion.div
+         key={c.id}
+         variants={{ hidden: { opacity: 0, x: -4 }, show: { opacity: 1, x: 0 } }}
+         onClick={() => selectContact(c.id)}
+         className="flex items-center gap-3 px-3 cursor-pointer transition-colors"
+         style={{
+          height: 48,
+          background: isActive ? 'rgba(255,255,255,0.06)' : 'transparent',
+          borderLeft: isActive ? '2px solid var(--accent, #0A84FF)' : '2px solid transparent',
+         }}
+         onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)' }}
+         onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+        >
+         {/* Avatar initials */}
+         <div className="w-8 h-8 rounded-full bg-white/[0.08] flex items-center justify-center shrink-0">
+          <span className="text-[11px] font-medium" style={{ color: tokens.colors.textSecondary }}>{contactInitials(c)}</span>
+         </div>
+         {/* Name + tag */}
+         <div className="flex-1 min-w-0 flex items-center gap-2">
+          <span className="text-sm font-medium truncate" style={{ color: tokens.colors.textPrimary }}>{c.firstName} {c.lastName}</span>
+          {colors && (
+           <Badge variant="secondary" className={`${colors.bg} ${colors.text} ${colors.border} border text-[10px] shrink-0 py-0 px-1.5`}>{rel}</Badge>
+          )}
+         </div>
+         {/* Birthday on right */}
+         {bdayText && (
+          <span className="text-xs shrink-0" style={{ color: 'rgba(255,255,255,0.4)' }}>{bdayText}</span>
+         )}
+        </motion.div>
+       )
+      })}
+     </motion.div>
     )}
    </div>
+  </div>
+ )
 
-   {/* Desktop: DataGrid */}
-   <div className="hidden md:block">
-   <DataGrid
-    table={table}
-    recordCount={filtered.length}
-    isLoading={loading}
-    loadingMode="skeleton"
-    onRowClick={(row) => openContactSheet(row.id)}
-    emptyMessage={
-     <div className="flex flex-col items-center justify-center py-12 text-center">
-      <AnimatedIcon icon={UserMultiple02Icon} strokeWidth={1.5} className="h-6 w-6 mb-3" style={{ color: tokens.colors.border }} />
-      <p className="text-[13px] text-[var(--text-3)]">{search ? 'No contacts matching your search' : 'No contacts yet'}</p>
-     </div>
-    }
-    tableLayout={{ dense: false, rowBorder: true, headerBackground: true, headerBorder: true, width: 'fixed' }}
-    tableClassNames={{
-     base: 'text-[13px]',
-     bodyRow: 'group/row cursor-pointer hover:bg-[rgba(255,255,255,0.03)] transition-colors',
-     headerRow: 'border-b border-white/[0.08]',
-    }}
-   >
-    <DataGridContainer className="bg-transparent rounded-md" style={{ borderColor: tokens.colors.border }}>
-     <DataGridTable />
-     {filtered.length > 20 && (
-      <DataGridPagination
-       sizes={[20, 50, 100]}
-       info="{from} - {to} of {count}"
-       className="text-[var(--text-3)]"
-       style={{ borderTop: `1px solid ${tokens.colors.border}` }}
-      />
-     )}
-    </DataGridContainer>
-   </DataGrid>
-   </div>
+ /* ── Right Panel: detail view ── */
+ const rightPanel = selectedContact ? (
+  <ContactDetailPanel
+   contact={selectedContact}
+   onSave={saveContact}
+   onDelete={deleteContact}
+   saving={saving}
+   toast={toast}
+   onBack={() => setMobileDetailOpen(false)}
+  />
+ ) : null
 
-   {/* Contact Detail Sheet — bottom on mobile, right on desktop */}
-   {/* Mobile: bottom sheet */}
-   <Sheet open={sheetOpen && isMobile} onOpenChange={setSheetOpen}>
-    <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl overflow-y-auto p-0" style={{ background: '#1E1E20', borderTop: `1px solid ${tokens.colors.border}` }} showCloseButton={false}>
-     {selectedContact ? (
-      <ContactDetail
-       contact={selectedContact}
-       onSave={saveContact}
-       onDelete={deleteContact}
-       saving={saving}
-       toast={toast}
-      />
-     ) : (
-      <div className="flex-1 flex items-center justify-center h-full">
-       <div className="text-center">
-        <AnimatedIcon icon={UserMultiple02Icon} strokeWidth={1.5} className="h-8 w-8 mx-auto mb-3" style={{ color: tokens.colors.border }} />
-        <p className="text-[13px] text-[var(--text-3)]">Select a contact</p>
-       </div>
-      </div>
-     )}
-    </SheetContent>
-   </Sheet>
-   {/* Desktop: right sheet */}
-   <Sheet open={sheetOpen && !isMobile} onOpenChange={setSheetOpen}>
-    <SheetContent side="right" className="w-[400px] p-0" style={{ background: '#1E1E20', borderLeft: `1px solid ${tokens.colors.border}` }} showCloseButton={false}>
-     {selectedContact ? (
-      <ContactDetail
-       contact={selectedContact}
-       onSave={saveContact}
-       onDelete={deleteContact}
-       saving={saving}
-       toast={toast}
-      />
-     ) : (
-      <div className="flex-1 flex items-center justify-center h-full">
-       <div className="text-center">
-        <AnimatedIcon icon={UserMultiple02Icon} strokeWidth={1.5} className="h-8 w-8 mx-auto mb-3" style={{ color: tokens.colors.border }} />
-        <p className="text-[13px] text-[var(--text-3)]">Select a contact</p>
-       </div>
-      </div>
-     )}
-    </SheetContent>
-   </Sheet>
+ return (
+  <div className="flex flex-col flex-1 min-h-0">
+   <TwoPanelLayout
+    leftPanel={leftPanel}
+    rightPanel={rightPanel}
+    emptyState={{ icon: <UserMultiple02Icon className="h-8 w-8" />, text: 'Select a contact' }}
+    selectedKey={selectedId}
+    mobileOpen={mobileDetailOpen}
+    onMobileClose={() => setMobileDetailOpen(false)}
+    mobileTitle={selectedContact ? `${selectedContact.firstName} ${selectedContact.lastName}` : 'Contact'}
+   />
 
    {/* Add Contact Dialog */}
    <Dialog open={addOpen} onOpenChange={setAddOpen}>
@@ -3241,7 +3072,7 @@ export default function LifePage() {
   initial={{ opacity: 0, y: 8 }}
   animate={{ opacity: 1, y: 0 }}
   transition={{ duration: 0.15 }}
-  className="p-5 md:p-6"
+  className="flex flex-col flex-1 min-h-0 px-5 md:px-6 pb-5 md:pb-6"
  >
   <ContactsSection toast={toast} />
  </motion.div>
