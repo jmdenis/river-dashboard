@@ -435,7 +435,7 @@ export default function OpsPage() {
   const [quickTaskText, setQuickTaskText] = useState('')
   const [quickTaskState, setQuickTaskState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const lastSubmitRef = useRef<{ text: string; time: number } | null>(null)
-  const textareaRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [inputFocused, setInputFocused] = useState(false)
 
   // Smart task
@@ -443,28 +443,19 @@ export default function OpsPage() {
   const [enhancing, setEnhancing] = useState(false)
   const smartTextareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Cycling placeholder
-  const placeholderExamples = useMemo(() => [
-    'fix the spacing on home page...',
-    'add dark mode toggle to settings...',
-    'optimize the knowledge page loading...',
-    'update the profile page layout...',
-    'add a search bar to the files page...',
-  ], [])
-  const [placeholderIdx, setPlaceholderIdx] = useState(0)
-  const [placeholderVisible, setPlaceholderVisible] = useState(true)
+  // Composer helpers
+  const isComposerLoading = enhancing || quickTaskState === 'loading'
+
+  const adjustComposerHeight = useCallback(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = Math.min(el.scrollHeight, 100) + 'px'
+  }, [])
 
   useEffect(() => {
-    if (inputFocused || quickTaskText) return
-    const interval = setInterval(() => {
-      setPlaceholderVisible(false)
-      setTimeout(() => {
-        setPlaceholderIdx(prev => (prev + 1) % placeholderExamples.length)
-        setPlaceholderVisible(true)
-      }, 300)
-    }, 4000)
-    return () => clearInterval(interval)
-  }, [inputFocused, quickTaskText, placeholderExamples.length])
+    adjustComposerHeight()
+  }, [quickTaskText, adjustComposerHeight])
 
   // Confirm dialogs
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
@@ -737,6 +728,7 @@ export default function OpsPage() {
       const result = await opsApi.smartTask(text)
       if (result.ok && result.command) {
         setSmartCommand(result.command)
+        setQuickTaskText('')
         requestAnimationFrame(() => smartTextareaRef.current?.focus())
       } else {
         toast.error(result.error || 'Failed to generate command')
@@ -784,8 +776,8 @@ export default function OpsPage() {
         <div className="h-full flex flex-col max-w-7xl mx-auto w-full md:px-6">
           <div className="flex-1 flex min-h-0">
             <div className="w-full md:w-[35%] md:max-w-[420px] shrink-0 flex flex-col" style={{ background: tokens.colors.surface, borderRight: '1px solid ' + tokens.colors.borderSubtle }}>
-              {/* Input bar placeholder */}
-              <div style={{ height: 44, borderBottom: '1px solid ' + tokens.colors.borderSubtle }} />
+              {/* Composer placeholder */}
+              <div style={{ height: 52, borderBottom: '1px solid ' + tokens.colors.borderSubtle }} />
               {/* Filter bar placeholder */}
               <div style={{ height: 36 }} />
               {/* Skeleton rows */}
@@ -814,67 +806,78 @@ export default function OpsPage() {
 
   const taskListPanel = (
     <>
-      {/* Task input */}
-      <div className="shrink-0 relative" style={{ borderBottom: '1px solid ' + tokens.colors.borderSubtle }}>
-        <input
-          type="text"
-          ref={textareaRef}
-          value={quickTaskText}
-          onChange={e => setQuickTaskText(e.target.value)}
-          onFocus={() => setInputFocused(true)}
-          onBlur={() => setInputFocused(false)}
-          onKeyDown={e => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              handleQuickTask()
-            }
-          }}
-          placeholder=" "
-          className="w-full text-[13px] font-mono px-4 peer"
-          style={{
-            height: 44,
-            paddingRight: 44,
-            background: 'transparent',
-            color: tokens.colors.textPrimary,
-            border: 'none',
-            outline: 'none',
-          }}
-        />
-        {!quickTaskText && !inputFocused && (
-          <div
-            className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-[13px] font-mono transition-opacity duration-300"
+      {/* Composer Row */}
+      <div
+        className={`shrink-0 relative${isComposerLoading ? ' composer-loading' : ''}`}
+        style={{
+          background: 'var(--glass-bg)',
+          borderBottom: `1px solid ${inputFocused && !isComposerLoading ? 'var(--accent-cyan)' : 'var(--glass-border)'}`,
+          transition: 'border-color 0.2s ease',
+          minHeight: 52,
+          padding: '12px 16px',
+        }}
+      >
+        <div className="flex items-start gap-3">
+          <TerminalIcon
+            size={16}
+            isAnimated={false}
+            style={{ color: 'rgba(255,255,255,0.3)', marginTop: 3, flexShrink: 0 }}
+          />
+          <div className="relative flex-1 min-w-0">
+            <textarea
+              ref={textareaRef}
+              value={quickTaskText}
+              onChange={e => setQuickTaskText(e.target.value)}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setInputFocused(false)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                  e.preventDefault()
+                  handleQuickTask()
+                }
+              }}
+              placeholder={isComposerLoading ? '' : 'Ask River to build something...'}
+              rows={1}
+              disabled={isComposerLoading}
+              className="w-full resize-none text-[13px] placeholder:italic placeholder:text-white/30 scrollbar-hide"
+              style={{
+                background: 'transparent',
+                color: isComposerLoading ? 'transparent' : tokens.colors.textPrimary,
+                border: 'none',
+                outline: 'none',
+                lineHeight: '20px',
+                maxHeight: 100,
+                overflowY: 'auto',
+                padding: 0,
+              }}
+            />
+            {isComposerLoading && (
+              <div className="absolute inset-0 flex items-center pointer-events-none">
+                <span className="text-[13px] italic" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                  {enhancing ? 'Expanding prompt...' : 'Queuing...'}
+                </span>
+              </div>
+            )}
+          </div>
+          <button
+            onClick={handleQuickTask}
+            disabled={isComposerLoading || !quickTaskText.trim()}
+            className="shrink-0 flex items-center justify-center rounded-md transition-all duration-200"
             style={{
-              color: tokens.colors.textQuaternary,
-              opacity: placeholderVisible ? 1 : 0,
+              width: 28,
+              height: 28,
+              marginTop: -2,
+              opacity: isComposerLoading || quickTaskText.trim() ? 1 : 0,
+              pointerEvents: isComposerLoading || quickTaskText.trim() ? 'auto' : 'none',
             }}
           >
-            {placeholderExamples[placeholderIdx]}
-          </div>
-        )}
-        {!quickTaskText && inputFocused && (
-          <div
-            className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-[13px] font-mono"
-            style={{ color: tokens.colors.textQuaternary }}
-          >
-            Enter a task or rr command...
-          </div>
-        )}
-        <button
-          onClick={handleQuickTask}
-          disabled={!quickTaskText.trim() || quickTaskState === 'loading' || enhancing}
-          className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-md transition-all duration-150 disabled:opacity-30"
-          style={{
-            width: 28,
-            height: 28,
-            color: quickTaskText.trim() ? tokens.colors.accent : tokens.colors.textQuaternary,
-          }}
-        >
-          {enhancing ? <Loader2 className="h-4 w-4 animate-spin" /> :
-           quickTaskState === 'loading' ? <Loader2 className="h-4 w-4 animate-spin" /> :
-           quickTaskState === 'success' ? <AnimatedIcon icon={Check} className="h-4 w-4" noStroke /> :
-           quickTaskText.trim() && !quickTaskText.trim().toLowerCase().startsWith('rr ') ? <AnimatedIcon icon={Sparkles} className="h-4 w-4" /> :
-           <AnimatedIcon icon={Send} className="h-4 w-4" />}
-        </button>
+            {isComposerLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" style={{ color: 'var(--accent-cyan)' }} />
+            ) : (
+              <Send className="h-4 w-4" style={{ color: 'var(--accent-cyan)' }} />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Smart command confirmation */}

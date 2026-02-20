@@ -304,6 +304,31 @@ html, body {
 
 :root {
   --accent-cyan: rgba(34, 211, 238, 0.85);
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.08);
+}
+
+/* ─── Composer Pulse Animation ─── */
+
+.composer-loading {
+  position: relative;
+}
+
+.composer-loading::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--accent-cyan);
+  animation: composer-pulse 1s ease-in-out infinite;
+  z-index: 1;
+}
+
+@keyframes composer-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
 }
 
 .animated-icon svg path,

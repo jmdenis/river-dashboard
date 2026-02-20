@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { motion } from 'motion/react'
 import { toast } from 'sonner'
-import { Loader2, MapPin, Check, Plus, Trash2, Mail, X, Shield, FileText, Settings, AlertTriangle, Key, Bug, Inbox, RefreshCw, ChevronRight, Copy, Clock } from 'lucide-react'
+import { Loader2, MapPin, Check, Plus, Trash2, Mail, X, Shield, FileText, Settings, AlertTriangle, Key, Bug, Inbox, RefreshCw, ChevronRight, Copy, Clock, Brain } from 'lucide-react'
 import { AnimatedIcon } from '../components/AnimatedIcon'
 import ReactMarkdown from 'react-markdown'
 
@@ -23,7 +23,7 @@ import { Alert, AlertTitle, AlertDescription } from '../components/reui/alert'
 import { FileUpload, type FileUploadEntry } from '../components/reui/file-upload'
 
 // APIs
-import { profileApi, type SecurityStatus, type DocFile } from '../services/profileApi'
+import { profileApi, type SecurityStatus, type DocFile, type MemoryData } from '../services/profileApi'
 import { lifeApi, type CronJob, type HomeSettings } from '../services/lifeApi'
 import { tokens } from '../designTokens'
 
@@ -1026,6 +1026,89 @@ function DocsTab() {
   )
 }
 
+// ─── Memory Tab ──────────────────────────────────────────────────────────────
+
+function MemoryTab() {
+  const [memory, setMemory] = useState<MemoryData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [regenerating, setRegenerating] = useState(false)
+
+  useEffect(() => {
+    profileApi.getMemory().then(m => { setMemory(m); setLoading(false) }).catch(() => setLoading(false))
+  }, [])
+
+  const regenerate = async () => {
+    setRegenerating(true)
+    try {
+      const result = await profileApi.regenerateMemory()
+      if ('error' in result) {
+        toast.error(`Failed: ${(result as any).error}`)
+      } else {
+        setMemory(result)
+        toast.success('Memory regenerated')
+      }
+    } catch {
+      toast.error('Regeneration failed')
+    } finally {
+      setRegenerating(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (!memory?.content) {
+    return (
+      <div className="max-w-3xl">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 gap-4">
+            <AnimatedIcon icon={Brain} className="size-8 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">No memory file generated yet.</p>
+            <Button onClick={regenerate} disabled={regenerating}>
+              {regenerating ? <Loader2 className="size-4 animate-spin" /> : <AnimatedIcon icon={RefreshCw} className="size-4" />}
+              Generate Memory
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-3xl">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <AnimatedIcon icon={Brain} className="size-4 text-muted-foreground" />
+              Weekly Memory
+            </CardTitle>
+            <Button variant="outline" size="sm" onClick={regenerate} disabled={regenerating}>
+              {regenerating ? <Loader2 className="size-3.5 animate-spin" /> : <AnimatedIcon icon={RefreshCw} className="size-3.5" />}
+              Regenerate
+            </Button>
+          </div>
+          {memory.generatedAt && (
+            <CardDescription>
+              Generated {new Date(memory.generatedAt).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            </CardDescription>
+          )}
+        </CardHeader>
+        <CardContent>
+          <div className="prose prose-invert prose-sm max-w-none prose-headings:text-foreground prose-headings:font-medium prose-a:text-primary prose-strong:text-foreground prose-code:text-primary prose-p:text-muted-foreground prose-li:text-muted-foreground">
+            <ReactMarkdown>{memory.content}</ReactMarkdown>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 // ─── Main Profile Page ───────────────────────────────────────────────────────
 
 export default function ProfilePage() {
@@ -1065,6 +1148,7 @@ export default function ProfilePage() {
               <TabsTrigger value="notifications" className="whitespace-nowrap">Notifications</TabsTrigger>
               <TabsTrigger value="cron" className="whitespace-nowrap">Cron Jobs</TabsTrigger>
               <TabsTrigger value="security" className="whitespace-nowrap">Security</TabsTrigger>
+              <TabsTrigger value="memory" className="whitespace-nowrap">Memory</TabsTrigger>
               <TabsTrigger value="docs" className="whitespace-nowrap">Docs</TabsTrigger>
             </TabsList>
           </div>
@@ -1091,6 +1175,12 @@ export default function ProfilePage() {
         <TabsContent value="security">
           <motion.div key="security" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }} className="px-5 md:px-6 py-6">
             <SecurityTab />
+          </motion.div>
+        </TabsContent>
+
+        <TabsContent value="memory">
+          <motion.div key="memory" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }} className="px-5 md:px-6 py-6">
+            <MemoryTab />
           </motion.div>
         </TabsContent>
 

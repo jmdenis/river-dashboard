@@ -28,7 +28,25 @@ export interface SecurityStatus {
   auth: { method: string; user: string }
 }
 
+export interface MemoryData {
+  content: string | null
+  generatedAt?: string
+  modified?: string
+  message?: string
+}
+
 export const profileApi = {
+  async getMemory(): Promise<MemoryData> {
+    const res = await fetch(`${API_BASE_URL}/api/memory`)
+    if (!res.ok) return { content: null }
+    return res.json()
+  },
+
+  async regenerateMemory(): Promise<MemoryData> {
+    const res = await fetch(`${API_BASE_URL}/api/memory/generate`, { method: 'POST' })
+    return res.json()
+  },
+
   async getProfileFiles(): Promise<ProfileFile[]> {
     const res = await fetch(`${API_BASE_URL}/api/profile`)
     if (!res.ok) return []
