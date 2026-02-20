@@ -11,6 +11,7 @@ import AnimatedPage from './components/AnimatedPage'
 import OpsPage from './pages/OpsPage'
 import LifePage from './pages/LifePage'
 import ProfilePage from './pages/ProfilePage'
+import FilesPage from './pages/FilesPage'
 
 const KnowledgePage = lazy(() => import('./pages/KnowledgePage'))
 const ContactsPage = lazy(() => import('./pages/ContactsPage'))
@@ -57,7 +58,7 @@ function AnimatedRoutes() {
           {/* Redirect old routes */}
           <Route path="life" element={<Navigate to="/home" replace />} />
           <Route path="profile" element={<Navigate to="/settings" replace />} />
-          <Route path="files" element={<Navigate to="/ops" replace />} />
+          <Route path="files" element={<AnimatedPage><FilesPage /></AnimatedPage>} />
         </Route>
       </Routes>
     </AnimatePresence>

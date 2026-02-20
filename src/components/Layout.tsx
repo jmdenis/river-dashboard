@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence } from 'motion/react'
-import { Upload, Terminal, Home, BookOpen, Settings, type LucideIcon } from 'lucide-react'
+import { Upload, Terminal, Home, BookOpen, Settings, FolderOpen, type LucideIcon } from 'lucide-react'
 
 import UploadModal from './UploadModal'
 import { AnimatedIcon } from './AnimatedIcon'
@@ -11,6 +11,7 @@ import { tokens } from '../designTokens'
 const NAV_ITEMS: { name: string; value: string; href: string; Icon: LucideIcon }[] = [
   { name: 'Ops', value: 'ops', href: '/ops', Icon: Terminal },
   { name: 'Home', value: 'home', href: '/home', Icon: Home },
+  { name: 'Files', value: 'files', href: '/files', Icon: FolderOpen },
   { name: 'Knowledge', value: 'knowledge', href: '/knowledge', Icon: BookOpen },
   { name: 'Settings', value: 'settings', href: '/settings', Icon: Settings },
 ]
