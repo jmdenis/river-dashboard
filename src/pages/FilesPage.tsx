@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { motion } from 'framer-motion'
+import { motion } from 'motion/react'
 import { Card, CardContent } from '../components/ui/card'
 import { Loader2, FileText, Download, Upload, CheckCircle2, AlertCircle } from 'lucide-react'
+import { tokens, styles } from '../designTokens'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 const TOKEN = API_BASE_URL.split('/dash/')[1]?.split('/')[0] || ''
@@ -77,8 +78,8 @@ export default function FilesPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>Files</h1>
-        <p className="text-sm mt-1" style={{ color: 'var(--text-2)' }}>Share files with River</p>
+        <h1 style={{ ...tokens.typography.display, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>Files</h1>
+        <p className="text-[13px] mt-1" style={{ color: 'var(--text-2)' }}>Share files with River</p>
       </div>
 
       <div
@@ -94,31 +95,31 @@ export default function FilesPage() {
         }}
       >
         <Upload className="h-6 w-6 mx-auto mb-3" style={{ color: dragOver ? 'var(--accent)' : 'var(--text-3)' }} />
-        <p className="text-sm" style={{ color: 'var(--text-2)' }}>{dragOver ? 'Drop files here' : 'Drag & drop files, or click to browse'}</p>
-        <p className="text-xs mt-1" style={{ color: 'var(--text-3)' }}>Up to 200 MB per file</p>
+        <p className="text-[13px]" style={{ color: 'var(--text-2)' }}>{dragOver ? 'Drop files here' : 'Drag & drop files, or click to browse'}</p>
+        <p className="text-[12px] mt-1" style={{ color: 'var(--text-3)' }}>Up to 200 MB per file</p>
         <input ref={fileInputRef} type="file" multiple onChange={handleFileSelect} className="hidden" />
       </div>
 
       {uploads.length > 0 && (
         <div className="space-y-2">
           {uploads.map((u, i) => (
-            <div key={i} className="flex items-center gap-3 text-sm p-2">
+            <div key={i} className="flex items-center gap-3 text-[13px] p-2">
               {u.status === 'uploading' && <Loader2 className="h-4 w-4 animate-spin text-[var(--accent)] shrink-0" />}
               {u.status === 'done' && <CheckCircle2 className="h-4 w-4 text-emerald-400/80 shrink-0" />}
               {u.status === 'error' && <AlertCircle className="h-4 w-4 text-rose-400/80 shrink-0" />}
               <span className="truncate text-[var(--text-2)]">{u.name}</span>
-              {u.error && <span className="text-xs text-rose-400/80">Error {u.error}</span>}
+              {u.error && <span className="text-[12px] text-rose-400/80">Error {u.error}</span>}
             </div>
           ))}
         </div>
       )}
 
       <div>
-        <p className="text-[11px] uppercase tracking-[0.05em] mb-4" style={{ color: 'var(--text-3)' }}>{files.length} file{files.length !== 1 ? 's' : ''}</p>
+        <p style={{ ...styles.sectionHeader, marginBottom: 16 }}>{files.length} file{files.length !== 1 ? 's' : ''}</p>
         <Card>
           <CardContent className="p-0">
             {files.length === 0 ? (
-              <p className="text-sm text-[var(--text-3)] text-center py-12">No files uploaded yet</p>
+              <p className="text-[13px] text-[var(--text-3)] text-center py-12">No files uploaded yet</p>
             ) : (
               <div>
                 {files.map((f, i) => (
@@ -134,8 +135,8 @@ export default function FilesPage() {
                     <div className="flex items-center gap-3 min-w-0">
                       <FileText className="h-4 w-4 shrink-0" style={{ color: 'var(--text-3)' }} />
                       <div className="min-w-0">
-                        <p className="text-sm truncate" style={{ color: 'var(--text-1)' }}>{f.name}</p>
-                        <p className="text-xs" style={{ color: 'var(--text-3)' }}>{formatSize(f.size)} · {formatDate(f.mtime)}</p>
+                        <p className="text-[13px] truncate" style={{ color: 'var(--text-1)' }}>{f.name}</p>
+                        <p className="text-[12px]" style={{ color: 'var(--text-3)' }}>{formatSize(f.size)} · {formatDate(f.mtime)}</p>
                       </div>
                     </div>
                     <a href={`${API_BASE_URL}/api/files/${encodeURIComponent(f.name)}`} target="_blank" rel="noopener noreferrer" className="p-2 text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors duration-150" title="Download">

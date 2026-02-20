@@ -1,28 +1,68 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence } from 'motion/react'
 import { opsApi, type InboxItem, type IntegrationProposal } from '../services/opsApi'
 import {
-  Search, ExternalLink,
-  RefreshCw, Loader2, Play, Copy, Check,
-  Bookmark, X, ChevronLeft, Trash2,
-  Mail, CheckSquare, Square, CheckCheck,
+  Autocomplete,
+  AutocompleteInput,
+  AutocompleteContent,
+  AutocompleteList,
+  AutocompleteItem,
+  AutocompleteEmpty,
+} from '@/components/reui/autocomplete'
+import { Alert, AlertTitle, AlertDescription } from '@/components/reui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { ButtonGroup } from '@/components/ui/button-group'
+import { Card, CardContent } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { toast } from 'sonner'
+import {
+  Newspaper, FlaskConical, Wrench, BookOpen, Youtube,
+  Share2, Briefcase, Package, ExternalLink, RefreshCw, Loader2,
+  Play, Copy, Check, Bookmark, X, ChevronLeft, Trash2, Info,
+  Instagram,
+  type LucideIcon,
 } from 'lucide-react'
-import { MailIcon, type MailIconHandle } from '../components/ui/mail-icon'
-import { tokens, styles } from '../designTokens'
+import { tokens } from '../designTokens'
+import { TwoPanelLayout } from '../components/TwoPanelLayout'
+import { DetailEmptyState } from '../components/DetailEmptyState'
+
+/* ── Types ─────────────────────────────────────────────── */
 
 type FilterTab = 'all' | 'actionable' | 'saved' | 'executed' | 'dismissed'
 
-const categoryEmojis: Record<string, string> = {
-  'tech-news': '\u{1F4F0}',
-  'ai-research': '\u{1F9EA}',
-  'tool-update': '\u{1F527}',
-  'tutorial': '\u{1F4DA}',
-  'youtube-video': '\u{1F3AC}',
-  'instagram-reel': '\u{1F4F1}',
-  'social-media': '\u{1F4F1}',
-  'business': '\u{1F4BC}',
-  'other': '\u{1F4E8}',
+/* ── Category icons ────────────────────────────────────── */
+
+const categoryIcons: Record<string, LucideIcon> = {
+  'tech-news': Newspaper,
+  'ai-research': FlaskConical,
+  'tool-update': Wrench,
+  'tutorial': BookOpen,
+  'youtube-video': Youtube,
+  'instagram-reel': Instagram,
+  'social-media': Share2,
+  'business': Briefcase,
+  'other': Package,
 }
+
+function CategoryIcon({ category, className }: { category?: string; className?: string }) {
+  const Icon = categoryIcons[category || 'other'] || Package
+  return <Icon className={className || 'h-4 w-4 shrink-0'} style={{ color: tokens.colors.textTertiary }} />
+}
+
+/* ── Helpers ───────────────────────────────────────────── */
 
 function cleanTitle(item: InboxItem): string {
   const a = item.analysis
@@ -93,19 +133,27 @@ function formatCategory(cat: string): string {
 
 function sourceName(item: InboxItem): string {
   const from = item.from || ''
-  // Extract name part before <email>
   const match = from.match(/^([^<]+)/)
   if (match) {
     const name = match[1].trim().replace(/"/g, '')
     if (name) return name
   }
-  // Fallback to category
   return formatCategory(item.analysis?.category || 'other')
 }
 
-/* ────────────────────────────────────────────────────────── */
-/*  Right Panel: Detail View                                  */
-/* ────────────────────────────────────────────────────────── */
+/* ── Animation variants ────────────────────────────────── */
+
+const listVariants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.02 } },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, x: -6 },
+  show: { opacity: 1, x: 0 },
+}
+
+/* ── Detail View (Right Panel) ─────────────────────────── */
 
 function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, executedId, onCopy, copiedId, onDismiss, onSave, onDelete }: {
   item: InboxItem
@@ -128,7 +176,10 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
   const source = sourceName(item)
   const fullDate = new Date(item.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
 
-  // Parse actionItems (can be array of strings or objects from different sources)
+  const [checkedTakeaways, setCheckedTakeaways] = useState<Set<number>>(new Set())
+  useEffect(() => { setCheckedTakeaways(new Set()) }, [item.id])
+
+  // Parse actionItems
   const actionItems: { assignee: string; action: string }[] = []
   if (a?.actionItems && Array.isArray(a.actionItems)) {
     for (const ai of a.actionItems) {
@@ -142,13 +193,13 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
     }
   }
 
-  // Parse summary into bullet points (can be a joined string with ". " separators)
-  const summaryBullets: string[] = []
+  // Parse takeaways
+  const takeaways: string[] = []
   if (a?.keyTakeaways && a.keyTakeaways.length > 0) {
-    summaryBullets.push(...a.keyTakeaways)
+    takeaways.push(...a.keyTakeaways)
   } else if (a?.summary) {
     const parts = a.summary.split(/\.\s+/).filter(Boolean)
-    if (parts.length > 1) summaryBullets.push(...parts)
+    if (parts.length > 1) takeaways.push(...parts)
   }
 
   return (
@@ -156,52 +207,70 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-6 py-6">
         {/* Source + date + category badge */}
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-[13px] font-medium" style={{ color: tokens.colors.accent }}>{source}</span>
-          <span className="text-[13px] tabular-nums" style={{ color: tokens.colors.textQuaternary }}>{fullDate}</span>
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
+          <span style={{ ...tokens.typography.caption, color: tokens.colors.accent }}>{source}</span>
+          <span className="text-[12px] tabular-nums" style={{ color: tokens.colors.textQuaternary }}>{fullDate}</span>
           {a?.category && (
-            <span
-              className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full"
-              style={{ background: tokens.colors.surface, color: tokens.colors.textTertiary, border: '1px solid ' + tokens.colors.innerHighlight }}
-            >
-              {categoryEmojis[a.category] || '\u{1F4E8}'} {formatCategory(a.category)}
-            </span>
+            <Badge variant="secondary" className="gap-1 text-[10px] px-1.5 py-0">
+              <CategoryIcon category={a.category} className="h-3 w-3" />
+              {formatCategory(a.category)}
+            </Badge>
           )}
         </div>
 
         {/* Title */}
-        <h2 className="text-[22px] font-semibold leading-tight tracking-[-0.02em] mb-5" style={{ color: tokens.colors.textPrimary }}>
+        <h2 className="leading-tight mb-5" style={{ ...tokens.typography.display, letterSpacing: '-0.02em', color: tokens.colors.textPrimary }}>
           {title}
         </h2>
 
-        {/* Summary as bullet points */}
-        {summaryBullets.length > 0 ? (
+        {/* Takeaways as checkbox list */}
+        {takeaways.length > 0 && (
           <div className="mb-6">
-            <p style={{ ...tokens.typography.micro, color: tokens.colors.textQuaternary, marginBottom: 8 }}>Summary</p>
-            <ul className="space-y-1.5">
-              {summaryBullets.map((s, i) => (
-                <li key={i} className="text-[14px] pl-3.5 relative leading-relaxed" style={{ color: tokens.colors.textSecondary }}>
-                  <span className="absolute left-0 top-[9px] h-[5px] w-[5px] rounded-full" style={{ background: tokens.colors.accent }} />
-                  {s}
-                </li>
-              ))}
-            </ul>
+            <p style={{ ...tokens.typography.label, color: tokens.colors.textQuaternary, marginBottom: 10 }}>Takeaways</p>
+            <div className="space-y-2.5">
+              {takeaways.map((t, i) => {
+                const id = `takeaway-${item.id}-${i}`
+                const isChecked = checkedTakeaways.has(i)
+                return (
+                  <div key={i} className="flex items-start gap-2.5">
+                    <Checkbox
+                      id={id}
+                      checked={isChecked}
+                      onCheckedChange={(checked) => {
+                        setCheckedTakeaways(prev => {
+                          const next = new Set(prev)
+                          if (checked) next.add(i)
+                          else next.delete(i)
+                          return next
+                        })
+                      }}
+                      className="mt-0.5"
+                    />
+                    <Label
+                      htmlFor={id}
+                      className={`text-[13px] leading-relaxed font-normal cursor-pointer transition-colors ${isChecked ? 'line-through opacity-50' : ''}`}
+                      style={{ color: tokens.colors.textSecondary }}
+                    >
+                      {t}
+                    </Label>
+                  </div>
+                )
+              })}
+            </div>
           </div>
-        ) : a?.summary ? (
-          <p className="text-[14px] leading-relaxed mb-6" style={{ color: tokens.colors.textSecondary }}>{a.summary}</p>
-        ) : null}
+        )}
 
         {/* Action Items */}
         {actionItems.length > 0 && (
           <div className="mb-6">
-            <p style={{ ...tokens.typography.micro, color: tokens.colors.textQuaternary, marginBottom: 8 }}>Action Items</p>
+            <p style={{ ...tokens.typography.label, color: tokens.colors.textQuaternary, marginBottom: 8 }}>Action Items</p>
             <ul className="space-y-1.5">
               {actionItems.map((ai, i) => (
-                <li key={i} className="text-[14px] pl-3.5 relative leading-relaxed" style={{ color: tokens.colors.textSecondary }}>
+                <li key={i} className="text-[13px] pl-3.5 relative leading-relaxed" style={{ color: tokens.colors.textSecondary }}>
                   <span className="absolute left-0 top-[9px] h-[5px] w-[5px] rounded-full bg-emerald-400" />
                   <span
-                    className="text-[11px] uppercase tracking-wider font-semibold mr-1.5 px-1.5 py-0.5 rounded"
-                    style={{ background: tokens.colors.surface, color: tokens.colors.textTertiary }}
+                    className="mr-1.5 px-1.5 py-0.5 rounded"
+                    style={{ ...tokens.typography.label, background: tokens.colors.surface, color: tokens.colors.textTertiary }}
                   >
                     {ai.assignee}
                   </span>
@@ -215,111 +284,105 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
         {/* Video verdict */}
         {a?.videoVerdict && (
           <div className="mb-6">
-            <p style={{ ...tokens.typography.micro, color: tokens.colors.textQuaternary, marginBottom: 8 }}>Verdict</p>
-            <p className="text-[14px] italic" style={{ color: tokens.colors.textSecondary }}>{a.videoVerdict}</p>
+            <p style={{ ...tokens.typography.label, color: tokens.colors.textQuaternary, marginBottom: 8 }}>Verdict</p>
+            <p className="text-[13px] italic" style={{ color: tokens.colors.textSecondary }}>{a.videoVerdict}</p>
           </div>
         )}
 
-        {/* Integration Plan / Proposal */}
+        {/* Integration Proposal — Card with accent left border + Alert info */}
         {proposal && (
-          <div
-            className="rounded-lg p-4 space-y-2.5 mb-6"
-            style={{ border: `1px solid ${tokens.colors.accent}33`, background: `${tokens.colors.accent}0D` }}
-          >
-            <p style={{ ...tokens.typography.micro, color: tokens.colors.accent }}>Integration Plan</p>
-            <div className="grid gap-2">
-              {([
-                ['WHERE', proposal.connectsTo],
-                ['HOW', proposal.how],
-                ['EFFORT', proposal.effort],
-                ['IMPACT', (proposal as IntegrationProposal & { impact?: string }).impact],
-                ['WHAT', proposal.what],
-              ] as [string, string | undefined][]).filter(([, v]) => v).map(([label, value]) => (
-                <div key={label} className="flex gap-2.5">
-                  <span
-                    className="text-[10px] uppercase tracking-wider w-[68px] shrink-0 pt-0.5 font-semibold"
-                    style={{ color: `${tokens.colors.accent}99` }}
-                  >
-                    {label}
-                  </span>
-                  <span className="text-[14px] leading-relaxed" style={{ color: tokens.colors.textSecondary }}>
-                    {value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <Card className="border-l-[3px] border-l-[#818CF8] mb-6 py-0 gap-0 overflow-hidden">
+            <CardContent className="p-0">
+              <Alert variant="info" className="rounded-none border-0">
+                <Info className="size-4" />
+                <AlertTitle>Integration Plan</AlertTitle>
+                <AlertDescription>
+                  <div className="grid gap-2 mt-1">
+                    {([
+                      ['WHERE', proposal.connectsTo],
+                      ['HOW', proposal.how],
+                      ['EFFORT', proposal.effort],
+                      ['IMPACT', (proposal as IntegrationProposal & { impact?: string }).impact],
+                      ['WHAT', proposal.what],
+                    ] as [string, string | undefined][]).filter(([, v]) => v).map(([label, value]) => (
+                      <div key={label} className="flex gap-2.5">
+                        <span
+                          className="text-[10px] uppercase tracking-[0.05em] w-[60px] shrink-0 pt-0.5 font-medium"
+                          style={{ color: tokens.colors.accent }}
+                        >
+                          {label}
+                        </span>
+                        <span className="text-[13px] leading-relaxed" style={{ color: tokens.colors.textSecondary }}>
+                          {value}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          </Card>
         )}
 
         {/* rr command */}
         {showRrCmd && (
           <div className="mb-6">
-            <p style={{ ...tokens.typography.micro, color: tokens.colors.textQuaternary, marginBottom: 8 }}>Command</p>
+            <p style={{ ...tokens.typography.label, color: tokens.colors.textQuaternary, marginBottom: 8 }}>Command</p>
             <pre
-              className="text-[12px] font-mono px-3 py-2.5 rounded-md whitespace-pre-wrap break-all mb-2"
-              style={{ color: tokens.colors.textSecondary, background: 'rgba(255,255,255,0.03)', border: '1px solid ' + tokens.colors.innerHighlight }}
+              className="text-[12px] font-mono px-3 py-2.5 rounded-md whitespace-pre-wrap break-all mb-2.5"
+              style={{ color: tokens.colors.textSecondary, background: 'rgba(255,255,255,0.03)', border: '1px solid ' + tokens.colors.border }}
             >
               {rrCmd}
             </pre>
-            <div className="flex items-center gap-2">
-              <button
+            <ButtonGroup>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => onCopy(rrCmd!, item.id)}
-                className="flex items-center gap-1.5 text-xs px-2.5 py-2.5 rounded-md transition-colors shrink-0"
-                style={{ background: 'rgba(255,255,255,0.04)', color: tokens.colors.textSecondary, border: '1px solid ' + tokens.colors.innerHighlight }}
-                title="Copy command"
               >
                 {copiedId === item.id
                   ? <Check className="h-3.5 w-3.5 text-emerald-400" />
                   : <Copy className="h-3.5 w-3.5" />}
                 Copy
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => onExecute(item.id)}
                 disabled={executingId === item.id || executedId === item.id}
-                className="flex items-center gap-1.5 text-xs px-3 py-2.5 rounded-md transition-colors duration-150 shrink-0 disabled:opacity-50"
-                style={{
-                  background: executedId === item.id ? 'rgba(16,185,129,0.1)' : `${tokens.colors.accent}26`,
-                  color: executedId === item.id ? 'rgb(52,211,153)' : tokens.colors.accent,
-                  border: executedId === item.id ? '1px solid rgba(16,185,129,0.3)' : `1px solid ${tokens.colors.accent}33`,
-                }}
               >
                 {executingId === item.id
                   ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   : executedId === item.id
-                    ? <Check className="h-3.5 w-3.5" />
+                    ? <Check className="h-3.5 w-3.5 text-emerald-400" />
                     : <Play className="h-3.5 w-3.5" />}
                 {executedId === item.id ? 'Executed' : 'Execute'}
-              </button>
-            </div>
+              </Button>
+            </ButtonGroup>
           </div>
         )}
 
         {/* No rr_command but has integrationProposal */}
         {!showRrCmd && proposal && (
           <div className="mb-6">
-            <p style={{ ...tokens.typography.micro, color: tokens.colors.textQuaternary, marginBottom: 8 }}>Command</p>
-            <button
-              disabled
-              className="flex items-center gap-1.5 text-xs px-3 py-2.5 rounded-md opacity-50 cursor-not-allowed"
-              style={{ background: 'rgba(255,255,255,0.04)', color: tokens.colors.textQuaternary, border: '1px solid ' + tokens.colors.innerHighlight }}
-              title="No executable command available"
-            >
+            <p style={{ ...tokens.typography.label, color: tokens.colors.textQuaternary, marginBottom: 8 }}>Command</p>
+            <Button variant="ghost" size="sm" disabled>
               <Play className="h-3.5 w-3.5" />
               Generate rr
-            </button>
+            </Button>
           </div>
         )}
 
         {/* Relevance scores */}
         {a?.relevance && (
           <div className="mb-6">
-            <p style={{ ...tokens.typography.micro, color: tokens.colors.textQuaternary, marginBottom: 8 }}>Relevance</p>
+            <p style={{ ...tokens.typography.label, color: tokens.colors.textQuaternary, marginBottom: 8 }}>Relevance</p>
             <div className="flex items-center gap-3 flex-wrap">
               {Object.entries(a.relevance).map(([k, v]) => {
                 const color = (v as number) > 7 ? 'text-emerald-400' : (v as number) >= 4 ? 'text-amber-400' : 'text-white/30'
                 return (
-                  <span key={k} className={`text-[13px] ${color}`}>
-                    {k}: <span className="font-semibold">{v}</span>
+                  <span key={k} className={`text-[12px] ${color}`}>
+                    {k}: <span className="font-medium">{v}</span>
                   </span>
                 )
               })}
@@ -333,7 +396,7 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
             href={item.urls[0]}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-[13px] hover:underline mb-6"
+            className="inline-flex items-center gap-1.5 text-[12px] hover:underline mb-6"
             style={{ color: tokens.colors.accent }}
           >
             <ExternalLink className="h-3.5 w-3.5" />
@@ -342,59 +405,54 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
         )}
       </div>
 
-      {/* Footer actions */}
-      <div className="shrink-0 px-6 py-3 flex items-center gap-2 flex-wrap" style={{ borderTop: '1px solid ' + tokens.colors.innerHighlight }}>
-        <button
-          onClick={() => onSave(item.id)}
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium px-4 py-2 rounded-full transition-colors"
-          style={{ background: `${tokens.colors.accent}26`, color: tokens.colors.accent }}
-        >
-          <Bookmark className="h-3.5 w-3.5" />
-          Bookmark
-        </button>
-        <button
-          onClick={() => onDismiss(item.id)}
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium px-4 py-2 rounded-full transition-colors hover:bg-white/[0.04]"
-          style={{ border: '1px solid ' + tokens.colors.border, color: tokens.colors.textSecondary }}
-        >
-          <X className="h-3.5 w-3.5" />
-          Dismiss
-        </button>
-        <button
-          onClick={() => onExecute(item.id)}
-          disabled={executingId === item.id || executedId === item.id}
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium px-4 py-2 rounded-full transition-colors hover:bg-white/[0.04] disabled:opacity-50"
-          style={{ border: '1px solid ' + tokens.colors.border, color: tokens.colors.textSecondary }}
-        >
-          <Play className="h-3.5 w-3.5" />
-          {executedId === item.id ? 'Executed' : 'Execute'}
-        </button>
+      {/* Sticky action bar */}
+      <div className="shrink-0 px-6 py-3 flex items-center" style={{ borderTop: '1px solid ' + tokens.colors.border }}>
+        <ButtonGroup>
+          <Button variant="ghost" size="sm" onClick={() => onSave(item.id)}>
+            <Bookmark className="h-3.5 w-3.5" />
+            Save
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => onDismiss(item.id)}>
+            <X className="h-3.5 w-3.5" />
+            Dismiss
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onExecute(item.id)}
+            disabled={executingId === item.id || executedId === item.id}
+          >
+            <Play className="h-3.5 w-3.5" />
+            {executedId === item.id ? 'Executed' : 'Execute'}
+          </Button>
+        </ButtonGroup>
         <div className="flex-1" />
-        <button
-          onClick={() => onRecheck(item.id)}
-          disabled={recheckingId === item.id}
-          className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-full transition-colors disabled:opacity-50"
-          style={{ color: tokens.colors.textQuaternary }}
-        >
-          {recheckingId === item.id
-            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            : <RefreshCw className="h-3.5 w-3.5" />}
-        </button>
-        <button
-          onClick={() => onDelete(item.id)}
-          className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-full transition-colors hover:text-rose-400"
-          style={{ color: tokens.colors.textQuaternary }}
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        <ButtonGroup>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => onRecheck(item.id)}
+            disabled={recheckingId === item.id}
+          >
+            {recheckingId === item.id
+              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              : <RefreshCw className="h-3.5 w-3.5" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="hover:text-rose-400"
+            onClick={() => onDelete(item.id)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </ButtonGroup>
       </div>
     </div>
   )
 }
 
-/* ────────────────────────────────────────────────────────── */
-/*  Main Component                                            */
-/* ────────────────────────────────────────────────────────── */
+/* ── Main Component ────────────────────────────────────── */
 
 export default function KnowledgePage() {
   const [items, setItems] = useState<InboxItem[]>([])
@@ -406,8 +464,7 @@ export default function KnowledgePage() {
   const [executingId, setExecutingId] = useState<string | null>(null)
   const [executedId, setExecutedId] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [deletingBatch, setDeletingBatch] = useState(false)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
   useEffect(() => {
     opsApi.getInboxRecent(100)
@@ -416,8 +473,10 @@ export default function KnowledgePage() {
       .finally(() => setLoading(false))
   }, [])
 
+  const nonJunk = useMemo(() => items.filter(i => !isJunk(i)), [items])
+
   const filteredItems = useMemo(() => {
-    let result = items.filter(i => !isJunk(i))
+    let result = [...nonJunk]
     result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
     if (filter === 'actionable') {
@@ -442,9 +501,8 @@ export default function KnowledgePage() {
     }
 
     return result
-  }, [items, filter, search])
+  }, [nonJunk, filter, search])
 
-  const nonJunk = useMemo(() => items.filter(i => !isJunk(i)), [items])
   const counts = useMemo(() => ({
     all: nonJunk.length,
     actionable: nonJunk.filter(i => i.analysis?.actionable).length,
@@ -458,13 +516,19 @@ export default function KnowledgePage() {
     [filteredItems, selectedId]
   )
 
+  /* ── Handlers ──────────────────────────────────────── */
+
   const handleRecheck = useCallback(async (id: string) => {
     setRecheckingId(id)
+    toast('Rechecking article...')
     try {
       await fetch(`/api/inbox/${id}/recheck`, { method: 'POST' })
       const updated = await opsApi.getInboxRecent(100)
       setItems(updated)
-    } catch {}
+      toast.success('Article rechecked')
+    } catch {
+      toast.error('Failed to recheck')
+    }
     setRecheckingId(null)
   }, [])
 
@@ -476,14 +540,18 @@ export default function KnowledgePage() {
     if (!cmd) return
     setExecutingId(id)
     setExecutedId(null)
+    toast('Executing rr command...')
     try {
       await opsApi.queueTask(cmd)
       await opsApi.inboxAction(id, 1)
       setExecutedId(id)
       const updated = await opsApi.getInboxRecent(100)
       setItems(updated)
+      toast.success('Command executed')
       setTimeout(() => setExecutedId(null), 3000)
-    } catch {}
+    } catch {
+      toast.error('Failed to execute command')
+    }
     setExecutingId(null)
   }, [items])
 
@@ -491,8 +559,11 @@ export default function KnowledgePage() {
     try {
       await navigator.clipboard.writeText(text)
       setCopiedId(id)
+      toast.success('Command copied')
       setTimeout(() => setCopiedId(null), 2000)
-    } catch {}
+    } catch {
+      toast.error('Failed to copy')
+    }
   }, [])
 
   const handleSave = useCallback(async (id: string) => {
@@ -500,7 +571,10 @@ export default function KnowledgePage() {
       await opsApi.inboxAction(id, 2)
       const updated = await opsApi.getInboxRecent(100)
       setItems(updated)
-    } catch {}
+      toast.success('Article saved')
+    } catch {
+      toast.error('Failed to save')
+    }
   }, [])
 
   const handleDismiss = useCallback(async (id: string) => {
@@ -508,11 +582,17 @@ export default function KnowledgePage() {
       await opsApi.inboxAction(id, 0)
       const updated = await opsApi.getInboxRecent(100)
       setItems(updated)
-    } catch {}
+      toast('Article dismissed')
+    } catch {
+      toast.error('Failed to dismiss')
+    }
+  }, [])
+
+  const confirmDelete = useCallback((id: string) => {
+    setDeleteConfirmId(id)
   }, [])
 
   const handleDelete = useCallback(async (id: string) => {
-    if (!window.confirm('Delete this article permanently?')) return
     try {
       await fetch(`/api/inbox/${encodeURIComponent(id)}`, { method: 'DELETE' })
       setItems(prev => prev.filter(i => i.id !== id))
@@ -522,243 +602,205 @@ export default function KnowledgePage() {
         const next = filteredItems[idx + 1] || filteredItems[idx - 1] || null
         return next?.id || null
       })
-    } catch {}
+      toast.success('Article deleted')
+    } catch {
+      toast.error('Failed to delete')
+    }
+    setDeleteConfirmId(null)
   }, [filteredItems])
-
-  const toggleSelect = useCallback((id: string) => {
-    setSelectedIds(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }, [])
-
-  const toggleSelectAll = useCallback(() => {
-    setSelectedIds(prev => {
-      const allVisible = new Set(filteredItems.map(i => i.id))
-      const allSelected = filteredItems.every(i => prev.has(i.id))
-      return allSelected ? new Set() : allVisible
-    })
-  }, [filteredItems])
-
-  const handleBatchDelete = useCallback(async () => {
-    if (selectedIds.size === 0) return
-    const count = selectedIds.size
-    if (!window.confirm(`Delete ${count} article${count > 1 ? 's' : ''} permanently?`)) return
-    setDeletingBatch(true)
-    try {
-      await Promise.all(
-        Array.from(selectedIds).map(id =>
-          fetch(`/api/inbox/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {})
-        )
-      )
-      setItems(prev => prev.filter(i => !selectedIds.has(i.id)))
-      if (selectedId && selectedIds.has(selectedId)) setSelectedId(null)
-      setSelectedIds(new Set())
-    } catch {}
-    setDeletingBatch(false)
-  }, [selectedIds, selectedId])
 
   const filters: { key: FilterTab; label: string }[] = [
     { key: 'all', label: 'All' },
     { key: 'actionable', label: 'Actionable' },
-    { key: 'saved', label: 'Bookmarked' },
+    { key: 'saved', label: 'Saved' },
     { key: 'executed', label: 'Executed' },
     { key: 'dismissed', label: 'Dismissed' },
   ]
 
+  /* ── Loading skeleton ──────────────────────────────── */
+
   if (loading) {
     return (
-      <div className="p-6 space-y-4">
-        <div className="skeleton h-10 w-full rounded-xl" />
-        <div className="skeleton h-5 w-72 rounded-lg" />
-        <div className="skeleton h-10 w-full rounded-xl" />
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="skeleton h-16 w-full mb-2 rounded-2xl" />
-        ))}
+      <div
+        className="flex"
+        style={{ height: 'calc(100vh - 48px)', background: tokens.colors.bg }}
+      >
+        {/* Left skeleton */}
+        <div className="w-[40%] max-w-[480px] shrink-0 p-5 space-y-3" style={{ borderRight: '1px solid ' + tokens.colors.borderSubtle }}>
+          <Skeleton className="h-9 w-full rounded-lg" />
+          <Skeleton className="h-6 w-64 rounded-lg" />
+          {[...Array(8)].map((_, i) => (
+            <Skeleton key={i} className="h-12 w-full rounded-lg" />
+          ))}
+        </div>
+        {/* Right skeleton */}
+        <div className="flex-1 p-6 space-y-4">
+          <Skeleton className="h-4 w-48 rounded" />
+          <Skeleton className="h-7 w-96 rounded" />
+          <Skeleton className="h-4 w-full rounded" />
+          <Skeleton className="h-4 w-3/4 rounded" />
+        </div>
       </div>
     )
   }
 
+  /* ── Render ────────────────────────────────────────── */
+
+  const leftPanel = (
+    <>
+      {/* Search — ReUI Autocomplete */}
+      <div className="shrink-0 px-4 pt-3 pb-2">
+        <Autocomplete
+          onValueChange={(val) => {
+            if (val != null) {
+              setSelectedId(String(val))
+              setSearch('')
+            }
+          }}
+        >
+          <AutocompleteInput
+            placeholder="Search articles..."
+            showClear
+            size="default"
+            className="pl-3"
+            onInput={(e: React.FormEvent<HTMLInputElement>) => {
+              setSearch((e.target as HTMLInputElement).value)
+            }}
+          />
+          <AutocompleteContent sideOffset={4}>
+            <AutocompleteList>
+              <AutocompleteEmpty>No articles found</AutocompleteEmpty>
+              {nonJunk.slice(0, 50).map(item => (
+                <AutocompleteItem key={item.id} value={item.id}>
+                  <CategoryIcon category={item.analysis?.category} className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{cleanTitle(item)}</span>
+                </AutocompleteItem>
+              ))}
+            </AutocompleteList>
+          </AutocompleteContent>
+        </Autocomplete>
+      </div>
+
+      {/* Filter tabs */}
+      <div className="shrink-0 px-4 pb-2.5 flex flex-wrap gap-1.5">
+        {filters.map(f => (
+          <button
+            key={f.key}
+            onClick={() => setFilter(f.key)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full transition-all duration-200"
+            style={filter === f.key
+              ? { ...tokens.typography.caption, background: tokens.colors.border, color: tokens.colors.textPrimary }
+              : { ...tokens.typography.caption, color: tokens.colors.textQuaternary }
+            }
+          >
+            {f.label}
+            {counts[f.key] > 0 && (
+              <Badge variant="secondary" className="text-[9px] px-1 py-0 h-[16px] min-w-[16px] justify-center">
+                {counts[f.key]}
+              </Badge>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Article list */}
+      <div className="flex-1 overflow-y-auto">
+        {filteredItems.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center px-5">
+            <BookOpen className="h-8 w-8 mb-3" style={{ color: tokens.colors.textQuaternary, opacity: 0.4 }} />
+            <p className="text-[13px]" style={{ color: tokens.colors.textQuaternary }}>
+              {nonJunk.length === 0 ? 'No articles yet' : 'No matches'}
+            </p>
+          </div>
+        ) : (
+          <motion.div
+            key={filter}
+            variants={listVariants}
+            initial="hidden"
+            animate="show"
+          >
+            {filteredItems.map(item => {
+              const isActive = selectedId === item.id
+              const itemTitle = cleanTitle(item)
+              const date = relativeDate(item.date)
+
+              return (
+                <motion.div
+                  key={item.id}
+                  variants={itemVariants}
+                  whileHover={{ backgroundColor: 'rgba(255,255,255,0.04)' }}
+                  transition={{ duration: 0.1 }}
+                  onClick={() => setSelectedId(item.id)}
+                  className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
+                    isActive ? 'bg-[#252527] border-l-[3px] border-l-[#818CF8]' : 'border-l-[3px] border-l-transparent'
+                  }`}
+                  style={{ borderBottom: '1px solid ' + tokens.colors.borderSubtle }}
+                >
+                  <CategoryIcon category={item.analysis?.category} />
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className="truncate"
+                      style={{ ...tokens.typography.body, fontWeight: 500, color: isActive ? tokens.colors.textPrimary : 'rgba(255,255,255,0.85)' }}
+                    >
+                      {itemTitle}
+                    </p>
+                  </div>
+                  <span
+                    className="shrink-0"
+                    style={{ ...tokens.typography.micro, color: tokens.colors.textQuaternary }}
+                  >
+                    {date}
+                  </span>
+                </motion.div>
+              )
+            })}
+          </motion.div>
+        )}
+      </div>
+    </>
+  )
+
+  const rightPanel = (
+    <AnimatePresence mode="wait">
+      {selectedItem ? (
+        <motion.div
+          key={selectedItem.id}
+          initial={{ opacity: 0, x: 12 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -12 }}
+          transition={{ duration: 0.15 }}
+          className="h-full"
+        >
+          <DetailView
+            item={selectedItem}
+            onRecheck={handleRecheck}
+            recheckingId={recheckingId}
+            onExecute={handleExecute}
+            executingId={executingId}
+            executedId={executedId}
+            onCopy={handleCopy}
+            copiedId={copiedId}
+            onDismiss={handleDismiss}
+            onSave={handleSave}
+            onDelete={confirmDelete}
+          />
+        </motion.div>
+      ) : (
+        <DetailEmptyState
+          icon={<BookOpen className="h-12 w-12" />}
+          text="Select an article"
+        />
+      )}
+    </AnimatePresence>
+  )
+
   return (
     <>
-      {/* Full-bleed two-panel layout */}
-      <div
-        className="flex flex-col md:flex-row"
-        style={{
-          height: 'calc(100vh - 52px)',
-          background: tokens.colors.bg,
-        }}
-      >
-        {/* Left Panel — 380px */}
-        <div
-          className={`shrink-0 flex flex-col md:w-[380px] ${selectedItem ? 'hidden md:flex' : 'flex'}`}
-          style={{ borderRight: '1px solid ' + tokens.colors.innerHighlight, height: '100%' }}
-        >
-          {/* Search */}
-          <div className="shrink-0 px-5 pt-3 pb-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: tokens.colors.textTertiary }} />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search..."
-                className="w-full pl-9 pr-3 py-2.5 rounded-[10px] text-[14px] bg-[#1C1C1E] text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-[#0A84FF]/50 transition-all duration-150"
-              />
-            </div>
-          </div>
-
-          {/* Filter chips */}
-          <div className="shrink-0 px-5 pb-2.5 flex flex-wrap gap-1.5 overflow-hidden">
-            {filters.map(f => (
-              <button
-                key={f.key}
-                onClick={() => setFilter(f.key)}
-                className="text-[13px] font-medium px-2.5 py-1 rounded-full transition-all duration-200"
-                style={filter === f.key
-                  ? { background: tokens.colors.border, color: tokens.colors.textPrimary }
-                  : { color: tokens.colors.textQuaternary }
-                }
-              >
-                {f.label}{counts[f.key] > 0 ? ` ${counts[f.key]}` : ''}
-              </button>
-            ))}
-          </div>
-
-          {/* Article list */}
-          <div className="flex-1 overflow-y-auto relative">
-            {filteredItems.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center px-5">
-                <MailIcon size={24} className="mb-3 text-white/[0.08]" isAnimated={false} />
-                <p className="text-[13px]" style={{ color: tokens.colors.textQuaternary }}>
-                  {nonJunk.length === 0 ? 'No articles yet' : 'No matches'}
-                </p>
-              </div>
-            ) : (
-              filteredItems.map(item => {
-                const isActive = selectedId === item.id
-                const isChecked = selectedIds.has(item.id)
-                const title = cleanTitle(item)
-                const source = sourceName(item)
-                const date = relativeDate(item.date)
-                const summary = item.analysis?.summary || ''
-
-                return (
-                  <div
-                    key={item.id}
-                    className="flex items-stretch transition-colors duration-100"
-                    style={{
-                      background: isActive ? `${tokens.colors.accent}1F` : isChecked ? `${tokens.colors.accent}0F` : 'transparent',
-                      borderBottom: '1px solid ' + tokens.colors.innerHighlight,
-                    }}
-                  >
-                    {/* Checkbox area */}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); toggleSelect(item.id) }}
-                      className="shrink-0 w-10 flex items-center justify-center hover:bg-white/[0.04] transition-colors"
-                      aria-label={isChecked ? 'Deselect' : 'Select'}
-                    >
-                      {isChecked
-                        ? <CheckSquare className="h-4 w-4" style={{ color: tokens.colors.accent }} />
-                        : <Square className="h-4 w-4 text-white/20 hover:text-white/40" />}
-                    </button>
-                    {/* Content area */}
-                    <button
-                      onClick={() => setSelectedId(item.id)}
-                      className="flex-1 min-w-0 text-left pr-5 py-3.5"
-                    >
-                      {/* Source + date */}
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-[13px] font-medium truncate" style={{ color: tokens.colors.accent }}>{source}</span>
-                        <span className="text-[13px] tabular-nums shrink-0 ml-2" style={{ color: tokens.colors.textQuaternary }}>{date}</span>
-                      </div>
-                      {/* Title */}
-                      <p
-                        className="text-[14px] font-medium truncate"
-                        style={{ color: isActive ? tokens.colors.textPrimary : 'rgba(255,255,255,0.85)' }}
-                      >
-                        {title}
-                      </p>
-                      {/* Summary */}
-                      {summary && (
-                        <p className="text-[14px] line-clamp-2 mt-0.5 leading-snug" style={{ color: tokens.colors.textSecondary }}>
-                          {summary}
-                        </p>
-                      )}
-                    </button>
-                  </div>
-                )
-              })
-            )}
-          </div>
-
-          {/* Floating action bar */}
-          <AnimatePresence>
-            {selectedIds.size > 0 && (
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 20, opacity: 0 }}
-                transition={{ type: 'spring', damping: 22, stiffness: 300 }}
-                className="shrink-0 px-4 py-2.5 flex items-center gap-2"
-                style={{ background: 'rgba(28, 28, 30, 0.85)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderTop: '1px solid ' + tokens.colors.innerHighlight }}
-              >
-                <span className="text-[13px] font-medium text-white/70 tabular-nums">
-                  {selectedIds.size} selected
-                </span>
-                <button
-                  onClick={toggleSelectAll}
-                  className="text-[12px] px-2.5 py-1.5 rounded-md transition-colors"
-                  style={{ color: tokens.colors.accent }}
-                >
-                  {filteredItems.length > 0 && filteredItems.every(i => selectedIds.has(i.id))
-                    ? 'Deselect all'
-                    : 'Select all'}
-                </button>
-                <div className="flex-1" />
-                <button
-                  onClick={handleBatchDelete}
-                  disabled={deletingBatch}
-                  className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-md transition-colors bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 disabled:opacity-50"
-                >
-                  {deletingBatch
-                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    : <Trash2 className="h-3.5 w-3.5" />}
-                  Delete
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Right Panel */}
-        <div className={`flex-1 min-w-0 ${selectedItem ? 'hidden md:flex' : 'hidden md:flex'} flex-col`}>
-          {selectedItem ? (
-            <DetailView
-              item={selectedItem}
-              onRecheck={handleRecheck}
-              recheckingId={recheckingId}
-              onExecute={handleExecute}
-              executingId={executingId}
-              executedId={executedId}
-              onCopy={handleCopy}
-              copiedId={copiedId}
-              onDismiss={handleDismiss}
-              onSave={handleSave}
-              onDelete={handleDelete}
-            />
-          ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <MailIcon size={40} className="mx-auto mb-3" style={{ opacity: 0.15, color: tokens.colors.textPrimary }} isAnimated={false} />
-                <p className="text-[14px]" style={{ color: tokens.colors.textQuaternary }}>Select an article</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      <TwoPanelLayout
+        left={leftPanel}
+        right={rightPanel}
+        hideLeftOnMobile={!!selectedItem}
+      />
 
       {/* Mobile Detail Overlay (< 768px) */}
       <AnimatePresence>
@@ -771,7 +813,7 @@ export default function KnowledgePage() {
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           >
-            <div className="shrink-0 flex items-center gap-2 px-4 py-3" style={{ borderBottom: '1px solid ' + tokens.colors.innerHighlight }}>
+            <div className="shrink-0 flex items-center gap-2 px-4 py-3" style={{ borderBottom: '1px solid ' + tokens.colors.border }}>
               <button
                 onClick={() => setSelectedId(null)}
                 className="flex items-center gap-1 text-[13px]"
@@ -793,12 +835,26 @@ export default function KnowledgePage() {
                 copiedId={copiedId}
                 onDismiss={handleDismiss}
                 onSave={handleSave}
-                onDelete={handleDelete}
+                onDelete={confirmDelete}
               />
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Delete Article Confirm */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete article</AlertDialogTitle>
+            <AlertDialogDescription>This will permanently delete this article. This action cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-white hover:bg-destructive/90" onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

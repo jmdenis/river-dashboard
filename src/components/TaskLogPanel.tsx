@@ -8,6 +8,7 @@ import {
   SheetDescription,
 } from './ui/sheet'
 import { Loader2 } from 'lucide-react'
+import { tokens } from '../designTokens'
 
 interface TaskLogPanelProps {
   task: Task | null
@@ -67,14 +68,14 @@ export default function TaskLogPanel({ task, open, onOpenChange }: TaskLogPanelP
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col border-l" style={{ background: 'var(--glass-bg)', borderColor: 'var(--border)' }}>
+      <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col border-l" style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border)' }}>
         <SheetHeader className="p-4 pb-3" style={{ borderBottom: '1px solid var(--border)' }}>
           <div className="flex items-center gap-2">
-            <SheetTitle style={{ fontSize: 14, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>
+            <SheetTitle style={{ fontSize: 15, fontWeight: 500, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>
               {task?.title || 'Task Log'}
             </SheetTitle>
           </div>
-          <SheetDescription className="font-mono" style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-2)' }}>
+          <SheetDescription className="font-mono" style={{ ...tokens.typography.caption, color: 'var(--text-2)' }}>
             {task?.id ? `ID: ${task.id}` : ''}
             {task?.status === 'running' && (
               <span className="ml-2 inline-flex items-center gap-1.5">
@@ -92,10 +93,10 @@ export default function TaskLogPanel({ task, open, onOpenChange }: TaskLogPanelP
             </div>
           ) : notFound ? (
             <div className="flex items-center justify-center h-full">
-              <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-2)' }}>No log file found for this task.</p>
+              <p style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-2)' }}>No log file found for this task.</p>
             </div>
           ) : (
-            <pre className="text-xs font-mono whitespace-pre-wrap break-words leading-relaxed" style={{ color: 'rgba(34, 197, 94, 0.8)' }}>
+            <pre className="font-mono whitespace-pre-wrap break-words leading-relaxed" style={{ fontSize: 12, color: 'rgba(34, 197, 94, 0.8)' }}>
               {logContent}
               <div ref={bottomRef} />
             </pre>

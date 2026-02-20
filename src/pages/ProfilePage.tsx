@@ -1,81 +1,48 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { motion } from 'framer-motion'
-import { Loader2, MapPin, Check, Clock as LucideClock, Plus, Trash2, Mail, X, Shield as LucideShield, FileText, Settings, AlertTriangle, Key, Bug, Inbox, RefreshCw, ChevronRight, Upload, CheckCircle2, AlertCircle } from 'lucide-react'
-import { ShieldCheckIcon } from '../components/ui/shield-check-icon'
-import { BellIcon } from '../components/ui/bell-icon'
-import { ClockIcon } from '../components/ui/clock-icon'
-import { FileIcon } from '../components/ui/file-icon'
-import { MailIcon } from '../components/ui/mail-icon'
-import { Button } from '../components/ui/button'
-import { Input } from '../components/ui/input'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog'
-import { Progress } from '../components/ui/progress'
+import { motion } from 'motion/react'
+import { toast } from 'sonner'
+import { Loader2, MapPin, Check, Plus, Trash2, Mail, X, Shield, FileText, Settings, AlertTriangle, Key, Bug, Inbox, RefreshCw, ChevronRight, Copy, Clock } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
+
+// shadcn/ui
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card'
+import { Input } from '../components/ui/input'
+import { Label } from '../components/ui/label'
+import { Button } from '../components/ui/button'
+import { Badge } from '../components/ui/badge'
+import { Switch } from '../components/ui/switch'
+import { Separator } from '../components/ui/separator'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog'
+
+// ReUI
+import { Alert, AlertTitle, AlertDescription } from '../components/reui/alert'
+import { FileUpload, type FileUploadEntry } from '../components/reui/file-upload'
+
+// APIs
 import { profileApi, type SecurityStatus, type DocFile } from '../services/profileApi'
 import { lifeApi, type CronJob, type HomeSettings } from '../services/lifeApi'
-import { tokens, styles } from '../designTokens'
+import { tokens } from '../designTokens'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 const TOKEN = API_BASE_URL.split('/dash/')[1]?.split('/')[0] || ''
 
-// --- Tab Control (matches LifePage style) ---
-type ProfileTabId = 'general' | 'notifications' | 'cron' | 'security' | 'docs'
+// ─── General Tab ─────────────────────────────────────────────────────────────
 
-const PROFILE_TABS: { id: ProfileTabId; label: string }[] = [
-  { id: 'general', label: 'General' },
-  { id: 'notifications', label: 'Notifications' },
-  { id: 'cron', label: 'Cron Jobs' },
-  { id: 'security', label: 'Security' },
-  { id: 'docs', label: 'Docs' },
-]
-
-function ProfileTabControl({ active, onChange }: { active: ProfileTabId; onChange: (id: ProfileTabId) => void }) {
-  return (
-    <div className="flex items-center gap-1">
-      {PROFILE_TABS.map(tab => (
-        <button
-          key={tab.id}
-          onClick={() => onChange(tab.id)}
-          style={active === tab.id ? styles.segmentedButtonActive : styles.segmentedButtonInactive}
-          className="hover:text-white/60 hover:bg-white/[0.04]"
-        >
-          {tab.label}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-// --- Toast Container ---
-function ToastContainer({ toasts }: { toasts: { id: number; message: string }[] }) {
-  return (
-    <div className="fixed bottom-6 right-6 z-50 space-y-2">
-      {toasts.map(t => (
-        <motion.div
-          key={t.id}
-          initial={{ opacity: 0, y: 20, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 20 }}
-          className="backdrop-blur-xl text-sm px-4 py-2.5"
-          style={{ background: 'rgba(0,0,0,0.8)', border: '1px solid ' + tokens.colors.innerHighlight, color: 'var(--text-1)', borderRadius: tokens.radii.md }}
-        >
-          {t.message}
-        </motion.div>
-      ))}
-    </div>
-  )
-}
-
-// --- General Tab: Home Location ---
-function HomeLocationSection({ toast }: { toast: (msg: string) => void }) {
+function GeneralTab() {
   const [draft, setDraft] = useState({ homeAddress: '', homeCity: '' })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
+  const [settings, setSettings] = useState<HomeSettings | null>(null)
+  const [timezone, setTimezone] = useState('Europe/Paris')
 
   useEffect(() => {
     lifeApi.getSettings().then(s => {
       setDraft({ homeAddress: s.homeAddress, homeCity: s.homeCity })
+      setSettings(s)
       setLoading(false)
     }).catch(() => setLoading(false))
   }, [])
@@ -91,85 +58,101 @@ function HomeLocationSection({ toast }: { toast: (msg: string) => void }) {
       const result = await lifeApi.updateSettings({ homeAddress: draft.homeAddress, homeCity: draft.homeCity })
       setDraft({ homeAddress: result.homeAddress, homeCity: result.homeCity })
       setDirty(false)
-      toast('Home location saved')
+      toast.success('Home location saved')
     } catch {
-      toast('Failed to save')
+      toast.error('Failed to save')
     } finally {
       setSaving(false)
     }
   }
 
-  return (
-    <div>
-      <div className="flex items-center gap-2 mb-3">
-        <MapPin className="h-3.5 w-3.5 text-white/55" />
-        <p className="text-[12px] font-semibold uppercase tracking-wider text-white/55">Home</p>
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="size-5 animate-spin text-muted-foreground" />
       </div>
-      {loading ? (
-        <div className="flex justify-center py-6"><Loader2 className="h-4 w-4 animate-spin text-[var(--text-3)]" /></div>
-      ) : (
-        <div className="space-y-2.5">
-          <div className="flex items-center gap-2.5">
-            <input
-              value={draft.homeAddress}
-              onChange={e => handleChange('homeAddress', e.target.value)}
-              className="flex-1 min-w-0 bg-[#1C1C1E] rounded-[10px] px-3.5 py-3 text-[14px] text-[var(--text-1)] placeholder:text-[var(--text-3)] border-none outline-none focus:ring-1 focus:ring-white/20 transition-shadow"
-              placeholder="Address"
-            />
-            {dirty && (
-              <button
-                onClick={save}
-                disabled={saving}
-                className="h-10 w-10 shrink-0 flex items-center justify-center rounded-[10px] transition-all disabled:opacity-30"
-                style={{ background: 'var(--accent-subtle)', color: 'var(--accent-text)' }}
-              >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-              </button>
-            )}
+    )
+  }
+
+  return (
+    <div className="max-w-[680px] space-y-4">
+      {/* Location */}
+      <Card className="md:py-6 py-4">
+        <CardHeader className="md:px-6 px-4">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <MapPin className="size-4 text-muted-foreground" />
+            Home Location
+          </CardTitle>
+          <CardDescription>Your home address for weather, commute, and location-based features.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 md:px-6 px-4">
+          <div className="space-y-2">
+            <Label htmlFor="address">Address</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="address"
+                value={draft.homeAddress}
+                onChange={e => handleChange('homeAddress', e.target.value)}
+                placeholder="123 Main Street"
+              />
+              {dirty && (
+                <Button onClick={save} disabled={saving} size="icon" variant="outline">
+                  {saving ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+                </Button>
+              )}
+            </div>
           </div>
           {draft.homeCity && (
-            <span className="inline-block bg-[#1C1C1E] rounded-[10px] px-3.5 py-2.5 text-[14px] text-[var(--text-2)]">
-              {draft.homeCity}
-            </span>
+            <div className="space-y-2">
+              <Label>City</Label>
+              <p className="text-sm text-muted-foreground">{draft.homeCity}</p>
+            </div>
           )}
-        </div>
-      )}
+        </CardContent>
+      </Card>
+
+      {/* Configuration */}
+      <Card className="md:py-6 py-4">
+        <CardHeader className="md:px-6 px-4">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <Settings className="size-4 text-muted-foreground" />
+            Configuration
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 md:px-6 px-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Owner</Label>
+              <p className="text-sm text-foreground">Jean-Marc Denis</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Partner</Label>
+              <p className="text-sm text-foreground">Anne</p>
+            </div>
+          </div>
+          <Separator />
+          <div className="space-y-2">
+            <Label htmlFor="timezone">Timezone</Label>
+            <Select value={timezone} onValueChange={setTimezone}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Europe/Paris">Europe/Paris (CET)</SelectItem>
+                <SelectItem value="America/Los_Angeles">America/Los Angeles (PT)</SelectItem>
+                <SelectItem value="America/New_York">America/New York (ET)</SelectItem>
+                <SelectItem value="UTC">UTC</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
 
-// --- General Tab: Owner & Partner (read from settings) ---
-function OwnerSection({ toast }: { toast: (msg: string) => void }) {
-  const [settings, setSettings] = useState<HomeSettings | null>(null)
-  const [loading, setLoading] = useState(true)
+// ─── Notifications Tab ───────────────────────────────────────────────────────
 
-  useEffect(() => {
-    lifeApi.getSettings().then(s => { setSettings(s); setLoading(false) }).catch(() => setLoading(false))
-  }, [])
-
-  if (loading) return null
-
-  return (
-    <div>
-      <div className="flex items-center gap-2 mb-3">
-        <Settings className="h-3.5 w-3.5 text-white/55" />
-        <p className="text-[12px] font-semibold uppercase tracking-wider text-white/55">Configuration</p>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-[#1C1C1E] rounded-xl p-4">
-          <p className="text-[11px] uppercase tracking-wider text-white/30 mb-1">Owner</p>
-          <p className="text-[14px] text-[var(--text-1)]">Jean-Marc Denis</p>
-        </div>
-        <div className="bg-[#1C1C1E] rounded-xl p-4">
-          <p className="text-[11px] uppercase tracking-wider text-white/30 mb-1">Partner</p>
-          <p className="text-[14px] text-[var(--text-1)]">Anne</p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// --- Notifications Tab ---
 const EMAIL_TYPES: { id: string; label: string; testId?: string }[] = [
   { id: 'morning-digest', label: 'Morning Digest', testId: 'morning-digest' },
   { id: 'weekend-family', label: 'Weekend Family', testId: 'weekend-family' },
@@ -182,16 +165,24 @@ const EMAIL_TYPES: { id: string; label: string; testId?: string }[] = [
   { id: 'trip-connection-summary', label: 'Trip Connection', testId: 'trip-connection' },
 ]
 
-function EmailNotificationsSection({ toast }: { toast: (msg: string) => void }) {
+function NotificationsTab() {
   const [config, setConfig] = useState<{ recipients: Record<string, string[]> } | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [newEmails, setNewEmails] = useState<Record<string, string>>({})
   const [addingFor, setAddingFor] = useState<string | null>(null)
   const [testState, setTestState] = useState<Record<string, 'idle' | 'sending' | 'sent'>>({})
+  const [cooldown, setCooldown] = useState<Record<string, number>>({})
+  const cooldownRefs = useRef<Record<string, ReturnType<typeof setInterval>>>({})
+  const [enabled, setEnabled] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {}
+    EMAIL_TYPES.forEach(t => { init[t.id] = true })
+    return init
+  })
 
   useEffect(() => {
     lifeApi.getEmailConfig().then(c => { setConfig(c); setLoading(false) }).catch(() => setLoading(false))
+    return () => { Object.values(cooldownRefs.current).forEach(clearInterval) }
   }, [])
 
   const save = async (updated: { recipients: Record<string, string[]> }) => {
@@ -200,7 +191,7 @@ function EmailNotificationsSection({ toast }: { toast: (msg: string) => void }) 
       const result = await lifeApi.updateEmailConfig(updated)
       setConfig(result)
     } catch {
-      toast('Failed to save')
+      toast.error('Failed to save')
     } finally {
       setSaving(false)
     }
@@ -211,6 +202,7 @@ function EmailNotificationsSection({ toast }: { toast: (msg: string) => void }) 
     const updated = { ...config, recipients: { ...config.recipients, [type]: config.recipients[type].filter(e => e !== email) } }
     setConfig(updated)
     save(updated)
+    toast.success(`Removed ${email}`)
   }
 
   const addRecipient = (type: string) => {
@@ -222,6 +214,7 @@ function EmailNotificationsSection({ toast }: { toast: (msg: string) => void }) 
     setNewEmails(prev => ({ ...prev, [type]: '' }))
     setAddingFor(null)
     save(updated)
+    toast.success(`Added ${email}`)
   }
 
   const sendTest = async (testId: string) => {
@@ -229,118 +222,383 @@ function EmailNotificationsSection({ toast }: { toast: (msg: string) => void }) 
     try {
       const result = await lifeApi.sendTestEmail(testId)
       if (result.error) {
-        toast(`Test failed: ${result.error}`)
+        toast.error(`Test failed: ${result.error}`)
         setTestState(prev => ({ ...prev, [testId]: 'idle' }))
       } else {
         setTestState(prev => ({ ...prev, [testId]: 'sent' }))
-        toast('Test email sent!')
-        setTimeout(() => setTestState(prev => ({ ...prev, [testId]: 'idle' })), 2000)
+        toast.success('Test email sent!')
+        // 30-second cooldown
+        setCooldown(prev => ({ ...prev, [testId]: 30 }))
+        if (cooldownRefs.current[testId]) clearInterval(cooldownRefs.current[testId])
+        cooldownRefs.current[testId] = setInterval(() => {
+          setCooldown(prev => {
+            const next = (prev[testId] || 0) - 1
+            if (next <= 0) {
+              clearInterval(cooldownRefs.current[testId])
+              delete cooldownRefs.current[testId]
+              setTestState(p => ({ ...p, [testId]: 'idle' }))
+              const { [testId]: _, ...rest } = prev
+              return rest
+            }
+            return { ...prev, [testId]: next }
+          })
+        }, 1000)
       }
     } catch {
-      toast('Test failed')
+      toast.error('Test failed')
       setTestState(prev => ({ ...prev, [testId]: 'idle' }))
     }
   }
 
-  if (loading) return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-[var(--text-3)]" /></div>
+  const toggleEnabled = (id: string) => {
+    setEnabled(prev => {
+      const next = { ...prev, [id]: !prev[id] }
+      toast.success(`${EMAIL_TYPES.find(t => t.id === id)?.label} ${next[id] ? 'enabled' : 'disabled'}`)
+      return next
+    })
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   return (
-    <div>
-      <div className="flex items-center gap-2 mb-4">
-        <MailIcon size={14} className="text-white/40" />
-        <p className="text-[13px] uppercase tracking-wider text-white/40">Email Notifications</p>
-        {saving && <Loader2 className="h-3 w-3 animate-spin ml-auto" style={{ color: 'var(--accent-text)' }} />}
-      </div>
-      <div className="space-y-1">
-        {EMAIL_TYPES.map(({ id, label, testId }) => {
-          const recipients = config?.recipients[id] || []
-          const tState = testId ? (testState[testId] || 'idle') : null
-          return (
-            <div key={id} className="group hover:bg-[rgba(255,255,255,0.04)] transition-colors px-2 py-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[14px] font-normal text-white shrink-0 w-32 truncate" title={label}>{label}</span>
-                {testId && (
-                  <button
-                    onClick={() => sendTest(testId)}
-                    disabled={tState !== 'idle'}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[13px] font-medium transition-all border border-white/[0.08] hover:bg-[rgba(255,255,255,0.06)] text-[var(--text-3)] hover:text-[var(--text-2)] disabled:opacity-50 shrink-0"
-                  >
-                    {tState === 'sending' ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : tState === 'sent' ? <Check className="h-2.5 w-2.5 text-emerald-400" /> : <Mail className="h-2.5 w-2.5" />}
-                    {tState === 'sent' ? 'Sent' : 'Test'}
-                  </button>
-                )}
-                {!testId && <span className="w-[52px] shrink-0" />}
-                <div className="flex items-center gap-1 flex-wrap flex-1 min-w-0">
-                  {recipients.map(email => (
-                    <span key={email} className="inline-flex items-center gap-1 text-[13px]" style={{ color: 'var(--text-2)' }}>
-                      {email}
-                      <button onClick={() => removeRecipient(id, email)} className="text-[var(--text-3)] hover:text-rose-400 transition-colors">
-                        <X className="h-2.5 w-2.5" />
-                      </button>
-                    </span>
-                  ))}
-                  {addingFor === id ? (
-                    <div className="inline-flex items-center gap-1">
-                      <input
-                        autoFocus
-                        placeholder="email@..."
-                        value={newEmails[id] || ''}
-                        onChange={e => setNewEmails(prev => ({ ...prev, [id]: e.target.value }))}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') addRecipient(id)
-                          if (e.key === 'Escape') setAddingFor(null)
-                        }}
-                        onBlur={() => { if (!(newEmails[id] || '').trim()) setAddingFor(null) }}
-                        className="h-5 w-32 text-[12px] bg-[rgba(255,255,255,0.04)] border border-white/[0.08] rounded px-1.5 text-[var(--text-2)] placeholder:text-[var(--text-3)] outline-none focus:border-[var(--accent-border)]"
-                      />
-                      <button onClick={() => addRecipient(id)} className="text-[var(--text-3)] hover:text-[var(--accent-text)]">
-                        <Check className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setAddingFor(id)}
-                      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[12px] text-[var(--text-3)] hover:text-[var(--text-2)] hover:bg-[rgba(255,255,255,0.04)] transition-colors"
+    <div className="max-w-3xl">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Mail className="size-4 text-muted-foreground" />
+              Email Notifications
+            </CardTitle>
+            {saving && <Loader2 className="size-3.5 animate-spin text-primary ml-auto" />}
+          </div>
+          <CardDescription>Manage notification recipients and test delivery.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-0">
+          {EMAIL_TYPES.map(({ id, label, testId }, index) => {
+            const recipients = config?.recipients[id] || []
+            const tState = testId ? (testState[testId] || 'idle') : null
+            const isEnabled = enabled[id] ?? true
+
+            return (
+              <div key={id}>
+                {index > 0 && <Separator className="my-0" />}
+                <div className="flex items-center gap-3 py-3">
+                  {/* Enable/disable switch */}
+                  <Switch
+                    size="sm"
+                    checked={isEnabled}
+                    onCheckedChange={() => toggleEnabled(id)}
+                  />
+
+                  {/* Name */}
+                  <Label className="w-36 shrink-0 text-sm font-normal">{label}</Label>
+
+                  {/* Recipient badges */}
+                  <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
+                    {recipients.map(email => (
+                      <Badge key={email} variant="secondary" className="gap-1 pr-1">
+                        {email}
+                        <button
+                          onClick={() => removeRecipient(id, email)}
+                          className="text-muted-foreground hover:text-destructive transition-colors ml-0.5"
+                        >
+                          <X className="size-3" />
+                        </button>
+                      </Badge>
+                    ))}
+
+                    {addingFor === id ? (
+                      <div className="inline-flex items-center gap-1">
+                        <Input
+                          autoFocus
+                          placeholder="email@..."
+                          value={newEmails[id] || ''}
+                          onChange={e => setNewEmails(prev => ({ ...prev, [id]: e.target.value }))}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') addRecipient(id)
+                            if (e.key === 'Escape') setAddingFor(null)
+                          }}
+                          onBlur={() => { if (!(newEmails[id] || '').trim()) setAddingFor(null) }}
+                          className="h-7 w-40 text-xs"
+                        />
+                        <Button size="icon-xs" variant="ghost" onClick={() => addRecipient(id)}>
+                          <Check className="size-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        size="icon-xs"
+                        variant="ghost"
+                        onClick={() => setAddingFor(id)}
+                        className="text-muted-foreground"
+                      >
+                        <Plus className="size-3" />
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Test button */}
+                  {testId && (
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      onClick={() => sendTest(testId)}
+                      disabled={tState !== 'idle' || (cooldown[testId] || 0) > 0}
+                      className="shrink-0"
                     >
-                      <Plus className="h-2.5 w-2.5" />
-                    </button>
+                      {tState === 'sending' ? (
+                        <Loader2 className="size-3 animate-spin" />
+                      ) : (cooldown[testId] || 0) > 0 ? (
+                        <Check className="size-3 text-emerald-400" />
+                      ) : (
+                        <Mail className="size-3" />
+                      )}
+                      {tState === 'sending' ? 'Test' : (cooldown[testId] || 0) > 0 ? `${cooldown[testId]}s` : 'Test'}
+                    </Button>
                   )}
                 </div>
               </div>
-            </div>
-          )
-        })}
-      </div>
+            )
+          })}
+        </CardContent>
+      </Card>
     </div>
   )
 }
 
-// --- Cron Jobs Tab ---
-function CronJobsSection({ cronJobs, onAdd, onDelete }: {
+// ─── System Jobs (static) ────────────────────────────────────────────────────
+
+const systemJobs = [
+  { id: 'backup', label: 'GitHub Backup', schedule: 'Daily 3:00 AM', cron: '0 3 * * *', enabled: true },
+  { id: 'heartbeat', label: 'Heartbeat Check', schedule: 'Every 30 min', cron: '*/30 * * * *', enabled: true },
+  { id: 'stats', label: 'Stats Polling', schedule: 'Every 5s', cron: '*/5 * * * *', enabled: true },
+  { id: 'logrotate', label: 'Log Rotation', schedule: 'Daily midnight', cron: '0 0 * * *', enabled: false },
+]
+
+// ─── Cron Jobs Tab ───────────────────────────────────────────────────────────
+
+function CronJobsTab({ cronJobs, cronLoading, onAdd, onDelete }: {
   cronJobs: CronJob[]
+  cronLoading: boolean
   onAdd: (line: string) => void
   onDelete: (line: string) => void
 }) {
   const [newLine, setNewLine] = useState('')
   const [open, setOpen] = useState(false)
+  const [cronEnabled, setCronEnabled] = useState<Record<string, boolean>>({})
+  const [sysEnabled, setSysEnabled] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {}
+    systemJobs.forEach(j => { init[j.id] = j.enabled })
+    return init
+  })
+
+  useEffect(() => {
+    const init: Record<string, boolean> = {}
+    cronJobs.forEach(j => { init[j.id] = true })
+    setCronEnabled(init)
+  }, [cronJobs])
+
+  const toggleSystem = (id: string) => {
+    setSysEnabled(prev => {
+      const next = { ...prev, [id]: !prev[id] }
+      const job = systemJobs.find(j => j.id === id)
+      toast.success(`${job?.label || id} ${next[id] ? 'enabled' : 'disabled'}`)
+      return next
+    })
+  }
+
+  const toggleCron = (id: string) => {
+    setCronEnabled(prev => {
+      const next = { ...prev, [id]: !prev[id] }
+      const job = cronJobs.find(j => j.id === id)
+      toast.success(`${job?.name || id} ${next[id] ? 'enabled' : 'disabled'}`)
+      return next
+    })
+  }
+
+  if (cronLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <ClockIcon size={14} className="text-white/40" />
-          <p className="text-[13px] uppercase tracking-wider text-white/40">Cron Jobs</p>
-          {cronJobs.length > 0 && <span className="text-[13px] text-white/40">{cronJobs.length}</span>}
+    <div className="max-w-3xl">
+      <Card className="p-0 gap-0 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: `1px solid ${tokens.colors.borderSubtle}` }}>
+          <div className="flex items-center gap-2">
+            <Clock className="size-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Cron Jobs</span>
+            <Badge variant="secondary" className="ml-1">{systemJobs.length + cronJobs.length}</Badge>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+            <Plus className="size-3.5" />
+            Add
+          </Button>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <button
-            onClick={() => setOpen(true)}
-            className="inline-flex items-center h-7 text-[14px] text-[var(--text-2)] border border-white/[0.08] hover:bg-[rgba(255,255,255,0.04)] rounded-md px-2.5"
-          >
-            <Plus className="h-3 w-3 mr-1" /> Add
-          </button>
-          <DialogContent className="">
-            <DialogHeader><DialogTitle style={{ color: 'var(--text-1)', fontWeight: 600 }}>Add Cron Job</DialogTitle></DialogHeader>
+
+        {/* Desktop: Table view */}
+        <div className="hidden md:block">
+          <Table>
+            <TableHeader>
+              <TableRow style={{ borderColor: tokens.colors.borderSubtle }}>
+                <TableHead className="w-14 h-8" style={tokens.typography.label}>On</TableHead>
+                <TableHead className="h-8" style={tokens.typography.label}>Job</TableHead>
+                <TableHead className="h-8" style={tokens.typography.label}>Schedule</TableHead>
+                <TableHead className="h-8" style={tokens.typography.label}>Cron</TableHead>
+                <TableHead className="w-10 h-8" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {/* SYSTEM group */}
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={5} className="py-2 px-4">
+                  <span style={{ ...tokens.typography.label, color: tokens.colors.textQuaternary }}>SYSTEM</span>
+                </TableCell>
+              </TableRow>
+              {systemJobs.map(job => (
+                <TableRow key={job.id} style={{ borderColor: tokens.colors.borderSubtle }}>
+                  <TableCell className="px-4">
+                    <Switch
+                      size="sm"
+                      checked={sysEnabled[job.id] ?? job.enabled}
+                      onCheckedChange={() => toggleSystem(job.id)}
+                    />
+                  </TableCell>
+                  <TableCell style={tokens.typography.body}>{job.label}</TableCell>
+                  <TableCell style={{ ...tokens.typography.caption, color: tokens.colors.textTertiary }}>{job.schedule}</TableCell>
+                  <TableCell>
+                    <code style={{ fontSize: 12, fontFamily: 'JetBrains Mono, SF Mono, monospace', color: tokens.colors.textQuaternary }}>{job.cron}</code>
+                  </TableCell>
+                  <TableCell />
+                </TableRow>
+              ))}
+
+              {/* SCHEDULED group */}
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={5} className="py-2 px-4" style={{ borderTop: `1px solid ${tokens.colors.borderSubtle}` }}>
+                  <span style={{ ...tokens.typography.label, color: tokens.colors.textQuaternary }}>SCHEDULED</span>
+                </TableCell>
+              </TableRow>
+              {cronJobs.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-6 text-sm text-muted-foreground">
+                    No scheduled jobs
+                  </TableCell>
+                </TableRow>
+              ) : (
+                cronJobs.map(job => {
+                  const rawSchedule = job.raw.split(/\s+/).slice(0, 5).join(' ')
+                  return (
+                    <TableRow key={job.id} style={{ borderColor: tokens.colors.borderSubtle }}>
+                      <TableCell className="px-4">
+                        <Switch
+                          size="sm"
+                          checked={cronEnabled[job.id] ?? true}
+                          onCheckedChange={() => toggleCron(job.id)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-foreground truncate max-w-[300px] block">{job.name}</span>
+                      </TableCell>
+                      <TableCell style={{ ...tokens.typography.caption, color: tokens.colors.textTertiary }}>{job.schedule}</TableCell>
+                      <TableCell>
+                        <code style={{ fontSize: 12, fontFamily: 'JetBrains Mono, SF Mono, monospace', color: tokens.colors.textQuaternary }}>{rawSchedule}</code>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          onClick={() => {
+                            onDelete(job.raw)
+                            toast.success(`Deleted ${job.name}`)
+                          }}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash2 className="size-3" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Mobile: Card view */}
+        <div className="md:hidden">
+          {/* System jobs */}
+          <div className="px-4 py-2">
+            <span style={{ ...tokens.typography.label, color: tokens.colors.textQuaternary }}>SYSTEM</span>
+          </div>
+          {systemJobs.map(job => (
+            <div key={job.id} className="flex items-center gap-3 px-4 py-3" style={{ borderTop: `1px solid ${tokens.colors.borderSubtle}` }}>
+              <Switch
+                size="sm"
+                checked={sysEnabled[job.id] ?? job.enabled}
+                onCheckedChange={() => toggleSystem(job.id)}
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-foreground">{job.label}</p>
+                <p className="text-xs text-muted-foreground">{job.schedule}</p>
+              </div>
+            </div>
+          ))}
+          {/* Scheduled jobs */}
+          <div className="px-4 py-2" style={{ borderTop: `1px solid ${tokens.colors.borderSubtle}` }}>
+            <span style={{ ...tokens.typography.label, color: tokens.colors.textQuaternary }}>SCHEDULED</span>
+          </div>
+          {cronJobs.length === 0 ? (
+            <p className="text-center py-6 text-sm text-muted-foreground">No scheduled jobs</p>
+          ) : (
+            cronJobs.map(job => {
+              const rawSchedule = job.raw.split(/\s+/).slice(0, 5).join(' ')
+              return (
+                <div key={job.id} className="flex items-center gap-3 px-4 py-3" style={{ borderTop: `1px solid ${tokens.colors.borderSubtle}` }}>
+                  <Switch
+                    size="sm"
+                    checked={cronEnabled[job.id] ?? true}
+                    onCheckedChange={() => toggleCron(job.id)}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-foreground truncate">{job.name}</p>
+                    <p className="text-xs text-muted-foreground">{job.schedule} · <code className="font-mono">{rawSchedule}</code></p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={() => {
+                      onDelete(job.raw)
+                      toast.success(`Deleted ${job.name}`)
+                    }}
+                    className="text-muted-foreground hover:text-destructive shrink-0"
+                  >
+                    <Trash2 className="size-3" />
+                  </Button>
+                </div>
+              )
+            })
+          )}
+        </div>
+      </Card>
+
+      {/* Add Cron Dialog */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Cron Job</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
             <Input
               placeholder="* * * * * /path/to/command"
               value={newLine}
@@ -350,156 +608,58 @@ function CronJobsSection({ cronJobs, onAdd, onDelete }: {
                   onAdd(newLine.trim())
                   setNewLine('')
                   setOpen(false)
+                  toast.success('Cron job added')
                 }
               }}
-              className="bg-[rgba(255,255,255,0.04)] border-white/[0.08] text-[var(--text-1)] font-mono text-xs"
+              className="font-mono text-sm"
             />
-            <p className="text-xs text-[var(--text-3)]">Format: minute hour day month weekday command</p>
-            <DialogFooter>
-              <Button
-                onClick={() => { onAdd(newLine.trim()); setNewLine(''); setOpen(false) }}
-                disabled={!newLine.trim()}
-                style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)', color: 'var(--accent-text)' }}
-              >
-                Add
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-      {cronJobs.length === 0 ? (
-        <p className="text-xs text-[var(--text-3)] text-center py-4">No cron jobs</p>
-      ) : (
-        <div className="space-y-0.5">
-          {cronJobs.map((job) => {
-            const rawSchedule = job.raw.split(/\s+/).slice(0, 5).join(' ')
-            return (
-              <div key={job.id} className="group flex items-center gap-2 px-2 py-1.5 hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-150">
-                <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: job.source === 'server' ? 'var(--accent)' : 'var(--success)' }} />
-                <span className="text-[14px] font-normal text-white truncate flex-1 min-w-0 max-w-[500px]">{job.name}</span>
-                <code className="text-[13px] text-white/30 font-mono tabular-nums shrink-0">{rawSchedule}</code>
-                <span className="text-[13px] text-white/40 shrink-0 hidden sm:inline">{job.schedule}</span>
-                {job.source === 'crontab' && (
-                  <button
-                    onClick={() => onDelete(job.raw)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-[var(--text-3)] hover:text-rose-400/80 shrink-0 p-0.5"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </button>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// --- Security Tab: Env vars ---
-function EnvVarsSection() {
-  const [vars, setVars] = useState<Record<string, string>>({})
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    profileApi.getEnvVars().then(v => { setVars(v); setLoading(false) }).catch(() => setLoading(false))
-  }, [])
-
-  if (loading) return <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin text-[var(--text-3)]" /></div>
-
-  const entries = Object.entries(vars)
-
-  return (
-    <div>
-      <div className="flex items-center gap-2 mb-4">
-        <Key className="h-3.5 w-3.5 text-white/40" />
-        <p className="text-[13px] uppercase tracking-wider text-white/40">API Keys & Secrets</p>
-        <span className="text-[13px] text-white/40">{entries.length}</span>
-      </div>
-      {entries.length === 0 ? (
-        <p className="text-xs text-[var(--text-3)] text-center py-4">No environment variables found</p>
-      ) : (
-        <div className="space-y-0.5">
-          {entries.map(([key, masked]) => (
-            <div key={key} className="flex items-center gap-3 px-2 py-1.5 hover:bg-[rgba(255,255,255,0.04)] transition-colors">
-              <code className="text-[14px] text-[var(--text-2)] font-mono flex-1 min-w-0 truncate">{key}</code>
-              <code className="text-[14px] text-white/40 font-mono shrink-0">{masked}</code>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// --- Security Tab: Connected Services ---
-function ConnectedServicesSection() {
-  const [status, setStatus] = useState<SecurityStatus | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    profileApi.getSecurityStatus().then(s => { setStatus(s); setLoading(false) }).catch(() => setLoading(false))
-  }, [])
-
-  if (loading) return (
-    <div>
-      <div className="flex items-center gap-2 mb-4">
-        <RefreshCw className="h-3.5 w-3.5 text-white/40" />
-        <p className="text-[13px] uppercase tracking-wider text-white/40">Connected Services</p>
-      </div>
-      <div className="flex items-center justify-center py-6 gap-2">
-        <Loader2 className="h-4 w-4 animate-spin text-[var(--text-3)]" />
-        <span className="text-xs text-[var(--text-3)]">Testing connections...</span>
-      </div>
-    </div>
-  )
-
-  if (!status) return null
-
-  const services = [
-    { name: 'Gmail SMTP', connected: status.smtp.connected, detail: status.smtp.account || '', icon: Mail },
-    { name: 'Gmail IMAP', connected: status.imap.connected, detail: '', icon: Inbox },
-    { name: 'Gemini AI', connected: status.gemini.connected, detail: '', icon: RefreshCw },
-    { name: 'Google Calendar', connected: status.calendar.connected, detail: '', icon: LucideClock },
-    { name: 'Telegram', connected: status.telegram.connected, detail: status.telegram.username ? `@${status.telegram.username}` : '', icon: Mail },
-    { name: 'GitHub', connected: status.github.connected, detail: '', icon: FileText },
-  ]
-
-  return (
-    <div>
-      <div className="flex items-center gap-2 mb-4">
-        <ShieldCheckIcon size={14} className="text-white/40" />
-        <p className="text-[13px] uppercase tracking-wider text-white/40">Connected Services</p>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        {services.map(s => (
-          <div key={s.name} className="flex items-center gap-2.5 px-3 py-2">
-            <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: s.connected ? 'var(--success, #10b981)' : 'var(--destructive, #ef4444)' }} />
-            <span className="text-[14px] text-[var(--text-2)] flex-1">{s.name}</span>
-            {s.detail && <span className="text-[14px] text-[var(--text-3)] truncate max-w-[140px]">{s.detail}</span>}
-            <span className="text-[14px] font-medium shrink-0" style={{ color: s.connected ? 'var(--success)' : 'var(--destructive)' }}>
-              {s.connected ? 'Connected' : 'Offline'}
-            </span>
+            <p className="text-xs text-muted-foreground">Format: minute hour day month weekday command</p>
           </div>
-        ))}
-      </div>
-      <div className="mt-4 pt-3" style={{ borderTop: '1px solid ' + tokens.colors.innerHighlight }}>
-        <div className="flex items-center gap-2">
-          <ShieldCheckIcon size={14} className="text-[var(--text-3)]" />
-          <span className="text-[13px] text-[var(--text-2)]">Auth: {status.auth.method}</span>
-          <span className="text-[12px] text-[var(--text-3)]">(user: {status.auth.user})</span>
-        </div>
-      </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                if (newLine.trim()) {
+                  onAdd(newLine.trim())
+                  setNewLine('')
+                  setOpen(false)
+                  toast.success('Cron job added')
+                }
+              }}
+              disabled={!newLine.trim()}
+            >
+              Add
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
-// --- Security Tab: Danger Zone ---
-function DangerZoneSection({ toast }: { toast: (msg: string) => void }) {
+// ─── Security Tab ────────────────────────────────────────────────────────────
+
+function SecurityTab() {
+  const [vars, setVars] = useState<Record<string, string>>({})
+  const [varsLoading, setVarsLoading] = useState(true)
+  const [status, setStatus] = useState<SecurityStatus | null>(null)
+  const [statusLoading, setStatusLoading] = useState(true)
   const [confirmAction, setConfirmAction] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
 
-  const actions = [
+  useEffect(() => {
+    profileApi.getEnvVars().then(v => { setVars(v); setVarsLoading(false) }).catch(() => setVarsLoading(false))
+    profileApi.getSecurityStatus().then(s => { setStatus(s); setStatusLoading(false) }).catch(() => setStatusLoading(false))
+  }, [])
+
+  const copyToClipboard = (key: string, value: string) => {
+    navigator.clipboard.writeText(value).then(
+      () => toast.success(`${key} copied to clipboard`),
+      () => toast.error('Failed to copy')
+    )
+  }
+
+  const dangerActions = [
     { id: 'rotate-token', label: 'Rotate Auth Token', description: 'Generate a new auth token. Requires service restart.', icon: Key },
     { id: 'clear-debug', label: 'Clear Debug Logs', description: 'Clear the server debug log file.', icon: Bug },
     { id: 'clear-inbox', label: 'Clear Inbox History', description: 'Delete all processed inbox analysis files.', icon: Inbox },
@@ -514,101 +674,186 @@ function DangerZoneSection({ toast }: { toast: (msg: string) => void }) {
       else result = await profileApi.clearInbox()
 
       if (result.error) {
-        toast(`Error: ${result.error}`)
+        toast.error(`Error: ${result.error}`)
       } else {
         const msg = result.message || (id === 'clear-inbox' ? `Cleared ${result.cleared} files` : 'Done')
-        toast(msg)
+        toast.success(msg)
       }
     } catch {
-      toast('Action failed')
+      toast.error('Action failed')
     } finally {
       setActionLoading(false)
       setConfirmAction(null)
     }
   }
 
-  return (
-    <>
-      <div className="pt-2">
-        <div className="flex items-center gap-2 mb-4">
-          <AlertTriangle className="h-3.5 w-3.5 text-rose-400/60" />
-          <p className="text-[13px] uppercase tracking-wider text-white/40">Danger Zone</p>
-        </div>
-        <div className="space-y-2">
-          {actions.map(a => (
-            <div key={a.id} className="flex items-center justify-between px-3 py-2.5 hover:bg-[rgba(255,255,255,0.02)] transition-colors" style={{ borderBottom: '1px solid ' + tokens.colors.innerHighlight }}>
-              <div className="flex items-center gap-2.5">
-                <a.icon className="h-3.5 w-3.5 text-[var(--text-3)]" />
-                <div>
-                  <p className="text-[14px] text-[var(--text-2)]">{a.label}</p>
-                  <p className="text-[14px] text-white/40">{a.description}</p>
-                </div>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setConfirmAction(a.id)}
-                className="h-7 text-[13px] text-rose-400/60 border-rose-500/20 hover:bg-rose-500/10 hover:text-rose-400"
-              >
-                Execute
-              </Button>
-            </div>
-          ))}
-        </div>
-      </div>
+  const services = status ? [
+    { name: 'Gmail SMTP', connected: status.smtp.connected, detail: status.smtp.account || '' },
+    { name: 'Gmail IMAP', connected: status.imap.connected, detail: '' },
+    { name: 'Gemini AI', connected: status.gemini.connected, detail: '' },
+    { name: 'Google Calendar', connected: status.calendar.connected, detail: '' },
+    { name: 'Telegram', connected: status.telegram.connected, detail: status.telegram.username ? `@${status.telegram.username}` : '' },
+    { name: 'GitHub', connected: status.github.connected, detail: '' },
+  ] : []
 
+  return (
+    <div className="max-w-3xl space-y-4">
+      {/* API Keys */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <Key className="size-4 text-muted-foreground" />
+            API Keys & Secrets
+            <Badge variant="secondary" className="ml-1">{Object.keys(vars).length}</Badge>
+          </CardTitle>
+          <CardDescription>Environment variables configured on the server. Values are masked.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {varsLoading ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+            </div>
+          ) : Object.keys(vars).length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">No environment variables found</p>
+          ) : (
+            <div className="space-y-2">
+              {Object.entries(vars).map(([key, masked]) => (
+                <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                  <Label className="sm:w-52 shrink-0 font-mono text-xs">{key}</Label>
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <Input
+                      type="password"
+                      value={masked}
+                      readOnly
+                      className="flex-1 font-mono text-xs h-8"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyToClipboard(key, masked)}
+                      className="shrink-0"
+                    >
+                      <Copy className="size-3.5" />
+                      Copy
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Connected Services */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <Shield className="size-4 text-muted-foreground" />
+            Connected Services
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {statusLoading ? (
+            <div className="flex items-center justify-center py-6 gap-2">
+              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Testing connections...</span>
+            </div>
+          ) : status ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {services.map(s => (
+                  <div key={s.name} className="flex items-center gap-2.5 py-1.5">
+                    <span className="text-sm text-foreground flex-1">{s.name}</span>
+                    {s.detail && <span className="text-xs text-muted-foreground truncate max-w-[140px]">{s.detail}</span>}
+                    <Badge variant={s.connected ? 'default' : 'destructive'}>
+                      {s.connected ? 'Connected' : 'Offline'}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+              <Separator />
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Shield className="size-3.5" />
+                Auth: {status.auth.method}
+                <span className="text-xs">(user: {status.auth.user})</span>
+              </div>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      {/* Danger Zone */}
+      <Alert variant="destructive">
+        <AlertTriangle className="size-4" />
+        <AlertTitle>Danger Zone</AlertTitle>
+        <AlertDescription>
+          <p className="mb-3">These actions are irreversible. Proceed with caution.</p>
+          <div className="space-y-2">
+            {dangerActions.map(a => (
+              <div key={a.id} className="flex items-center justify-between py-2">
+                <div className="flex items-center gap-2.5">
+                  <a.icon className="size-3.5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-foreground">{a.label}</p>
+                    <p className="text-xs text-muted-foreground">{a.description}</p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => setConfirmAction(a.id)}
+                >
+                  Execute
+                </Button>
+              </div>
+            ))}
+          </div>
+        </AlertDescription>
+      </Alert>
+
+      {/* Confirm Dialog */}
       <Dialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>
-        <DialogContent className="">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle style={{ color: 'var(--text-1)', fontWeight: 600 }}>Confirm Action</DialogTitle>
+            <DialogTitle>Confirm Action</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-[var(--text-3)]">
-            Are you sure you want to {actions.find(a => a.id === confirmAction)?.label.toLowerCase()}? This action cannot be undone.
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to {dangerActions.find(a => a.id === confirmAction)?.label.toLowerCase()}? This action cannot be undone.
           </p>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setConfirmAction(null)} className="text-[var(--text-2)] border-white/[0.08]">
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => setConfirmAction(null)}>Cancel</Button>
             <Button
+              variant="destructive"
               onClick={() => confirmAction && executeAction(confirmAction)}
               disabled={actionLoading}
-              className="bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] text-[var(--accent-red)] hover:bg-[rgba(239,68,68,0.2)]"
             >
-              {actionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+              {actionLoading && <Loader2 className="size-3.5 animate-spin" />}
               Confirm
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   )
 }
 
-// --- Docs Tab (with file upload) ---
-interface UploadEntry {
-  name: string
-  status: 'uploading' | 'done' | 'error'
-  progress: number
-  error?: string
-}
+// ─── Docs Tab ────────────────────────────────────────────────────────────────
 
-function DocsSection({ toast }: { toast: (msg: string) => void }) {
+function DocsTab() {
   const [docs, setDocs] = useState<DocFile[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDoc, setSelectedDoc] = useState<string | null>(null)
   const [docContent, setDocContent] = useState<string>('')
   const [docModified, setDocModified] = useState<string>('')
   const [docLoading, setDocLoading] = useState(false)
-  const [dragOver, setDragOver] = useState(false)
-  const [uploads, setUploads] = useState<UploadEntry[]>([])
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploads, setUploads] = useState<FileUploadEntry[]>([])
 
   useEffect(() => {
     profileApi.getDocs().then(d => { setDocs(d); setLoading(false) }).catch(() => setLoading(false))
   }, [])
 
   const uploadFile = useCallback(async (file: File) => {
-    const entry: UploadEntry = { name: file.name, status: 'uploading', progress: 0 }
+    const entry: FileUploadEntry = { name: file.name, status: 'uploading', progress: 0 }
     setUploads(prev => [...prev, entry])
     try {
       const xhr = new XMLHttpRequest()
@@ -631,12 +876,14 @@ function DocsSection({ toast }: { toast: (msg: string) => void }) {
       })
       await promise
       setUploads(prev => prev.map(u => u.name === file.name ? { ...u, status: 'done', progress: 100 } : u))
-      toast(`${file.name} uploaded`)
+      toast.success(`${file.name} uploaded`)
+      // Refresh docs list
+      profileApi.getDocs().then(d => setDocs(d))
     } catch (e: any) {
       setUploads(prev => prev.map(u => u.name === file.name ? { ...u, status: 'error', error: e.message } : u))
-      toast(`Upload failed: ${e.message}`)
+      toast.error(`Upload failed: ${e.message}`)
     }
-  }, [toast])
+  }, [])
 
   useEffect(() => {
     if (uploads.length === 0) return
@@ -647,16 +894,9 @@ function DocsSection({ toast }: { toast: (msg: string) => void }) {
     }
   }, [uploads])
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setDragOver(false)
-    Array.from(e.dataTransfer.files).forEach(uploadFile)
+  const handleFilesSelected = useCallback((files: File[]) => {
+    files.forEach(uploadFile)
   }, [uploadFile])
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    Array.from(e.target.files || []).forEach(uploadFile)
-    if (fileInputRef.current) fileInputRef.current.value = ''
-  }
 
   const openDoc = async (name: string) => {
     setSelectedDoc(name)
@@ -674,142 +914,135 @@ function DocsSection({ toast }: { toast: (msg: string) => void }) {
     }
   }
 
-  if (loading) return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-[var(--text-3)]" /></div>
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
+  // Document content view
   if (selectedDoc) {
     return (
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.15 }}
+        className="max-w-3xl"
       >
         <div className="flex items-center gap-2 mb-4">
           <button
             onClick={() => { setSelectedDoc(null); setDocContent('') }}
-            className="text-xs text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             Docs
           </button>
-          <ChevronRight className="h-3 w-3 text-[var(--text-3)]" />
-          <span className="text-xs text-[var(--text-2)]">{selectedDoc}</span>
+          <ChevronRight className="size-3 text-muted-foreground" />
+          <span className="text-sm text-foreground">{selectedDoc}</span>
         </div>
-        <div className="pt-4">
-          {docLoading ? (
-            <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-[var(--text-3)]" /></div>
-          ) : (
-            <>
-              {docModified && (
-                <p className="text-xs text-[var(--text-3)] mb-4">
-                  Last modified: {new Date(docModified).toLocaleString()}
-                </p>
-              )}
-              <div className="prose prose-invert prose-sm max-w-none prose-headings:text-[var(--text-1)] prose-headings:font-medium prose-a:text-[var(--accent-text)] prose-strong:text-[var(--text-1)] prose-code:text-[var(--accent-text)] prose-p:text-[var(--text-2)] prose-li:text-[var(--text-2)]">
-                <ReactMarkdown>{docContent}</ReactMarkdown>
+        <Card>
+          <CardContent className="pt-6">
+            {docLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="size-5 animate-spin text-muted-foreground" />
               </div>
-            </>
-          )}
-        </div>
+            ) : (
+              <>
+                {docModified && (
+                  <p className="text-xs text-muted-foreground mb-4">
+                    Last modified: {new Date(docModified).toLocaleString()}
+                  </p>
+                )}
+                <div className="prose prose-invert prose-sm max-w-none prose-headings:text-foreground prose-headings:font-medium prose-a:text-primary prose-strong:text-foreground prose-code:text-primary prose-p:text-muted-foreground prose-li:text-muted-foreground">
+                  <ReactMarkdown>{docContent}</ReactMarkdown>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
       </motion.div>
     )
   }
 
   return (
-    <div className="space-y-4">
-      {/* Upload zone */}
-      <div
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
-        className="p-8 text-center cursor-pointer transition-all duration-150"
-        style={{
-          background: dragOver ? 'var(--accent-subtle)' : tokens.colors.surface,
-          border: dragOver ? '1px dashed var(--accent)' : '1px solid ' + tokens.colors.border,
-          borderRadius: tokens.radii.xl,
-          boxShadow: 'inset 0 1px 0 0 ' + tokens.colors.innerHighlight,
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-        }}
-      >
-        <Upload className="h-5 w-5 mx-auto mb-2" style={{ color: dragOver ? 'var(--accent-text)' : 'var(--text-3)' }} />
-        <p className="text-[14px] text-white/40">
-          {dragOver ? 'Drop files here' : 'Drop files here or click to browse'}
-        </p>
-        <input ref={fileInputRef} type="file" multiple onChange={handleFileSelect} className="hidden" />
-      </div>
+    <div className="max-w-3xl space-y-4">
+      {/* File Upload */}
+      <FileUpload
+        onFilesSelected={handleFilesSelected}
+        accept=".md,.txt,.json,.yaml,.yml"
+        uploads={uploads}
+      />
 
-      {/* Upload progress */}
-      {uploads.length > 0 && (
-        <div className="space-y-2">
-          {uploads.map((u, i) => (
-            <div key={i} className="space-y-1">
-              <div className="flex items-center gap-2 text-xs">
-                {u.status === 'uploading' && <Loader2 className="h-3 w-3 animate-spin shrink-0" style={{ color: 'var(--accent-text)' }} />}
-                {u.status === 'done' && <CheckCircle2 className="h-3 w-3 text-emerald-400 shrink-0" />}
-                {u.status === 'error' && <AlertCircle className="h-3 w-3 text-rose-400 shrink-0" />}
-                <span className="truncate text-[var(--text-2)]">{u.name}</span>
-                {u.status === 'uploading' && <span className="text-[var(--text-3)] ml-auto">{u.progress}%</span>}
-              </div>
-              {u.status === 'uploading' && <Progress value={u.progress} className="h-1" />}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Docs list */}
-      <div style={styles.glassCard}>
-        <div className="flex items-center gap-2 mb-4">
-          <FileIcon size={14} className="text-white/40" />
-          <p className="text-[13px] uppercase tracking-wider text-white/40">Markdown Files</p>
-          <span className="text-[13px] text-white/40">{docs.length}</span>
-        </div>
-        {docs.length === 0 ? (
-          <p className="text-xs text-[var(--text-3)] text-center py-4">No .md files found</p>
-        ) : (
-          <div className="space-y-0.5">
-            {docs.map(doc => (
-              <button
-                key={doc.name}
-                onClick={() => openDoc(doc.name)}
-                className="w-full flex items-center gap-3 px-2 py-2 hover:bg-[rgba(255,255,255,0.04)] transition-colors text-left group rounded-lg"
-              >
-                <FileText className="h-3.5 w-3.5 text-[var(--text-3)] shrink-0" />
-                <span className="text-[14px] font-mono text-[var(--text-2)] flex-1 truncate group-hover:text-[var(--text-1)] transition-colors">{doc.name}</span>
-                <span className="text-[14px] text-white/30 tabular-nums shrink-0">
-                  {doc.size < 1024 ? `${doc.size}B` : `${(doc.size / 1024).toFixed(1)}KB`}
-                </span>
-                <span className="text-[14px] text-white/30 tabular-nums shrink-0">
-                  {new Date(doc.modified).toLocaleDateString()}
-                </span>
-                <ChevronRight className="h-3 w-3 text-[rgba(255,255,255,0.15)] group-hover:text-[var(--text-3)] transition-colors shrink-0" />
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* File List */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <FileText className="size-4 text-muted-foreground" />
+            Markdown Files
+            <Badge variant="secondary" className="ml-1">{docs.length}</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {docs.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">No .md files found</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Filename</TableHead>
+                  <TableHead className="text-right">Size</TableHead>
+                  <TableHead className="text-right">Modified</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {docs.map(doc => (
+                  <TableRow
+                    key={doc.name}
+                    className="cursor-pointer"
+                    onClick={() => openDoc(doc.name)}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <FileText className="size-3.5 text-muted-foreground shrink-0" />
+                        <span className="font-mono text-sm">{doc.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground tabular-nums">
+                      {doc.size < 1024 ? `${doc.size}B` : `${(doc.size / 1024).toFixed(1)}KB`}
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground tabular-nums">
+                      {new Date(doc.modified).toLocaleDateString()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
 
-// --- Main Profile Page ---
+// ─── Main Profile Page ───────────────────────────────────────────────────────
+
 export default function ProfilePage() {
-  const [activeTab, setActiveTab] = useState<ProfileTabId>('general')
   const [cronJobs, setCronJobs] = useState<CronJob[]>([])
   const [cronLoading, setCronLoading] = useState(false)
-  const [toasts, setToasts] = useState<{ id: number; message: string }[]>([])
-
-  const addToast = useCallback((message: string) => {
-    const id = Date.now()
-    setToasts(prev => [...prev, { id, message }])
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000)
-  }, [])
+  const [cronLoaded, setCronLoaded] = useState(false)
+  const [activeTab, setActiveTab] = useState('general')
 
   useEffect(() => {
-    if (activeTab === 'cron' && cronJobs.length === 0 && !cronLoading) {
+    if (activeTab === 'cron' && !cronLoaded && !cronLoading) {
       setCronLoading(true)
-      lifeApi.getData().then(d => { setCronJobs(d.cronJobs); setCronLoading(false) }).catch(() => setCronLoading(false))
+      lifeApi.getData().then(d => {
+        setCronJobs(d.cronJobs)
+        setCronLoading(false)
+        setCronLoaded(true)
+      }).catch(() => setCronLoading(false))
     }
-  }, [activeTab])
+  }, [activeTab, cronLoaded, cronLoading])
 
   const addCron = async (line: string) => {
     const result = await lifeApi.cronAction('add', line)
@@ -822,75 +1055,50 @@ export default function ProfilePage() {
   }
 
   return (
-    <>
-      <div className="min-h-full">
-        {/* Sub-nav bar */}
-        <div className="border-b border-white/[0.08] px-5 md:px-6 pt-2 pb-2.5">
-          <ProfileTabControl active={activeTab} onChange={setActiveTab} />
+    <div className="min-h-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <div className="border-b border-border px-5 md:px-6 pt-2 pb-0">
+          <div className="overflow-x-auto scrollbar-hide -mx-5 px-5 md:-mx-6 md:px-6">
+            <TabsList variant="line" className="w-max">
+              <TabsTrigger value="general" className="whitespace-nowrap">General</TabsTrigger>
+              <TabsTrigger value="notifications" className="whitespace-nowrap">Notifications</TabsTrigger>
+              <TabsTrigger value="cron" className="whitespace-nowrap">Cron Jobs</TabsTrigger>
+              <TabsTrigger value="security" className="whitespace-nowrap">Security</TabsTrigger>
+              <TabsTrigger value="docs" className="whitespace-nowrap">Docs</TabsTrigger>
+            </TabsList>
+          </div>
         </div>
 
-        {activeTab === 'general' && (
+        <TabsContent value="general">
           <motion.div key="general" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }} className="px-5 md:px-6 py-6">
-            <div className="max-w-[680px] space-y-4">
-              <div style={styles.glassCard}>
-                <HomeLocationSection toast={addToast} />
-              </div>
-              <div style={styles.glassCard}>
-                <OwnerSection toast={addToast} />
-              </div>
-            </div>
+            <GeneralTab />
           </motion.div>
-        )}
+        </TabsContent>
 
-        {activeTab === 'notifications' && (
+        <TabsContent value="notifications">
           <motion.div key="notifications" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }} className="px-5 md:px-6 py-6">
-            <div className="max-w-3xl">
-              <div style={styles.glassCard}>
-                <EmailNotificationsSection toast={addToast} />
-              </div>
-            </div>
+            <NotificationsTab />
           </motion.div>
-        )}
+        </TabsContent>
 
-        {activeTab === 'cron' && (
+        <TabsContent value="cron">
           <motion.div key="cron" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }} className="px-5 md:px-6 py-6">
-            <div className="max-w-3xl">
-              <div style={styles.glassCard}>
-                {cronLoading ? (
-                  <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-[var(--text-3)]" /></div>
-                ) : (
-                  <CronJobsSection cronJobs={cronJobs} onAdd={addCron} onDelete={deleteCron} />
-                )}
-              </div>
-            </div>
+            <CronJobsTab cronJobs={cronJobs} cronLoading={cronLoading} onAdd={addCron} onDelete={deleteCron} />
           </motion.div>
-        )}
+        </TabsContent>
 
-        {activeTab === 'security' && (
-          <motion.div key="security" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }} className="px-5 md:px-6 py-6 space-y-4">
-            <div className="max-w-3xl space-y-4">
-              <div style={styles.glassCard}>
-                <EnvVarsSection />
-              </div>
-              <div style={styles.glassCard}>
-                <ConnectedServicesSection />
-              </div>
-              <div style={styles.glassCard}>
-                <DangerZoneSection toast={addToast} />
-              </div>
-            </div>
+        <TabsContent value="security">
+          <motion.div key="security" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }} className="px-5 md:px-6 py-6">
+            <SecurityTab />
           </motion.div>
-        )}
+        </TabsContent>
 
-        {activeTab === 'docs' && (
+        <TabsContent value="docs">
           <motion.div key="docs" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }} className="px-5 md:px-6 py-6">
-            <div className="max-w-3xl">
-              <DocsSection toast={addToast} />
-            </div>
+            <DocsTab />
           </motion.div>
-        )}
-      </div>
-      <ToastContainer toasts={toasts} />
-    </>
+        </TabsContent>
+      </Tabs>
+    </div>
   )
 }

@@ -1,123 +1,202 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@custom-variant dark (&:is(.dark *));
+
+/* ─── Tailwind v4 Theme ─── */
+
+@theme {
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+
+  --color-info: hsl(var(--info));
+  --color-info-foreground: hsl(var(--info-foreground));
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+
+  --color-sidebar: hsl(var(--sidebar));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from { height: 0; }
+    to { height: var(--radix-accordion-content-height); }
+  }
+  @keyframes accordion-up {
+    from { height: var(--radix-accordion-content-height); }
+    to { height: 0; }
+  }
+}
 
 /* ─── River Design System Tokens ─── */
 
 :root {
-  /* Backgrounds — Apple systemBackground */
-  --bg-base: #000000;
-  --bg-surface: #1C1C1E;
-  --bg-elevated: #2C2C2E;
+  /* Backgrounds — Linear-inspired neutral dark */
+  --bg-base: #0A0A0B;
+  --bg-surface: #141415;
+  --bg-elevated: #1E1E20;
 
-  /* Glass (navbar only) — based on secondarySystemBackground */
-  --glass-bg: rgba(28, 28, 30, 0.8);
-  --glass-border: rgba(84, 84, 88, 0.4);
-  --glass-blur: blur(24px) saturate(140%);
-
-  /* Text hierarchy — Apple label / secondaryLabel / tertiaryLabel */
-  --text-1: #FFFFFF;
+  /* Text hierarchy */
+  --text-1: rgba(255, 255, 255, 0.92);
   --text-2: rgba(255, 255, 255, 0.55);
-  --text-3: rgba(255, 255, 255, 0.30);
+  --text-3: rgba(255, 255, 255, 0.35);
 
-  /* Accent — Apple systemBlue dark */
-  --accent: #0A84FF;
-  --accent-subtle: rgba(10, 132, 255, 0.15);
-  --accent-border: rgba(10, 132, 255, 0.3);
-  --accent-text: #0A84FF;
-  --accent-muted: rgba(10, 132, 255, 0.60);
+  /* Accent — Indigo */
+  --accent: 0 0% 12%;
+  --accent-subtle: rgba(129, 140, 248, 0.10);
+  --accent-border: rgba(129, 140, 248, 0.20);
+  --accent-text: #818CF8;
+  --accent-muted: rgba(129, 140, 248, 0.60);
 
-  /* Semantic — Apple system colors dark */
-  --success: #30D158;
-  --warning: #FF9F0A;
-  --destructive: #FF453A;
+  /* Borders */
+  --border: 0 0% 100% / 0.08;
+  --divider: rgba(255, 255, 255, 0.05);
 
-  /* Borders — Apple separator / systemGray3 / opaqueSeparator */
-  --border: rgba(84, 84, 88, 0.6);
-  --border-hover: #48484A;
-  --divider: rgba(84, 84, 88, 0.36);
+  /* shadcn tokens */
+  --background: 0 0% 4%;
+  --foreground: 0 0% 100%;
+  --card: 0 0% 8%;
+  --card-foreground: 0 0% 100%;
+  --popover: 0 0% 12%;
+  --popover-foreground: 0 0% 100%;
+  --primary: 234 89% 74%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 12%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 0 0% 12%;
+  --muted-foreground: 0 0% 55%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 87% 72%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 0 0% 100% / 0.08;
+  --ring: 234 89% 74%;
+  --radius: 0.5rem;
+  --chart-1: 234 89% 74%;
+  --chart-2: 0 0% 44%;
+  --chart-3: 0 0% 55%;
+  --chart-4: 0 0% 33%;
+  --chart-5: 0 0% 66%;
+
+  /* ReUI semantic tokens */
+  --info: 217 91% 60%;
+  --info-foreground: 0 0% 100%;
+  --success: 160 84% 39%;
+  --success-foreground: 0 0% 100%;
+  --warning: 45 93% 47%;
+  --warning-foreground: 0 0% 100%;
+
+  /* Sidebar */
+  --sidebar: 0 0% 6%;
+  --sidebar-foreground: 0 0% 100%;
+  --sidebar-primary: 234 89% 74%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 0 0% 12%;
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-border: 0 0% 100% / 0.08;
+  --sidebar-ring: 234 89% 74%;
+  --invert: var(--color-zinc-900);
+  --invert-foreground: var(--color-zinc-50);
 }
 
-@layer base {
-  :root {
-    --background: 0 0% 0%;
-    --foreground: 0 0% 100%;
-    --card: 0 0% 11%;
-    --card-foreground: 0 0% 100%;
-    --popover: 0 0% 11%;
-    --popover-foreground: 0 0% 100%;
-    --primary: 211 100% 52%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 17%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 0 0% 17%;
-    --muted-foreground: 0 0% 60%;
-    --accent: 0 0% 17%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 100% 61%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 33% / 0.6;
-    --input: 0 0% 33% / 0.6;
-    --ring: 211 100% 52%;
-    --radius: 0.75rem;
-    --chart-1: 211 100% 52%;
-    --chart-2: 0 0% 44%;
-    --chart-3: 0 0% 55%;
-    --chart-4: 0 0% 33%;
-    --chart-5: 0 0% 66%;
-  }
+.dark {
+  --background: 0 0% 4%;
+  --foreground: 0 0% 100%;
+  --card: 0 0% 8%;
+  --card-foreground: 0 0% 100%;
+  --popover: 0 0% 12%;
+  --popover-foreground: 0 0% 100%;
+  --primary: 234 89% 74%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 12%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 0 0% 12%;
+  --muted-foreground: 0 0% 55%;
+  --accent: 0 0% 12%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 87% 72%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 100% / 0.08;
+  --input: 0 0% 100% / 0.08;
+  --ring: 234 89% 74%;
+  --chart-1: 234 89% 74%;
+  --chart-2: 0 0% 44%;
+  --chart-3: 0 0% 55%;
+  --chart-4: 0 0% 33%;
+  --chart-5: 0 0% 66%;
 
-  .dark {
-    --background: 0 0% 0%;
-    --foreground: 0 0% 100%;
-    --card: 0 0% 11%;
-    --card-foreground: 0 0% 100%;
-    --popover: 0 0% 11%;
-    --popover-foreground: 0 0% 100%;
-    --primary: 211 100% 52%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 17%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 0 0% 17%;
-    --muted-foreground: 0 0% 60%;
-    --accent: 0 0% 17%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 100% 61%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 33% / 0.6;
-    --input: 0 0% 33% / 0.6;
-    --ring: 211 100% 52%;
-    --chart-1: 211 100% 52%;
-    --chart-2: 0 0% 44%;
-    --chart-3: 0 0% 55%;
-    --chart-4: 0 0% 33%;
-    --chart-5: 0 0% 66%;
-  }
+  --info: 217 91% 60%;
+  --info-foreground: 0 0% 100%;
+  --success: 160 84% 39%;
+  --success-foreground: 0 0% 100%;
+  --warning: 45 93% 47%;
+  --warning-foreground: 0 0% 100%;
+  --invert: var(--color-zinc-700);
+  --invert-foreground: var(--color-zinc-50);
 }
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
   body {
     background: var(--bg-base);
     color: var(--text-1);
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', sans-serif;
-    font-size: 14px;
-    font-weight: 500;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 13px;
+    font-weight: 400;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     min-height: 100vh;
   }
 }
 
-/* ─── Glass (navbar only) ─── */
+/* ─── Nav Link Hover ─── */
 
-.glass {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border-bottom: 1px solid var(--glass-border);
+.nav-link-desktop:hover {
+  color: var(--text-2) !important;
 }
 
 /* ─── Segmented Control ─── */
@@ -125,7 +204,6 @@
 .segmented-control {
   display: inline-flex;
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   padding: 3px;
 }
@@ -133,7 +211,7 @@
 .segmented-control-item {
   position: relative;
   padding: 6px 14px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   border-radius: 6px;
   transition: all 0.2s ease;
@@ -142,7 +220,7 @@
 }
 
 .segmented-control-item.active {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--bg-elevated);
   color: var(--text-1);
 }
 
@@ -150,7 +228,7 @@
 
 .section-label {
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-3);
@@ -172,52 +250,53 @@
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* ─── Animations ─── */
+/* ─── Mobile Responsiveness Utilities ─── */
 
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+@media (max-width: 767px) {
+  .desktop-only { display: none !important; }
+  .mobile-bottom-nav { display: flex; }
+}
+@media (min-width: 768px) {
+  .mobile-only { display: none !important; }
+  .mobile-bottom-nav { display: none; }
 }
 
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+/* Prevent horizontal overflow globally */
+html, body {
+  overflow-x: hidden;
 }
 
-@keyframes status-pulse {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
+/* ─── Scrollbar Hide Utility ─── */
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-/* ─── Utility Animation Classes ─── */
+/* ─── Safe Area Support ─── */
 
-.animate-status-pulse {
-  animation: status-pulse 2s ease-in-out infinite;
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .mobile-bottom-nav {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
 
-.animate-fade-in-fast {
-  animation: fade-in 200ms ease-out forwards;
-}
+/* Touch targets are handled per-component via min-height styles */
 
-/* ─── Skeleton Shimmer Loading ─── */
+/* ─── Mobile Card Padding ─── */
 
-.skeleton {
-  position: relative;
-  overflow: hidden;
-  background: var(--bg-surface);
-}
-
-.skeleton::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.05) 50%,
-    transparent 100%
-  );
-  animation: shimmer 1.5s ease-in-out infinite;
+@media (max-width: 767px) {
+  [data-slot="card-content"] {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  [data-slot="card-header"] {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
 }
 
 /* ─── Respect Reduced Motion ─── */
@@ -230,4 +309,9 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+@theme inline {
+  --color-invert: var(--invert);
+  --color-invert-foreground: var(--invert-foreground);
 }

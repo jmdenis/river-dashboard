@@ -2,6 +2,8 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { Upload, Loader2, CheckCircle2, AlertCircle, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Progress } from './ui/progress'
 import { lifeApi } from '../services/lifeApi'
+import { tokens } from '../designTokens'
+import { toast } from 'sonner'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 const TOKEN = API_BASE_URL.split('/dash/')[1]?.split('/')[0] || ''
@@ -20,14 +22,6 @@ interface FileEntry {
   date: string
 }
 
-interface Toast {
-  id: number
-  message: string
-  type: 'success' | 'error'
-}
-
-let toastId = 0
-
 export default function UploadModal({
   open,
   onOpenChange,
@@ -39,7 +33,6 @@ export default function UploadModal({
 }) {
   const [dragOver, setDragOver] = useState(false)
   const [uploads, setUploads] = useState<UploadEntry[]>([])
-  const [toasts, setToasts] = useState<Toast[]>([])
   const [files, setFiles] = useState<FileEntry[]>([])
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(0)
@@ -49,12 +42,6 @@ export default function UploadModal({
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const LIMIT = 10
-
-  const addToast = useCallback((message: string, type: 'success' | 'error') => {
-    const id = ++toastId
-    setToasts(prev => [...prev, { id, message, type }])
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000)
-  }, [])
 
   const loadFiles = useCallback(async (p: number) => {
     setLoadingFiles(true)
@@ -105,16 +92,16 @@ export default function UploadModal({
       setUploads(prev =>
         prev.map(u => u.name === file.name ? { ...u, status: 'done', progress: 100 } : u)
       )
-      addToast(`${file.name} uploaded`, 'success')
+      toast.success(`${file.name} uploaded`)
       // Reload file list after upload
       loadFiles(1)
     } catch (e: any) {
       setUploads(prev =>
         prev.map(u => u.name === file.name ? { ...u, status: 'error', error: e.message } : u)
       )
-      addToast(`Upload failed: ${e.message}`, 'error')
+      toast.error(`Upload failed: ${e.message}`)
     }
-  }, [addToast, loadFiles])
+  }, [loadFiles])
 
   // Process initial files passed from global drag-and-drop
   useEffect(() => {
@@ -166,22 +153,7 @@ export default function UploadModal({
     return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
   }
 
-  if (!open) return (
-    <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
-      {toasts.map(toast => (
-        <div
-          key={toast.id}
-          className={`pointer-events-auto px-4 py-2.5 rounded-2xl text-sm shadow-lg shadow-black/20 animate-in slide-in-from-right-5 fade-in duration-200 ${
-            toast.type === 'success'
-              ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300'
-              : 'bg-rose-500/10 border border-rose-500/20 text-rose-300'
-          }`}
-        >
-          {toast.message}
-        </div>
-      ))}
-    </div>
-  )
+  if (!open) return null
 
   return (
     <>
@@ -189,7 +161,7 @@ export default function UploadModal({
       <div
         ref={dropdownRef}
         className="fixed top-12 right-4 z-[70] w-[400px] max-h-[calc(100vh-80px)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150"
-        style={{ background: 'var(--glass-bg)', border: '1px solid var(--border)', borderRadius: '12px', boxShadow: 'none' }}
+        style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '12px', boxShadow: 'none' }}
       >
         {/* Upload zone */}
         <div
@@ -205,7 +177,7 @@ export default function UploadModal({
           }}
         >
           <Upload className="h-5 w-5 mx-auto mb-2" style={{ color: dragOver ? 'var(--accent)' : 'var(--text-3)' }} />
-          <p style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-2)' }}>
+          <p style={{ ...tokens.typography.body, color: 'var(--text-2)' }}>
             {dragOver ? 'Drop files here' : 'Drop files here or click to browse'}
           </p>
           <input
@@ -222,7 +194,7 @@ export default function UploadModal({
           <div className="px-3 pb-2 space-y-2">
             {uploads.map((u, i) => (
               <div key={i} className="space-y-1">
-                <div className="flex items-center gap-2 text-xs">
+                <div className="flex items-center gap-2 text-[12px]">
                   {u.status === 'uploading' && <Loader2 className="h-3 w-3 animate-spin text-[var(--accent)] shrink-0" />}
                   {u.status === 'done' && <CheckCircle2 className="h-3 w-3 text-emerald-400 shrink-0" />}
                   {u.status === 'error' && <AlertCircle className="h-3 w-3 text-rose-400 shrink-0" />}
@@ -246,19 +218,19 @@ export default function UploadModal({
               <Loader2 className="h-4 w-4 animate-spin text-[var(--text-3)]" />
             </div>
           ) : files.length === 0 ? (
-            <p className="text-center py-6" style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-2)' }}>No files uploaded</p>
+            <p className="text-center py-6" style={{ ...tokens.typography.body, color: 'var(--text-2)' }}>No files uploaded</p>
           ) : (
             <div className="divide-y divide-white/[0.04]">
               {files.map((f) => (
                 <a
                   key={f.name}
                   href={`${API_BASE_URL}/api/files/${encodeURIComponent(f.name)}/download`}
-                  className="flex items-center gap-3 hover:bg-[rgba(255,255,255,0.06)] transition-colors duration-100 group"
+                  className="flex items-center gap-3 hover:bg-[var(--bg-surface)] transition-colors duration-100 group"
                   style={{ padding: '12px 16px', borderBottom: '1px solid var(--divider)' }}
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="truncate transition-colors" style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-1)' }}>{f.name}</p>
-                    <p style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-2)' }}>{f.sizeHuman} &middot; {formatDate(f.date)}</p>
+                    <p className="truncate transition-colors" style={{ ...tokens.typography.body, fontWeight: 500, color: 'var(--text-1)' }}>{f.name}</p>
+                    <p style={{ ...tokens.typography.caption, color: 'var(--text-2)' }}>{f.sizeHuman} &middot; {formatDate(f.date)}</p>
                   </div>
                   <Download className="h-3.5 w-3.5 text-[var(--text-3)] group-hover:text-[var(--text-2)] shrink-0 transition-colors" />
                 </a>
@@ -271,15 +243,15 @@ export default function UploadModal({
               <button
                 onClick={() => page > 1 && loadFiles(page - 1)}
                 disabled={page <= 1}
-                className="text-xs text-[var(--text-3)] hover:text-[var(--text-2)] disabled:text-[rgba(255,255,255,0.1)] disabled:cursor-default flex items-center gap-1 transition-colors"
+                className="text-[12px] text-[var(--text-3)] hover:text-[var(--text-2)] disabled:text-[rgba(255,255,255,0.1)] disabled:cursor-default flex items-center gap-1 transition-colors"
               >
                 <ChevronLeft className="h-3 w-3" /> Prev
               </button>
-              <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-2)' }}>{page} / {totalPages}</span>
+              <span style={{ ...tokens.typography.caption, color: 'var(--text-2)' }}>{page} / {totalPages}</span>
               <button
                 onClick={() => page < totalPages && loadFiles(page + 1)}
                 disabled={page >= totalPages}
-                className="text-xs text-[var(--text-3)] hover:text-[var(--text-2)] disabled:text-[rgba(255,255,255,0.1)] disabled:cursor-default flex items-center gap-1 transition-colors"
+                className="text-[12px] text-[var(--text-3)] hover:text-[var(--text-2)] disabled:text-[rgba(255,255,255,0.1)] disabled:cursor-default flex items-center gap-1 transition-colors"
               >
                 Next <ChevronRight className="h-3 w-3" />
               </button>
@@ -288,21 +260,6 @@ export default function UploadModal({
         </div>
       </div>
 
-      {/* Toast notifications */}
-      <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
-        {toasts.map(toast => (
-          <div
-            key={toast.id}
-            className={`pointer-events-auto px-4 py-2.5 rounded-2xl text-sm shadow-lg shadow-black/20 animate-in slide-in-from-right-5 fade-in duration-200 ${
-              toast.type === 'success'
-                ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300'
-                : 'bg-rose-500/10 border border-rose-500/20 text-rose-300'
-            }`}
-          >
-            {toast.message}
-          </div>
-        ))}
-      </div>
     </>
   )
 }

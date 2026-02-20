@@ -63,7 +63,7 @@ const PlaneIcon = forwardRef<PlaneIconHandle, PlaneIconProps>(
   const planeVariants: Variants = {
    normal: { x: 0, y: 0, rotate: 0 },
    animate: {
-    ...animations.planeFloat.keyframes,
+    ...animations.planeFloat.animate,
     transition: animations.planeFloat.transition,
    },
   };

@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
-import { motion } from 'framer-motion'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import { toast } from 'sonner'
+import { motion, AnimatePresence } from 'motion/react'
 import { TextMorph } from 'torph/react'
 import { lifeApi, type LifeData, type Birthday, type Reminder, type CronJob, type CalendarEvent, type Activities, type Idea, type WeekendWeather, type LocalEvent, type Trip, type HomeSettings, type UpcomingTrip, type TravelWorkout, type EquipmentType, type DayPlan, type DayPlanStep, type Contact, type TripQuestion, type TripPreferencesResponse, type PackingList } from '../services/lifeApi'
 import ReactMarkdown from 'react-markdown'
@@ -8,11 +9,39 @@ import { tokens, styles } from '../designTokens'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '../components/ui/dialog'
-import { Loader2, Plus, Trash2, Check, Clock, Calendar as LucideCalendar, MessageCircle, Gift as LucideGift, Copy, ExternalLink, Sparkles, Heart, Pencil, X, Eye, EyeOff, Mail, RefreshCw, Car, Share2, MapPin, ParkingSquare, Hotel, Search, ChevronDown, ChevronLeft, Star, UtensilsCrossed, History, CloudRain, Sun, CloudSun, Cloud, Snowflake, CloudDrizzle, Zap, Wind, Home, Plane as LucidePlane, Dumbbell, Send, Download, Phone, Users, Tag, ChevronUp, Luggage } from 'lucide-react'
+import { Loader2, Plus, Trash2, Check, Clock, Calendar as LucideCalendar, MessageCircle, Gift as LucideGift, Copy, ExternalLink, Sparkles, Heart, Pencil, X, Eye, EyeOff, Mail, RefreshCw, Car, Share2, MapPin, ParkingSquare, Hotel, Search, ChevronDown, ChevronLeft, ChevronRight, Star, UtensilsCrossed, History, CloudRain, Sun, CloudSun, Cloud, Snowflake, CloudDrizzle, Zap, Wind, Home, Plane as LucidePlane, Dumbbell, Send, Download, Phone, Users, UserPlus, Tag, ChevronUp, Luggage } from 'lucide-react'
 import { PlaneIcon, type PlaneIconHandle } from '../components/ui/plane-icon'
 import { CalendarIcon } from '../components/ui/calendar-icon'
 import { GiftIcon } from '../components/ui/gift-icon'
 import { ClockIcon } from '../components/ui/clock-icon'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { Badge } from '../components/ui/badge'
+import { Checkbox } from '../components/ui/checkbox'
+import { Avatar, AvatarFallback } from '../components/ui/avatar'
+import { Skeleton } from '../components/ui/skeleton'
+import { Timeline, TimelineItem, TimelineIndicator, TimelineSeparator, TimelineHeader, TimelineTitle, TimelineDate, TimelineContent } from '../components/reui/timeline'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '../components/ui/sheet'
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '../components/ui/select'
+import { Label } from '../components/ui/label'
+import { Textarea } from '../components/ui/textarea'
+import { Separator } from '../components/ui/separator'
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../components/ui/alert-dialog'
+import { Autocomplete, AutocompleteInput, AutocompleteContent, AutocompleteList, AutocompleteItem, AutocompleteEmpty } from '../components/reui/autocomplete'
+import { DataGrid, DataGridContainer } from '../components/reui/data-grid/data-grid'
+import { DataGridTable } from '../components/reui/data-grid/data-grid-table'
+import { DataGridPagination } from '../components/reui/data-grid/data-grid-pagination'
+import { DataGridColumnHeader } from '../components/reui/data-grid/data-grid-column-header'
+import { useReactTable, getCoreRowModel, getSortedRowModel, getPaginationRowModel, type ColumnDef, type SortingState } from '@tanstack/react-table'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -122,28 +151,6 @@ function getAgeNumber(dateStr: string, yearStr?: string): number | null {
 // --- Segmented Tab Control ---
 type TabId = 'dashboard' | 'ideas' | 'contacts'
 
-const TABS: { id: TabId; label: string }[] = [
- { id: 'dashboard', label: 'Dashboard' },
- { id: 'ideas', label: 'Ideas' },
- { id: 'contacts', label: 'Contacts' },
-]
-
-function TabControl({ active, onChange }: { active: TabId; onChange: (id: TabId) => void }) {
- return (
- <div style={styles.segmentedControl}>
- {TABS.map(tab => (
- <button
- key={tab.id}
- onClick={() => onChange(tab.id)}
- style={active === tab.id ? styles.segmentedButtonActive : styles.segmentedButtonInactive}
- >
- {tab.label}
- </button>
- ))}
- </div>
- )
-}
-
 // --- Exercise emoji mapping ---
 const MUSCLE_EMOJIS: Record<string, string> = {
  push: '💪', chest: '💪', press: '💪',
@@ -213,29 +220,8 @@ function WorkoutModal({ workout, open, onClose, toast, equipment, onEquipmentCha
  const equipmentLabel = equipment === 'kettlebells' ? 'Kettlebells' : equipment === 'dumbbells' ? 'Dumbbells' : 'No equipment'
 
  return (
- <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
- {/* Backdrop */}
- <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
-
- {/* Modal card */}
- <motion.div
- initial={{ opacity: 0, scale: 0.95, y: 20 }}
- animate={{ opacity: 1, scale: 1, y: 0 }}
- exit={{ opacity: 0, scale: 0.95, y: 20 }}
- transition={{ duration: 0.2 }}
- className="relative w-full max-w-lg max-h-[85vh] overflow-y-auto"
- style={{ borderRadius: tokens.radii.md, border: `1px solid ${tokens.colors.innerHighlight}`, background: 'rgba(255,255,255,0.04)' }}
- onClick={e => e.stopPropagation()}
- >
- {/* Close button */}
- <button
- onClick={onClose}
- className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-white/[0.12] transition-colors z-10"
- style={{ background: tokens.colors.surface, color: tokens.colors.textSecondary }}
- >
- <X className="h-4 w-4" />
- </button>
-
+ <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
+ <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto p-0 gap-0" showCloseButton={true}>
  {/* Equipment toggle pills */}
  <div className="px-6 pt-6 pb-3">
  <div className="inline-flex rounded-xl p-[3px]" style={{ background: 'rgba(255,255,255,0.04)' }}>
@@ -257,28 +243,28 @@ function WorkoutModal({ workout, open, onClose, toast, equipment, onEquipmentCha
  </div>
 
  {/* Header */}
- <div className="px-6 pb-4">
- <div className="flex items-center gap-3 mb-1">
+ <DialogHeader className="px-6 pb-4">
+ <DialogTitle className="flex items-center gap-3">
  <Dumbbell className="h-5 w-5 text-[var(--accent)]" />
- <h2 style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>{workout.title || 'Travel Workout'}</h2>
- </div>
+ {workout.title || 'Travel Workout'}
+ </DialogTitle>
  <div className="flex items-center gap-2 ml-8 flex-wrap">
- <span className="text-[12px]" style={{ color: 'var(--text-2, var(--text-2))' }}>{workout.duration || '25 min'}</span>
- <span className="text-[12px]" style={{ color: 'var(--text-2, var(--text-2))' }}>{equipmentLabel}</span>
+ <span className="text-[12px] text-muted-foreground">{workout.duration || '25 min'}</span>
+ <span className="text-[12px] text-muted-foreground">{equipmentLabel}</span>
  {workout.weight_suggestion && (
- <span className="text-[12px]" style={{ color: 'var(--text-2, var(--text-2))' }}>⚖️ {workout.weight_suggestion}</span>
+ <span className="text-[12px] text-muted-foreground">⚖️ {workout.weight_suggestion}</span>
  )}
  {workout.rounds && (
- <span className="text-[12px]" style={{ color: 'var(--text-2, var(--text-2))' }}>🔄 {workout.rounds} rounds</span>
+ <span className="text-[12px] text-muted-foreground">🔄 {workout.rounds} rounds</span>
  )}
  </div>
- </div>
+ </DialogHeader>
 
  {/* Loading overlay */}
  {loading ? (
- <div className="px-6 pb-6 flex items-center justify-center py-12 gap-2 text-[var(--text-2)]">
+ <div className="px-6 pb-6 flex items-center justify-center py-12 gap-2 text-muted-foreground">
  <Loader2 className="h-5 w-5 animate-spin text-[var(--accent)]" />
- <span className="text-sm">Generating {equipmentLabel.toLowerCase()} workout...</span>
+ <span className="text-[13px]">Generating {equipmentLabel.toLowerCase()} workout...</span>
  </div>
  ) : (
  <>
@@ -287,10 +273,10 @@ function WorkoutModal({ workout, open, onClose, toast, equipment, onEquipmentCha
  {workout.exercises.map((ex, i) => (
  <div key={i} className="rounded-xl bg-[rgba(255,255,255,0.04)] border border-[var(--border)] p-4">
  <div className="flex items-start gap-3">
- <span className="text-xl mt-0.5 shrink-0">{getExerciseEmoji(ex.name)}</span>
+ <span className="text-[20px] mt-0.5 shrink-0">{getExerciseEmoji(ex.name)}</span>
  <div className="flex-1 min-w-0">
  <div className="flex items-center gap-2">
- <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-1)' }}>{ex.name}</p>
+ <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)' }}>{ex.name}</p>
  <a
  href={`https://www.youtube.com/results?search_query=${encodeURIComponent(ex.name + ' form tutorial')}`}
  target="_blank"
@@ -302,12 +288,12 @@ function WorkoutModal({ workout, open, onClose, toast, equipment, onEquipmentCha
  </a>
  </div>
  <div className="flex items-center gap-2 mt-1">
- <span className="text-xs text-[var(--accent-text)] font-mono">{ex.sets ? `${ex.sets} × ` : ''}{ex.reps_or_duration}</span>
+ <span className="text-[12px] text-[var(--accent-text)] font-mono">{ex.sets ? `${ex.sets} × ` : ''}{ex.reps_or_duration}</span>
  <span className="w-px h-3 bg-white/[0.08]" />
- <span className="text-xs text-[var(--text-3)]">{ex.rest_seconds}s rest</span>
+ <span className="text-[12px] text-[var(--text-3)]">{ex.rest_seconds}s rest</span>
  </div>
  {ex.description && (
- <p className="text-sm text-[var(--text-2)] mt-1.5 leading-relaxed">{ex.description}</p>
+ <p className="text-[13px] text-[var(--text-2)] mt-1.5 leading-relaxed">{ex.description}</p>
  )}
  {ex.muscleGroups && ex.muscleGroups.length > 0 && (
  <div className="flex items-center gap-1.5 mt-2 flex-wrap">
@@ -327,24 +313,17 @@ function WorkoutModal({ workout, open, onClose, toast, equipment, onEquipmentCha
  )}
 
  {/* Footer actions */}
- <div className="p-6 pt-2 flex items-center gap-3 border-t border-[var(--border)]">
- <button
- onClick={handleEmail}
- disabled={emailing || loading}
- className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--accent-subtle)] border border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent-subtle)] text-xs transition-colors disabled:opacity-50"
- >
+ <DialogFooter className="p-6 pt-2 border-t border-[var(--border)] sm:justify-start">
+ <Button variant="outline" size="sm" onClick={handleEmail} disabled={emailing || loading}>
  {emailing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
  Email to me
- </button>
- <button
- onClick={onClose}
- className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.06)] hover:bg-white/[0.1] text-[var(--text-2)] hover:text-[var(--text-1)] text-xs transition-colors border border-[var(--border)]"
- >
+ </Button>
+ <Button variant="outline" size="sm" onClick={onClose}>
  Close
- </button>
- </div>
- </motion.div>
- </div>
+ </Button>
+ </DialogFooter>
+ </DialogContent>
+ </Dialog>
  )
 }
 
@@ -399,94 +378,63 @@ function PackingListModal({ tripId, open, onClose, toast }: {
  }
  }
 
- if (!open) return null
-
  const totalItems = packingList?.categories.reduce((s, c) => s + c.items.length, 0) ?? 0
  const packedItems = packingList?.categories.reduce((s, c) => s + c.items.filter(i => i.packed).length, 0) ?? 0
 
  return (
- <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
- <motion.div
- initial={{ opacity: 0, scale: 0.95, y: 10 }}
- animate={{ opacity: 1, scale: 1, y: 0 }}
- exit={{ opacity: 0, scale: 0.95 }}
- transition={{ duration: 0.2 }}
- className="w-full max-w-lg max-h-[85vh] flex flex-col"
- style={{ borderRadius: tokens.radii.md, border: `1px solid ${tokens.colors.innerHighlight}`, background: 'rgba(255,255,255,0.04)' }}
- onClick={e => e.stopPropagation()}
- >
+ <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
+ <DialogContent className="max-w-lg max-h-[85vh] flex flex-col p-0 gap-0" showCloseButton={true}>
  {/* Header */}
- <div className="p-5 pb-3 flex items-center justify-between" style={{ borderBottom: `1px solid ${tokens.colors.border}` }}>
- <div className="flex items-center gap-2.5">
+ <DialogHeader className="p-5 pb-3" style={{ borderBottom: `1px solid ${tokens.colors.border}` }}>
+ <DialogTitle className="flex items-center gap-2.5">
  <Luggage className="h-4 w-4 text-[var(--accent-muted)]" />
- <span style={{ fontSize: 14, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>Packing List</span>
+ Packing List
  {packingList && (
- <span className="text-[10px] px-2 py-0.5 rounded-full bg-[rgba(255,255,255,0.06)] text-[var(--text-2)] font-mono">
- {packedItems}/{totalItems}
- </span>
+ <Badge variant="secondary" className="text-[10px] font-mono">{packedItems}/{totalItems}</Badge>
  )}
- </div>
- <button onClick={onClose} className="text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors">
- <X className="h-4 w-4" />
- </button>
- </div>
+ </DialogTitle>
+ </DialogHeader>
 
  {/* Content */}
  <div className="flex-1 overflow-y-auto p-5 space-y-4">
  {loading && (
  <div className="flex items-center justify-center py-12">
- <Loader2 className="h-5 w-5 animate-spin text-[var(--text-3)]" />
+ <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
  </div>
  )}
 
  {!loading && !packingList && (
  <div className="text-center py-10">
- <Luggage className="h-8 w-8 text-[rgba(255,255,255,0.15)] mx-auto mb-3" />
- <p className="text-sm text-[var(--text-2)] mb-4">No packing list yet</p>
- <button
- onClick={handleGenerate}
- disabled={generating}
- className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--accent-subtle)] text-[var(--accent)] hover:bg-[var(--accent-subtle)] border border-[var(--accent-border)] text-xs transition-colors disabled:opacity-50"
- >
+ <Luggage className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
+ <p className="text-[13px] text-muted-foreground mb-4">No packing list yet</p>
+ <Button variant="outline" size="sm" onClick={handleGenerate} disabled={generating}>
  {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
  Generate with AI
- </button>
+ </Button>
  </div>
  )}
 
  {!loading && packingList && packingList.categories.map((cat, catIdx) => (
  <div key={cat.name}>
- <p className="text-[11px] uppercase tracking-[0.05em] mb-2" style={{ fontWeight: 600, color: 'var(--text-3)' }}>{cat.name}</p>
+ <p className="text-[11px] uppercase tracking-[0.05em] mb-2" style={{ fontWeight: 500, color: 'var(--text-3)' }}>{cat.name}</p>
  <div className="space-y-1">
  {cat.items.map((item, itemIdx) => (
- <button
+ <div
  key={`${cat.name}-${itemIdx}`}
+ className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[rgba(255,255,255,0.04)] transition-colors cursor-pointer"
  onClick={() => togglePacked(catIdx, itemIdx)}
- className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[rgba(255,255,255,0.04)] transition-colors text-left group"
  >
- <div className={`flex-shrink-0 h-4 w-4 rounded border transition-colors flex items-center justify-center ${
- item.packed
- ? 'bg-emerald-500/20 border-emerald-500/40'
- : 'border-[rgba(255,255,255,0.12)] group-hover:border-[rgba(255,255,255,0.2)]'
- }`}>
- {item.packed && <Check className="h-2.5 w-2.5 text-emerald-400" />}
- </div>
- <span className={`text-sm flex-1 transition-colors ${
- item.packed ? 'text-[var(--text-3)] line-through' : 'text-[var(--text-2)]'
- }`}>
+ <Checkbox checked={item.packed} onCheckedChange={() => togglePacked(catIdx, itemIdx)} />
+ <span className={`text-[13px] flex-1 ${item.packed ? 'text-muted-foreground line-through' : ''}`}>
  {item.name}
  </span>
  {item.quantity > 1 && (
- <span className="text-[12px] font-mono" style={{ color: 'var(--text-2, var(--text-2))' }}>
- ×{item.quantity}
- </span>
+ <span className="text-[12px] font-mono text-muted-foreground">×{item.quantity}</span>
  )}
  {item.weatherNote && (
- <span className="text-[12px] max-w-[140px] truncate" style={{ color: 'var(--text-2, var(--text-2))' }}>
- {item.weatherNote}
- </span>
+ <span className="text-[12px] max-w-[140px] truncate text-muted-foreground">{item.weatherNote}</span>
  )}
- </button>
+ </div>
  ))}
  </div>
  </div>
@@ -495,23 +443,19 @@ function PackingListModal({ tripId, open, onClose, toast }: {
 
  {/* Footer */}
  {packingList && (
- <div className="p-4 pt-2 border-t border-[var(--border)] flex items-center gap-3">
- <button
- onClick={handleGenerate}
- disabled={generating}
- className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(255,255,255,0.04)] text-[var(--text-2)] hover:bg-white/[0.08] hover:text-[var(--text-2)] text-xs transition-colors disabled:opacity-50 border border-[var(--border)]"
- >
+ <DialogFooter className="p-4 pt-2 border-t border-[var(--border)] sm:justify-start">
+ <Button variant="outline" size="sm" onClick={handleGenerate} disabled={generating}>
  {generating ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
  Regenerate
- </button>
+ </Button>
  <span className="flex-1" />
- <span className="text-[10px] text-[var(--text-3)]">
- {packedItems === totalItems && totalItems > 0 ? '✅ All packed!' : `${totalItems - packedItems} items left`}
+ <span className="text-[10px] text-muted-foreground">
+ {packedItems === totalItems && totalItems > 0 ? 'All packed!' : `${totalItems - packedItems} items left`}
  </span>
- </div>
+ </DialogFooter>
  )}
- </motion.div>
- </div>
+ </DialogContent>
+ </Dialog>
  )
 }
 
@@ -523,9 +467,7 @@ function TripHelper({ trip, toast }: { trip: UpcomingTrip; toast: (msg: string) 
  const [notifying, setNotifying] = useState(false)
  const [packingModalOpen, setPackingModalOpen] = useState(false)
  const [equipment, setEquipment] = useState<EquipmentType>('none')
- // Cache workouts per equipment type on the client side
  const [workoutsByEquipment, setWorkoutsByEquipment] = useState<Partial<Record<EquipmentType, TravelWorkout>>>({})
- // Trip questions & preferences
  const [tripQuestions, setTripQuestions] = useState<TripQuestion[]>([])
  const [walkTime, setWalkTime] = useState<{ estimate: boolean; note: string } | null>(null)
  const [questionAnswers, setQuestionAnswers] = useState<Record<string, string>>({})
@@ -557,7 +499,6 @@ function TripHelper({ trip, toast }: { trip: UpcomingTrip; toast: (msg: string) 
  const unansweredQuestions = tripQuestions.filter(q => !q.asked)
 
  const fetchWorkout = async (equip: EquipmentType) => {
- // Check client-side cache first
  if (workoutsByEquipment[equip]) {
  setWorkout(workoutsByEquipment[equip]!)
  return
@@ -599,7 +540,6 @@ function TripHelper({ trip, toast }: { trip: UpcomingTrip; toast: (msg: string) 
 
  const daysLabel = trip.status === 'active' ? 'now' : trip.daysUntil === 0 ? 'today' : trip.daysUntil === 1 ? 'tomorrow' : `in ${trip.daysUntil} days`
 
- // Format flight time helper
  const formatFlightTime = (iso: string) => {
  if (!iso) return 'TBD'
  const d = new Date(iso)
@@ -619,7 +559,6 @@ function TripHelper({ trip, toast }: { trip: UpcomingTrip; toast: (msg: string) 
  return h > 0 ? `${h}h${m > 0 ? `${m}m` : ''}` : `${m}m`
  }
 
- // Calculate layover between consecutive flights
  const getLayover = (prevArrive: string, nextDepart: string) => {
  if (!prevArrive || !nextDepart) return ''
  const a = new Date(prevArrive)
@@ -634,162 +573,138 @@ function TripHelper({ trip, toast }: { trip: UpcomingTrip; toast: (msg: string) 
 
  const flights = trip.flights || []
 
+ // Context line: weather · timezone · currency
+ const contextParts = [trip.weather, trip.timezone, trip.currency].filter(Boolean)
+
+ // Build timeline items for flights + layovers
+ const timelineItems: { type: 'flight' | 'layover'; flight?: typeof flights[0]; layoverAirport?: string; layoverDuration?: string; step: number }[] = []
+ let stepCounter = 1
+ flights.forEach((flight, i) => {
+ timelineItems.push({ type: 'flight', flight, step: stepCounter++ })
+ if (i < flights.length - 1) {
+  const lay = getLayover(flight.arrive, flights[i + 1].depart)
+  if (lay) {
+  timelineItems.push({ type: 'layover', layoverAirport: flights[i + 1].from, layoverDuration: lay, step: stepCounter++ })
+  }
+ }
+ })
+
  return (
  <div>
- <div className="rounded-2xl p-6" style={styles.glassCard}>
- <div className="flex items-start gap-6">
- {/* Left: flight + accommodation */}
- <div className="flex-1 min-w-0">
+ <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.1 }}>
+ <Card className="bg-[#141415] border-[rgba(255,255,255,0.08)] rounded-lg py-0">
+ <CardHeader className="pb-0 pt-6">
+  <div className="flex items-center gap-2 mb-1">
+  <LucidePlane size={16} className="text-[rgba(255,255,255,0.35)]" />
+  <CardTitle className="text-[20px] font-semibold leading-7 text-[rgba(255,255,255,0.92)]">{trip.destination}</CardTitle>
+  </div>
+  <div className="flex items-center gap-2">
+  <span className="text-[12px] font-medium leading-4 text-[rgba(255,255,255,0.35)]">{trip.dateRange}</span>
+  <Badge variant="secondary" className="bg-[rgba(129,140,248,0.10)] text-[#818CF8] border-transparent">{daysLabel}</Badge>
+  </div>
+ </CardHeader>
+ <CardContent className="pt-3 pb-6">
+  {/* Context line */}
+  {contextParts.length > 0 && (
+  <p className="text-[12px] font-medium leading-4 text-[rgba(255,255,255,0.35)] mb-4">
+   {contextParts.join(' · ')}
+  </p>
+  )}
 
- {/* LAYER 1 — FLIGHTS */}
- <div className="mb-5">
- <div className="flex items-center gap-2.5 mb-3">
- <PlaneIcon ref={(el: PlaneIconHandle | null) => { if (el) el.startAnimation() }} size={20} className="text-[var(--accent)] shrink-0" />
- <span className="text-[24px] font-bold text-white">{trip.destination}</span>
- </div>
+  {/* Flights timeline */}
+  {flights.length > 0 ? (
+  <div className="mb-5">
+   <Timeline defaultValue={stepCounter}>
+   {timelineItems.map((item, i) => {
+    if (item.type === 'flight' && item.flight) {
+    const fl = item.flight
+    const dur = formatFlightDuration(fl.depart, fl.arrive)
+    const timeParts = [
+     `${formatFlightTime(fl.depart)} → ${formatFlightTime(fl.arrive)}`,
+     dur,
+     fl.number,
+    ].filter(Boolean).join(' · ')
+    return (
+     <TimelineItem key={i} step={item.step}>
+     <TimelineIndicator className="!size-[6px] !border-0 bg-[#818CF8]" />
+     <TimelineSeparator className="bg-[rgba(255,255,255,0.05)]" />
+     <TimelineHeader>
+      <TimelineTitle className="text-[13px] text-[rgba(255,255,255,0.92)]">{fl.from} → {fl.to}</TimelineTitle>
+      <TimelineDate className="text-[12px] text-[rgba(255,255,255,0.35)]">{timeParts}</TimelineDate>
+     </TimelineHeader>
+     </TimelineItem>
+    )
+    }
+    return (
+    <TimelineItem key={i} step={item.step}>
+     <TimelineIndicator className="!size-[6px] bg-transparent !border !border-dashed !border-[rgba(255,255,255,0.15)]" />
+     <TimelineSeparator className="bg-[rgba(255,255,255,0.05)]" />
+     <TimelineContent className="text-[10px] font-medium text-[rgba(255,255,255,0.35)]">
+     {item.layoverAirport} Layover {item.layoverDuration}
+     </TimelineContent>
+    </TimelineItem>
+    )
+   })}
+   </Timeline>
+  </div>
+  ) : (
+  <p className="text-[13px] text-[rgba(255,255,255,0.35)] mb-5">{trip.route}</p>
+  )}
 
- {/* FLIGHTS label */}
- <p className="text-[11px] uppercase tracking-wider text-white/30 ml-[33px] mb-2">Flights</p>
+  {/* Accommodation */}
+  {trip.hotel && (
+  <div className="mb-5">
+   <p className="text-[11px] font-medium uppercase tracking-[0.05em] text-[rgba(255,255,255,0.35)] mb-1.5">Accommodation</p>
+   <p className="text-[13px] text-[rgba(255,255,255,0.92)]">{trip.hotel.name}</p>
+   {trip.hotel.confirmationNumber && (
+   <p className="text-[12px] text-[rgba(255,255,255,0.35)] mt-0.5">{trip.hotel.confirmationNumber}</p>
+   )}
+  </div>
+  )}
 
- {/* Flight route visualization */}
- {flights.length > 0 ? (
- <div className="ml-[33px] space-y-0">
- {flights.map((flight, i) => (
- <div key={i}>
- {/* Flight leg */}
- <div className="flex items-center gap-3 py-1.5">
- {/* Route dots + line */}
- <div className="flex items-center gap-1.5 shrink-0 min-w-[100px]">
- <span className="h-2 w-2 rounded-full bg-[var(--accent)]" />
- <span className="flex-1 h-px bg-white/15 relative">
- <span className="absolute -top-[3px] right-0 text-white/15 text-[8px]">{'>'}</span>
- </span>
- <span className="h-2 w-2 rounded-full border border-[var(--accent)] bg-transparent" />
- </div>
- {/* Leg info */}
- <span className="text-[14px] font-medium text-white tabular-nums shrink-0">{flight.from} → {flight.to}</span>
- <span className="text-[12px] text-white/40 font-mono tabular-nums">{formatFlightTime(flight.depart)}</span>
- <span className="text-[12px] text-white/20">→</span>
- <span className="text-[12px] text-white/40 font-mono tabular-nums">{formatFlightTime(flight.arrive)}</span>
- {formatFlightDuration(flight.depart, flight.arrive) && (
- <span className="text-[12px] text-white/20 tabular-nums">{formatFlightDuration(flight.depart, flight.arrive)}</span>
- )}
- {flight.number && <span className="text-[11px] text-white/20 font-mono">{flight.number}</span>}
- </div>
- {/* Layover indicator */}
- {i < flights.length - 1 && (
- <div className="flex items-center gap-3 py-1 ml-[44px]">
- <span className="text-[11px] text-white/25 font-mono">{flights[i + 1].from} layover</span>
- {getLayover(flight.arrive, flights[i + 1].depart) && (
- <span className="text-[11px] text-white/25 tabular-nums">{getLayover(flight.arrive, flights[i + 1].depart)}</span>
- )}
- </div>
- )}
- </div>
- ))}
- </div>
- ) : (
- <div className="ml-[33px]">
- <span className="text-[13px] text-white/30">{trip.route}</span>
- </div>
- )}
- </div>
+  {/* Action chips — horizontal scroll on mobile, no wrap */}
+  <div className="flex items-center gap-2 flex-nowrap overflow-x-auto md:flex-wrap mt-4">
+  <Button variant="ghost" size="sm" className="rounded-full border border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.55)] text-[12px] hover:bg-[rgba(255,255,255,0.04)]" onClick={() => setPackingModalOpen(true)}>
+   Packing list
+  </Button>
+  <Button variant="ghost" size="sm" className="rounded-full border border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.55)] text-[12px] hover:bg-[rgba(255,255,255,0.04)]" onClick={openWorkout} disabled={loadingWorkout}>
+   {loadingWorkout && <Loader2 className="h-3 w-3 animate-spin" />}
+   Workout
+  </Button>
+  <Button variant="ghost" size="sm" className="rounded-full border border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.55)] text-[12px] hover:bg-[rgba(255,255,255,0.04)]" onClick={handleNotify} disabled={notifying}>
+   {notifying && <Loader2 className="h-3 w-3 animate-spin" />}
+   Notify Anne
+  </Button>
+  </div>
 
- {/* Separator between flights and hotel */}
- {trip.hotel && <div className="border-b border-white/[0.08] my-4 ml-[33px]" />}
-
- {/* LAYER 2 — ACCOMMODATION */}
- {trip.hotel && (
- <div className="ml-[33px] mb-5">
- <p className="text-[11px] uppercase tracking-wider text-white/30 mb-2">Accommodation</p>
- <p className="text-[14px] font-medium text-white/70">
- {trip.hotel.name}
- {trip.hotel.confirmationNumber && (
- <span className="text-[12px] text-white/30 font-mono ml-2">{trip.hotel.confirmationNumber}</span>
- )}
- </p>
- <p className="text-[12px] text-white/40 mt-0.5">
- {[
- trip.hotel.hasGym && 'Gym',
- trip.hotel.hasBreakfast && 'Breakfast',
- trip.hotel.hasPool && 'Pool',
- ].filter(Boolean).join(' · ')}
- {(trip.hotel.hasGym || trip.hotel.hasBreakfast || trip.hotel.hasPool) && (trip.hotel.neighborhood || trip.hotel.nearestMetro) ? ' · ' : ''}
- {[trip.hotel.neighborhood, trip.hotel.nearestMetro].filter(Boolean).join(', ')}
- </p>
- </div>
- )}
- </div>
-
- {/* Right: LAYER 3 — CONTEXT */}
- <div className="text-right shrink-0 space-y-0.5">
- <p className="text-[13px] font-medium text-white">{trip.dateRange}</p>
- <TextMorph as="p" className="text-[var(--warning)] font-semibold text-[13px]">{daysLabel}</TextMorph>
- {trip.weather && <p className="text-[12px] text-white/30 mt-1">{trip.weather}</p>}
- {trip.timezone && <p className="text-[12px] text-white/30">{trip.timezone}</p>}
- {trip.currency && <p className="text-[12px] text-white/30">{trip.currency}</p>}
- </div>
- </div>
-
- {/* Separator above action buttons */}
- <div className="border-b border-white/[0.06] mb-4" />
-
- {/* Action buttons row */}
- <div className="flex items-center gap-2 mt-4">
- <button
- onClick={() => setPackingModalOpen(true)}
- className="rounded-full border border-white/[0.12] bg-transparent text-[13px] font-medium px-5 py-2 text-white/70 hover:text-white hover:bg-white/[0.06] transition-colors"
- >
- Packing list
- </button>
- <button
- onClick={openWorkout}
- disabled={loadingWorkout}
- className="rounded-full border border-white/[0.12] bg-transparent text-[13px] font-medium px-5 py-2 text-white/70 hover:text-white hover:bg-white/[0.06] transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
- >
- {loadingWorkout && <Loader2 className="h-3 w-3 animate-spin" />}
- Workout
- </button>
- <button
- onClick={handleNotify}
- disabled={notifying}
- className="rounded-full border border-white/[0.12] bg-transparent text-[13px] font-medium px-5 py-2 text-white/70 hover:text-white hover:bg-white/[0.06] transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
- >
- {notifying && <Loader2 className="h-3 w-3 animate-spin" />}
- Notify Anne
- </button>
- </div>
-
- {/* Trip questions */}
- {unansweredQuestions.length > 0 && (
- <div className="mt-4 pt-4 border-t border-white/[0.08]">
- <p className="text-[12px] text-white/55 mb-3 flex items-center gap-1.5">
- <Sparkles className="h-3 w-3 text-white/30" />
- Help River plan better
- </p>
- <div className="space-y-2">
- {unansweredQuestions.map(q => (
- <div key={q.id} className="flex items-center gap-2">
- <Input
- placeholder={q.question}
- value={questionAnswers[q.id] || ''}
- onChange={e => setQuestionAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
- onKeyDown={e => e.key === 'Enter' && handleAnswerSubmit(q.id)}
- className="h-8 text-xs bg-[rgba(255,255,255,0.04)] border-[var(--border)] placeholder:text-white/30 flex-1"
- />
- <button
- onClick={() => handleAnswerSubmit(q.id)}
- disabled={!questionAnswers[q.id]?.trim() || savingQuestion === q.id}
- className="inline-flex items-center justify-center h-8 w-8 rounded-lg transition-colors disabled:opacity-30 bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20"
- >
- {savingQuestion === q.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
- </button>
- </div>
- ))}
- </div>
- </div>
- )}
- </div>
+  {/* Trip questions */}
+  {unansweredQuestions.length > 0 && (
+  <div className="mt-4 pt-4 border-t border-[rgba(255,255,255,0.05)]">
+   <p className="flex items-center gap-1.5 text-[12px] font-medium text-[rgba(255,255,255,0.55)] mb-3">
+   <Sparkles className="h-3 w-3 text-[rgba(255,255,255,0.35)]" />
+   Help River plan better
+   </p>
+   <div className="flex flex-col gap-2">
+   {unansweredQuestions.map(q => (
+    <div key={q.id} className="flex items-center gap-2">
+    <Input
+     placeholder={q.question}
+     value={questionAnswers[q.id] || ''}
+     onChange={e => setQuestionAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+     onKeyDown={e => e.key === 'Enter' && handleAnswerSubmit(q.id)}
+     className="h-8 text-[12px] bg-[rgba(255,255,255,0.04)] border-[var(--border)] placeholder:text-white/30 flex-1"
+    />
+    <Button variant="ghost" size="icon" className="h-8 w-8 text-[#818CF8] border border-[rgba(129,140,248,0.20)] bg-[rgba(129,140,248,0.10)]" onClick={() => handleAnswerSubmit(q.id)} disabled={!questionAnswers[q.id]?.trim() || savingQuestion === q.id}>
+     {savingQuestion === q.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+    </Button>
+    </div>
+   ))}
+   </div>
+  </div>
+  )}
+ </CardContent>
+ </Card>
+ </motion.div>
 
  {/* Workout modal */}
  {workoutModalOpen && (
@@ -821,12 +736,19 @@ function TripHelper({ trip, toast }: { trip: UpcomingTrip; toast: (msg: string) 
 function CalendarSection({ events }: { events: CalendarEvent[] }) {
  if (events.length === 0) {
  return (
- <div className="rounded-2xl p-6 h-full" style={styles.glassCard}>
- <p className="text-[12px] uppercase tracking-wider text-white/40 mb-4">This Week</p>
- <p className="text-[14px] text-white/30 text-center py-8">Nothing scheduled</p>
- </div>
+ <Card className="h-full bg-[#141415] border-[rgba(255,255,255,0.08)] rounded-lg">
+ <CardHeader>
+  <CardTitle className="text-[11px] font-medium uppercase tracking-[0.05em] text-[rgba(255,255,255,0.35)]">This Week</CardTitle>
+ </CardHeader>
+ <CardContent>
+  <p className="text-[13px] text-[rgba(255,255,255,0.35)] text-center py-8">Nothing scheduled</p>
+ </CardContent>
+ </Card>
  )
  }
+
+ const now = new Date()
+ now.setHours(0, 0, 0, 0)
 
  const eventsByDay: Record<string, CalendarEvent[]> = {}
  events.forEach(event => {
@@ -836,34 +758,54 @@ function CalendarSection({ events }: { events: CalendarEvent[] }) {
  eventsByDay[dayLabel].push(event)
  })
 
+ const isEventPast = (event: CalendarEvent) => {
+ const eventDate = new Date(event.start)
+ if (event.allDay) {
+ const ed = new Date(event.start)
+ ed.setHours(0, 0, 0, 0)
+ return ed < now
+ }
+ return eventDate < new Date()
+ }
+
+ const staggerParent = { show: { transition: { staggerChildren: 0.03 } }, hidden: {} }
+ const staggerChild = { hidden: { opacity: 0, x: -8 }, show: { opacity: 1, x: 0 } }
+
  return (
- <div className="rounded-2xl p-6 h-full" style={styles.glassCard}>
- <p className="text-[12px] uppercase tracking-wider text-white/40 mb-4">This Week</p>
- <div>
- {Object.entries(eventsByDay).map(([dayLabel, dayEvents], dayIdx) => (
- <div key={dayLabel} className={dayIdx === 0 ? 'mt-2' : 'mt-5'}>
- <p className="text-[14px] font-semibold text-white mb-2">
- {dayLabel}
- </p>
- <div className="space-y-1">
- {dayEvents.map((event, idx) => {
- const isAnne = ANNE_EMAILS.includes(event.organizer)
- return (
- <div key={idx} className={`flex items-start gap-3 py-1 ${isAnne ? 'opacity-40' : ''}`}>
- <span className="font-mono shrink-0 w-12 text-[14px] text-white/30 tabular-nums">{formatEventTime(event)}</span>
- <span className="shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
- <span className="flex-1 text-[14px] text-white">{event.title}</span>
- {event.location && (
- <span className="truncate max-w-[200px] text-right text-[14px] text-white/30">{event.location}</span>
- )}
- </div>
- )
- })}
- </div>
- </div>
- ))}
- </div>
- </div>
+ <Card className="h-full bg-[#141415] border-[rgba(255,255,255,0.08)] rounded-lg">
+ <CardHeader>
+  <CardTitle className="text-[11px] font-medium uppercase tracking-[0.05em] text-[rgba(255,255,255,0.35)]">This Week</CardTitle>
+ </CardHeader>
+ <CardContent>
+  {Object.entries(eventsByDay).map(([dayLabel, dayEvents], dayIdx) => (
+  <div key={dayLabel} className={dayIdx > 0 ? 'border-t border-[rgba(255,255,255,0.05)] mt-6 pt-4' : ''}>
+   <p className="text-[15px] font-medium leading-5 text-[rgba(255,255,255,0.92)] mb-2 sticky top-0 z-10 bg-[#141415] py-1">{dayLabel}</p>
+   <motion.div variants={staggerParent} initial="hidden" animate="show">
+   {dayEvents.map((event, idx) => {
+    const past = isEventPast(event)
+    const isAnne = ANNE_EMAILS.includes(event.organizer)
+    const catStyle = getCategoryStyle(event)
+    return (
+    <motion.div
+     key={idx}
+     variants={staggerChild}
+     className="flex items-center gap-3"
+     style={{ minHeight: 36, paddingTop: 6, paddingBottom: 6, opacity: isAnne ? 0.4 : 1 }}
+    >
+     <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${catStyle.dot}`} />
+     <span className="flex-1 min-w-0 text-[13px] leading-5 truncate" style={{ color: past ? tokens.colors.textTertiary : tokens.colors.textPrimary }}>{event.title}</span>
+     <span className="shrink-0 text-[12px] font-medium leading-4" style={{ color: past ? tokens.colors.textQuaternary : tokens.colors.textSecondary }}>{formatEventTime(event)}</span>
+     {event.location && (
+     <span className="hidden md:inline shrink-0 text-[12px] font-medium leading-4 text-[rgba(255,255,255,0.35)] max-w-[160px] truncate">{event.location}</span>
+     )}
+    </motion.div>
+    )
+   })}
+   </motion.div>
+  </div>
+  ))}
+ </CardContent>
+ </Card>
  )
 }
 
@@ -912,20 +854,20 @@ function HomeLocationSection({ toast }: { toast: (msg: string) => void }) {
  <Input
  value={draft.homeAddress}
  onChange={e => handleChange('homeAddress', e.target.value)}
- className="h-8 text-xs bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-2)] placeholder:text-[var(--text-3)] flex-1 min-w-0"
+ className="h-8 text-[12px] bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-2)] placeholder:text-[var(--text-3)] flex-1 min-w-0"
  placeholder="Address"
  />
  <Input
  value={draft.homeCity}
  onChange={e => handleChange('homeCity', e.target.value)}
- className="h-8 text-xs bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-2)] placeholder:text-[var(--text-3)] w-32 shrink-0"
+ className="h-8 text-[12px] bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-2)] placeholder:text-[var(--text-3)] w-32 shrink-0"
  placeholder="City"
  />
  <Button
  size="sm"
  onClick={save}
  disabled={saving || !dirty}
- className="h-8 px-3 text-xs bg-[var(--accent-subtle)] border border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent-subtle)] shrink-0 disabled:opacity-30"
+ className="h-8 px-3 text-[12px] bg-[var(--accent-subtle)] border border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent-subtle)] shrink-0 disabled:opacity-30"
  >
  {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
  </Button>
@@ -972,9 +914,9 @@ function CronJobsSection({ cronJobs, onAdd, onDelete }: {
  setOpen(false)
  }
  }}
- className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)] font-mono text-xs"
+ className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)] font-mono text-[12px]"
  />
- <p className="text-xs text-[var(--text-3)]">Format: minute hour day month weekday command</p>
+ <p className="text-[12px] text-[var(--text-3)]">Format: minute hour day month weekday command</p>
  <DialogFooter>
  <Button
  onClick={() => { onAdd(newLine.trim()); setNewLine(''); setOpen(false) }}
@@ -988,7 +930,7 @@ function CronJobsSection({ cronJobs, onAdd, onDelete }: {
  </Dialog>
  </div>
  {cronJobs.length === 0 ? (
- <p className="text-xs text-[var(--text-3)] text-center py-4">No cron jobs</p>
+ <p className="text-[12px] text-[var(--text-3)] text-center py-4">No cron jobs</p>
  ) : (
  <div className="space-y-0.5">
  {cronJobs.map((job) => {
@@ -996,9 +938,9 @@ function CronJobsSection({ cronJobs, onAdd, onDelete }: {
  return (
  <div key={job.id} className="group flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-150">
  <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: job.source === 'server' ? 'var(--accent, #06b6d4)' : 'var(--success, #10b981)' }} />
- <span className="text-[14px] text-[var(--text-2)] truncate flex-1 min-w-0">{job.name}</span>
- <code className="text-[13px] text-[var(--text-3)] font-mono shrink-0">{rawSchedule}</code>
- <span className="text-[13px] text-[var(--text-3)] shrink-0 hidden sm:inline">{job.schedule}</span>
+ <span className="text-[13px] text-[var(--text-2)] truncate flex-1 min-w-0">{job.name}</span>
+ <code className="text-[12px] font-medium text-[var(--text-3)] font-mono shrink-0">{rawSchedule}</code>
+ <span className="text-[12px] font-medium text-[var(--text-3)] shrink-0 hidden sm:inline">{job.schedule}</span>
  {job.source === 'crontab' && (
  <button
  onClick={() => onDelete(job.raw)}
@@ -1115,173 +1057,158 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
  return parts.join(', ')
  })() : ''
 
+ const getInitials = (name: string) => {
+ const parts = name.split(' ').filter(Boolean)
+ if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+ return parts[0]?.[0]?.toUpperCase() || '?'
+ }
+
  return (
- <div className="rounded-2xl p-6" style={styles.glassCard}>
- <div className="flex items-center justify-between mb-4">
+ <Card className="bg-[#141415] border-[rgba(255,255,255,0.08)] rounded-lg">
+ {/* Header: label + count + Add */}
+ <div className="flex items-center justify-between px-6 pt-6 pb-0">
  <div className="flex items-center gap-2">
- <p className="text-[12px] uppercase tracking-wider text-white/40">Birthdays</p>
- {living.length > 0 && <span className="text-[12px] text-white/30 bg-white/[0.06] px-1.5 py-0.5 rounded-full font-medium">{living.length}</span>}
+ <span className="text-[11px] font-medium uppercase tracking-[0.05em] text-[rgba(255,255,255,0.35)]">Birthdays</span>
+ {living.length > 0 && (
+  <Badge variant="secondary" className="text-[rgba(255,255,255,0.55)] border-transparent">{living.length}</Badge>
+ )}
  </div>
  <Dialog open={open} onOpenChange={setOpen}>
  <DialogTrigger asChild>
- <button className="text-[13px] font-medium text-[var(--accent)] hover:text-[var(--accent)]/80 transition-colors">
- Add
- </button>
+  <button className="text-[12px] font-medium text-[#818CF8] bg-transparent border-none cursor-pointer">Add</button>
  </DialogTrigger>
  <DialogContent className="">
- <DialogHeader><DialogTitle className="text-[var(--text-1)] ">Add Birthday</DialogTitle></DialogHeader>
- <div className="space-y-3">
- <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" />
- <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" />
- <Input placeholder="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" />
- </div>
- <DialogFooter>
- <Button onClick={addBirthday} disabled={!name.trim() || !date} className="bg-[var(--accent-subtle)] border border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent-subtle)]">Add</Button>
- </DialogFooter>
+  <DialogHeader><DialogTitle className="text-[var(--text-1)]">Add Birthday</DialogTitle></DialogHeader>
+  <div className="space-y-3">
+  <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" />
+  <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" />
+  <Input placeholder="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" />
+  </div>
+  <DialogFooter>
+  <Button onClick={addBirthday} disabled={!name.trim() || !date} className="bg-[var(--accent-subtle)] border border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent-subtle)]">Add</Button>
+  </DialogFooter>
  </DialogContent>
  </Dialog>
  </div>
+ <CardContent>
  {living.length === 0 && deceased.length === 0 && hidden.length === 0 ? (
- <p className="text-sm text-[var(--text-3)] text-center py-8">No birthdays added</p>
+ <p className="text-[13px] text-[rgba(255,255,255,0.35)] text-center py-8">No birthdays added</p>
  ) : displayedLiving.length === 0 && deceased.length === 0 ? (
  <div className="text-center py-8">
- <p className="text-sm text-[var(--text-3)] mb-2">No birthdays in the next 30 days</p>
- <button onClick={() => setShowAll(true)} className="text-xs text-[var(--accent)] hover:text-[var(--accent-text)]">Show all {living.length} birthdays</button>
+  <p className="text-[13px] text-[rgba(255,255,255,0.35)] mb-2">No birthdays in the next 30 days</p>
+  <button onClick={() => setShowAll(true)} className="text-[12px] font-medium text-[#818CF8] bg-transparent border-none cursor-pointer">Show all {living.length} birthdays</button>
  </div>
  ) : (
  <>
- <div className="space-y-1">
- {displayedLiving.map((b) => {
- const days = daysUntilBirthday(b.date)
- const isToday = days === 0
- const countdown = getCountdown(days)
- const age = getAge(b.date, b.year)
- return (
- <div
- key={b.id}
- className={`group flex items-center justify-between py-2.5 px-1 hover:bg-white/[0.03] rounded-lg transition-colors duration-150 ${isToday ? 'bg-[var(--warning)]/5' : ''}`}
- >
- <div className="flex flex-col gap-0.5 min-w-0">
- <span className={`text-[14px] font-medium ${isToday ? 'text-[var(--warning)]' : 'text-white'}`}>{b.name}</span>
- <span className="text-[13px] text-white/30"><TextMorph as="span" className="inline-flex text-[13px] text-white/30">{countdown}</TextMorph>{age ? <> · <TextMorph as="span" className="inline-flex text-[13px] text-white/30">{age}</TextMorph></> : ''}</span>
- </div>
- <div className="flex items-center gap-2 shrink-0">
- <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
- <Button
- variant="ghost" size="icon"
- className="text-white/30 hover:text-[var(--accent)] h-7 w-7"
- onClick={() => setMessageModal(b)}
- title="Birthday message"
- >
- <MessageCircle className="h-3.5 w-3.5" />
- </Button>
- <Button
- variant="ghost" size="icon"
- className="text-white/30 hover:text-[var(--accent)] h-7 w-7"
- onClick={() => setGiftModal(b)}
- title="Gift ideas"
- >
- <LucideGift className="h-3.5 w-3.5" />
- </Button>
- <Button
- variant="ghost" size="icon"
- className={`text-white/30 hover:text-[var(--accent)] h-7 w-7 ${sendingEmailId === b.id ? '!opacity-100' : ''}`}
- disabled={sendingEmailId === b.id}
- onClick={async () => { setSendingEmailId(b.id); await onSendEmail(b); setSendingEmailId(null) }}
- title="Send email reminder"
- >
- {sendingEmailId === b.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
- </Button>
- <button
- onClick={() => hideBirthday(b.id)}
- className="text-white/30 hover:text-white/55 h-7 w-7 flex items-center justify-center"
- title="Hide"
- >
- <X className="h-3 w-3" />
- </button>
- </div>
- <span className="text-[14px] text-white/30">{formatBirthdayDate(b.date)}</span>
- </div>
- </div>
- )
- })}
- </div>
+ <motion.div className="flex flex-col gap-1" initial="hidden" animate="show" variants={{ hidden: {}, show: { transition: { staggerChildren: 0.03 } } }}>
+  {displayedLiving.map((b) => {
+  const days = daysUntilBirthday(b.date)
+  const isToday = days === 0
+  const countdown = getCountdown(days)
+  const age = getAge(b.date, b.year)
+  return (
+   <motion.div
+   key={b.id}
+   className="group flex items-center gap-3 rounded-lg px-1 py-1.5"
+   variants={{ hidden: { opacity: 0, x: -8 }, show: { opacity: 1, x: 0 } }}
+   whileHover={{ backgroundColor: 'rgba(255,255,255,0.04)' }}
+   transition={{ duration: 0.15 }}
+   >
+   <Avatar className="h-7 w-7">
+    <AvatarFallback className="bg-[#1E1E20] text-[rgba(255,255,255,0.55)] text-[10px]">{getInitials(b.name)}</AvatarFallback>
+   </Avatar>
+   <div className="flex-1 min-w-0">
+    <span className="text-[13px] leading-5 block" style={{ color: isToday ? '#FBBF24' : 'rgba(255,255,255,0.92)' }}>{b.name}</span>
+    <span className="text-[12px] font-medium leading-4 text-[rgba(255,255,255,0.35)]">
+    <TextMorph as="span" className="inline-flex text-[12px] font-medium leading-4 text-[rgba(255,255,255,0.35)]">{countdown}</TextMorph>
+    {age ? <> · <TextMorph as="span" className="inline-flex text-[12px] font-medium leading-4 text-[rgba(255,255,255,0.35)]">{age}</TextMorph></> : ''}
+    </span>
+   </div>
+   <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+    <Button variant="ghost" size="icon" className="text-white/30 hover:text-[var(--accent)] h-7 w-7" onClick={() => setMessageModal(b)} title="Birthday message">
+    <MessageCircle className="h-3.5 w-3.5" />
+    </Button>
+    <Button variant="ghost" size="icon" className="text-white/30 hover:text-[var(--accent)] h-7 w-7" onClick={() => setGiftModal(b)} title="Gift ideas">
+    <LucideGift className="h-3.5 w-3.5" />
+    </Button>
+    <Button variant="ghost" size="icon" className={`text-white/30 hover:text-[var(--accent)] h-7 w-7 ${sendingEmailId === b.id ? '!opacity-100' : ''}`} disabled={sendingEmailId === b.id} onClick={async () => { setSendingEmailId(b.id); await onSendEmail(b); setSendingEmailId(null) }} title="Send email reminder">
+    {sendingEmailId === b.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+    </Button>
+    <button onClick={() => hideBirthday(b.id)} className="text-white/30 hover:text-white/55 h-7 w-7 flex items-center justify-center" title="Hide">
+    <X className="h-3 w-3" />
+    </button>
+   </div>
+   <span className="text-[12px] font-medium leading-4 text-[rgba(255,255,255,0.35)] shrink-0">{formatBirthdayDate(b.date)}</span>
+   </motion.div>
+  )
+  })}
+ </motion.div>
  {/* Deceased entries */}
  {(showAll || displayedLiving.length > 0) && deceased.length > 0 && (
- <div className="pt-3 mt-3 border-t border-[rgba(255,255,255,0.04)]">
- {deceased.map((b) => (
- <div key={b.id} className="flex items-center p-3 rounded-xl">
- <span className="text-sm text-[var(--text-3)]">&#x1F54A;&#xFE0F; {b.name}</span>
- </div>
- ))}
- </div>
+  <div className="pt-3 mt-3 border-t border-[rgba(255,255,255,0.05)]">
+  {deceased.map((b) => (
+   <div key={b.id} className="p-1.5">
+   <span className="text-[13px] text-[rgba(255,255,255,0.35)]">&#x1F54A;&#xFE0F; {b.name}</span>
+   </div>
+  ))}
+  </div>
  )}
  {!showAll && sortedLiving.length > upcoming.length && (
- <button onClick={() => setShowAll(true)} className="text-xs text-[var(--text-3)] hover:text-[var(--text-2)] mt-3 w-full text-center">
- Show all {sortedLiving.length} birthdays
- </button>
+  <button onClick={() => setShowAll(true)} className="text-[12px] font-medium text-[#818CF8] bg-transparent border-none cursor-pointer mt-3 w-full text-center block">
+  Show all {sortedLiving.length} birthdays
+  </button>
  )}
  {showAll && (
- <button onClick={() => setShowAll(false)} className="text-xs text-[var(--text-3)] hover:text-[var(--text-2)] mt-3 w-full text-center">
- Show upcoming only
- </button>
+  <button onClick={() => setShowAll(false)} className="text-[12px] font-medium text-[rgba(255,255,255,0.35)] bg-transparent border-none cursor-pointer mt-3 w-full text-center block">
+  Show upcoming only
+  </button>
  )}
  </>
  )}
  {/* Hidden entries toggle */}
  {hidden.length > 0 && (
- <div className="pt-3 mt-3 border-t border-[rgba(255,255,255,0.04)]">
- <button
- onClick={() => setShowHidden(!showHidden)}
- className="text-xs text-[var(--text-3)] hover:text-[var(--text-2)] flex items-center gap-1.5"
- >
- {showHidden ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
- {showHidden ? 'Hide' : 'Show'} hidden ({hidden.length})
- </button>
- {showHidden && (
- <div className="space-y-1 mt-2">
- {hidden.map((b) => (
- <div key={b.id} className="group flex items-center justify-between p-3 rounded-xl">
- <div className="flex items-center gap-3">
- <span className="text-sm text-[var(--text-3)]">{b.name}</span>
- <span className="text-xs text-[rgba(255,255,255,0.1)]">{formatBirthdayDate(b.date)}</span>
- </div>
- <Button
- variant="ghost" size="icon"
- className="text-[var(--text-3)] hover:text-[var(--text-2)] h-7 w-7"
- onClick={() => unhideBirthday(b.id)}
- title="Unhide"
- >
- <Eye className="h-3.5 w-3.5" />
- </Button>
- </div>
- ))}
+ <div className="pt-3 mt-3 border-t border-[rgba(255,255,255,0.05)]">
+  <button onClick={() => setShowHidden(!showHidden)} className="flex items-center gap-1.5 text-[12px] font-medium text-[rgba(255,255,255,0.35)] bg-transparent border-none cursor-pointer">
+  {showHidden ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+  {showHidden ? 'Hide' : 'Show'} hidden ({hidden.length})
+  </button>
+  <AnimatePresence>
+  {showHidden && (
+  <motion.div className="flex flex-col gap-1 mt-2" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}>
+   {hidden.map((b) => (
+   <div key={b.id} className="group flex items-center justify-between p-1.5">
+    <div className="flex items-center gap-3">
+    <span className="text-[13px] text-[rgba(255,255,255,0.35)]">{b.name}</span>
+    <span className="text-[12px] text-[rgba(255,255,255,0.18)]">{formatBirthdayDate(b.date)}</span>
+    </div>
+    <Button variant="ghost" size="icon" className="text-[var(--text-3)] hover:text-[var(--text-2)] h-7 w-7" onClick={() => unhideBirthday(b.id)} title="Unhide">
+    <Eye className="h-3.5 w-3.5" />
+    </Button>
+   </div>
+   ))}
+  </motion.div>
+  )}
+  </AnimatePresence>
  </div>
  )}
- </div>
- )}
+ </CardContent>
 
  {/* Message Modal */}
  <Dialog open={!!messageModal} onOpenChange={(v) => { if (!v) setMessageModal(null) }}>
  <DialogContent className="">
  <DialogHeader>
- <DialogTitle className="text-[var(--text-1)] ">
- Message pour {messageModal?.name.split(' ')[0]}
- </DialogTitle>
+  <DialogTitle className="text-[var(--text-1)]">Message pour {messageModal?.name.split(' ')[0]}</DialogTitle>
  </DialogHeader>
  {messageModal && (
- <div className="space-y-4">
- <p className="text-sm text-[var(--text-2)] bg-[rgba(255,255,255,0.04)] rounded-xl p-4 leading-relaxed">
- {generateBirthdayMessage(messageModal)}
- </p>
- <Button
- onClick={() => copyToClipboard(generateBirthdayMessage(messageModal))}
- className="w-full bg-[var(--accent-subtle)] border border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent-subtle)]"
- >
- <Copy className="h-3.5 w-3.5 mr-2" />
- {copied ? 'Copié !' : 'Copier le message'}
- </Button>
- </div>
+  <div className="space-y-4">
+  <p className="text-[13px] text-[var(--text-2)] bg-[rgba(255,255,255,0.04)] rounded-xl p-4 leading-relaxed">
+   {generateBirthdayMessage(messageModal)}
+  </p>
+  <Button onClick={() => copyToClipboard(generateBirthdayMessage(messageModal))} className="w-full bg-[var(--accent-subtle)] border border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent-subtle)]">
+   <Copy className="h-3.5 w-3.5 mr-2" />
+   {copied ? 'Copié !' : 'Copier le message'}
+  </Button>
+  </div>
  )}
  </DialogContent>
  </Dialog>
@@ -1290,39 +1217,31 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
  <Dialog open={!!giftModal} onOpenChange={(v) => { if (!v) setGiftModal(null) }}>
  <DialogContent className="">
  <DialogHeader>
- <DialogTitle className="text-[var(--text-1)] ">
- Idées cadeaux pour {giftModalTitle}
- </DialogTitle>
+  <DialogTitle className="text-[var(--text-1)]">Idées cadeaux pour {giftModalTitle}</DialogTitle>
  </DialogHeader>
  {giftLoading ? (
- <div className="flex items-center justify-center py-8 gap-2 text-[var(--text-2)]">
- <Loader2 className="h-4 w-4 animate-spin" />
- <span className="text-sm">Génération en cours...</span>
- </div>
+  <div className="flex items-center justify-center py-8 gap-2 text-[var(--text-2)]">
+  <Loader2 className="h-4 w-4 animate-spin" />
+  <span className="text-[13px]">Génération en cours...</span>
+  </div>
  ) : (
- <div className="space-y-2">
- {giftIdeas.map((idea, i) => (
- <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-[rgba(255,255,255,0.04)]">
- <span className="text-sm text-[var(--text-2)]">{idea}</span>
- <a
- href={`https://www.google.com/search?q=${encodeURIComponent(idea.replace(/^\S+\s/, '') + ' cadeau Toulouse')}`}
- target="_blank"
- rel="noopener noreferrer"
- className="text-[var(--accent)] hover:text-[var(--accent-text)] shrink-0 ml-2"
- title="Chercher près de Toulouse"
- >
- <ExternalLink className="h-3.5 w-3.5" />
- </a>
- </div>
- ))}
- {giftIdeas.length === 0 && (
- <p className="text-sm text-[var(--text-3)] text-center py-4">Aucune suggestion disponible</p>
- )}
- </div>
+  <div className="space-y-2">
+  {giftIdeas.map((idea, i) => (
+   <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-[rgba(255,255,255,0.04)]">
+   <span className="text-[13px] text-[var(--text-2)]">{idea}</span>
+   <a href={`https://www.google.com/search?q=${encodeURIComponent(idea.replace(/^\S+\s/, '') + ' cadeau Toulouse')}`} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:text-[var(--accent-text)] shrink-0 ml-2" title="Chercher près de Toulouse">
+    <ExternalLink className="h-3.5 w-3.5" />
+   </a>
+   </div>
+  ))}
+  {giftIdeas.length === 0 && (
+   <p className="text-[13px] text-[var(--text-3)] text-center py-4">Aucune suggestion disponible</p>
+  )}
+  </div>
  )}
  </DialogContent>
  </Dialog>
- </div>
+ </Card>
  )
 }
 
@@ -1408,144 +1327,114 @@ function RemindersSection({ reminders, onUpdate, onRefresh }: {
  }
 
  return (
- <div className="rounded-2xl p-6" style={styles.glassCard}>
- <div className="flex items-center justify-between mb-4">
- <p className="text-[12px] uppercase tracking-wider text-white/40">Reminders</p>
- <Dialog open={open} onOpenChange={setOpen}>
- <DialogTrigger asChild>
- <button className="text-[13px] font-medium text-[var(--accent)] hover:text-[var(--accent)]/80 transition-colors">
- Add
- </button>
- </DialogTrigger>
- <DialogContent className="">
- <DialogHeader><DialogTitle className="text-[var(--text-1)] ">Add Reminder</DialogTitle></DialogHeader>
- <div className="space-y-3">
- <Input placeholder="Reminder title" value={title} onChange={(e) => setTitle(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" />
- <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" />
+ <Card className="bg-[#141415] border-[rgba(255,255,255,0.08)] rounded-lg">
+ <div className="flex items-center justify-between px-6 pt-6 pb-0">
+  <span className="text-[11px] font-medium uppercase tracking-[0.05em] text-[rgba(255,255,255,0.35)]">Reminders</span>
+  <Dialog open={open} onOpenChange={setOpen}>
+  <DialogTrigger asChild>
+   <button className="text-[12px] font-medium text-[#818CF8] bg-transparent border-none cursor-pointer">Add</button>
+  </DialogTrigger>
+  <DialogContent className="">
+   <DialogHeader><DialogTitle className="text-[var(--text-1)]">Add Reminder</DialogTitle></DialogHeader>
+   <div className="space-y-3">
+    <Input placeholder="Reminder title" value={title} onChange={(e) => setTitle(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" />
+    <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" />
+   </div>
+   <DialogFooter>
+    <Button onClick={addReminder} disabled={!title.trim()} className="bg-[var(--accent-subtle)] border border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent-subtle)]">Add</Button>
+   </DialogFooter>
+  </DialogContent>
+  </Dialog>
  </div>
- <DialogFooter>
- <Button onClick={addReminder} disabled={!title.trim()} className="bg-[var(--accent-subtle)] border border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent-subtle)]">Add</Button>
- </DialogFooter>
- </DialogContent>
- </Dialog>
- </div>
+ <CardContent>
  {active.length === 0 && done.length === 0 ? (
- <p className="text-sm text-[var(--text-3)] text-center py-8">No reminders</p>
+ <p className="text-[13px] text-[rgba(255,255,255,0.35)] text-center py-8">No reminders</p>
  ) : (
- <div className="space-y-1">
- {active.map((r) => {
- const overdue = isOverdue(r.due)
- const countdown = getCountdown(r.due)
- return (
- <div
- key={r.id}
- className={`group flex items-center justify-between p-3 rounded-xl hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-150 ${overdue ? 'bg-rose-500/5 border border-rose-500/20' : ''}`}
- >
- <div className="flex items-center gap-3">
- <button onClick={() => toggleDone(r.id)} className="h-4 w-4 rounded border border-[rgba(255,255,255,0.15)] flex items-center justify-center hover:border-[var(--accent)] transition-colors duration-150 shrink-0">
- </button>
- <div>
- <div className="flex items-center gap-2">
- <p className={`text-[14px] ${overdue ? 'text-rose-400' : 'text-[var(--text-2)]'}`}>{r.title}</p>
- {r.recurring && <span className="text-[13px]" style={{ color: 'var(--text-2, var(--text-2))' }}>{r.recurring}</span>}
- </div>
- {r.due && (
- <p className={`text-[13px] flex items-center gap-1 mt-0.5 ${overdue ? 'text-rose-400/80' : 'text-[var(--text-3)]'}`}>
- <Clock className="h-3 w-3" />
- {countdown} &middot; {new Date(r.due).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
- </p>
- )}
- </div>
- </div>
- <Button
- variant="ghost" size="icon"
- className="opacity-0 group-hover:opacity-100 transition-opacity text-[var(--text-3)] hover:text-[var(--accent)] h-7 w-7"
- onClick={() => openEdit(r)}
- >
- <Pencil className="h-3.5 w-3.5" />
- </Button>
- </div>
- )
- })}
- {done.length > 0 && (
- <div className="pt-3 mt-3 border-t border-[rgba(255,255,255,0.04)]">
- <p className="text-xs text-[var(--text-3)] mb-2 px-3">Completed</p>
- {done.map((r) => (
- <div key={r.id} className="group flex items-center justify-between p-3 rounded-xl hover:bg-[rgba(255,255,255,0.04)] transition-colors duration-150">
- <div className="flex items-center gap-3">
- <button onClick={() => toggleDone(r.id)} className="h-4 w-4 rounded border border-emerald-500/40 bg-emerald-500/20 flex items-center justify-center shrink-0">
- <Check className="h-2.5 w-2.5 text-emerald-400" />
- </button>
- <span className="text-[14px] text-white/30 line-through">{r.title}</span>
- </div>
- <Button
- variant="ghost" size="icon"
- className="opacity-0 group-hover:opacity-100 transition-opacity text-[var(--text-3)] hover:text-[var(--accent)] h-7 w-7"
- onClick={() => openEdit(r)}
- >
- <Pencil className="h-3.5 w-3.5" />
- </Button>
- </div>
- ))}
+ <div className="flex flex-col gap-2 md:gap-3">
+  {active.map((r) => {
+  const overdue = isOverdue(r.due)
+  return (
+   <div key={r.id} className="group flex items-center gap-3">
+   <Checkbox
+    checked={false}
+    onCheckedChange={() => toggleDone(r.id)}
+    className={overdue ? 'border-[#F87171]' : 'border-[rgba(255,255,255,0.15)]'}
+   />
+   <span className="flex-1 min-w-0 text-[13px] leading-5" style={{ color: overdue ? '#F87171' : 'rgba(255,255,255,0.55)' }}>{r.title}</span>
+   <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity text-[var(--text-3)] hover:text-[var(--accent)] h-7 w-7" onClick={() => openEdit(r)}>
+    <Pencil className="h-3.5 w-3.5" />
+   </Button>
+   </div>
+  )
+  })}
+  {done.map((r) => (
+  <div key={r.id} className="group flex items-center gap-3">
+   <Checkbox
+   checked={true}
+   onCheckedChange={() => toggleDone(r.id)}
+   />
+   <span className="flex-1 min-w-0 text-[13px] leading-5 text-[rgba(255,255,255,0.35)] line-through">{r.title}</span>
+   <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity text-[var(--text-3)] hover:text-[var(--accent)] h-7 w-7" onClick={() => openEdit(r)}>
+   <Pencil className="h-3.5 w-3.5" />
+   </Button>
+  </div>
+  ))}
  </div>
  )}
- </div>
- )}
+ </CardContent>
 
  {/* Edit Reminder Modal */}
  <Dialog open={!!editModal} onOpenChange={(v) => { if (!v) setEditModal(null) }}>
  <DialogContent className="">
- <DialogHeader><DialogTitle className="text-[var(--text-1)] ">Edit Reminder</DialogTitle></DialogHeader>
+ <DialogHeader><DialogTitle className="text-[var(--text-1)]">Edit Reminder</DialogTitle></DialogHeader>
  <div className="space-y-3">
- <div>
- <label className="text-xs text-[var(--text-2)] mb-1 block">Title</label>
- <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" />
- </div>
- <div>
- <label className="text-xs text-[var(--text-2)] mb-1 block">Due date</label>
- <Input type="date" value={editDue} onChange={(e) => setEditDue(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" />
- </div>
- <div>
- <label className="text-xs text-[var(--text-2)] mb-1 block">Recurring</label>
- <select
- value={editRecurring}
- onChange={(e) => setEditRecurring(e.target.value)}
- className="w-full h-9 rounded-md border border-[var(--border)] bg-[rgba(255,255,255,0.04)] text-[var(--text-1)] text-sm px-3"
- >
- <option value="none">None</option>
- <option value="daily">Daily</option>
- <option value="weekly">Weekly</option>
- <option value="monthly">Monthly</option>
- <option value="yearly">Yearly</option>
- </select>
- </div>
- <div>
- <label className="text-xs text-[var(--text-2)] mb-1 block">Status</label>
- <select
- value={editStatus}
- onChange={(e) => setEditStatus(e.target.value)}
- className="w-full h-9 rounded-md border border-[var(--border)] bg-[rgba(255,255,255,0.04)] text-[var(--text-1)] text-sm px-3"
- >
- <option value="active">Active</option>
- <option value="done">Done</option>
- </select>
- </div>
+  <div>
+  <label className="text-[12px] text-[var(--text-2)] mb-1 block">Title</label>
+  <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" />
+  </div>
+  <div>
+  <label className="text-[12px] text-[var(--text-2)] mb-1 block">Due date</label>
+  <Input type="date" value={editDue} onChange={(e) => setEditDue(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" />
+  </div>
+  <div>
+  <Label className="text-[12px] text-[var(--text-2)] mb-1 block">Recurring</Label>
+  <Select value={editRecurring} onValueChange={setEditRecurring}>
+   <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+   <SelectContent>
+    <SelectItem value="none">None</SelectItem>
+    <SelectItem value="daily">Daily</SelectItem>
+    <SelectItem value="weekly">Weekly</SelectItem>
+    <SelectItem value="monthly">Monthly</SelectItem>
+    <SelectItem value="yearly">Yearly</SelectItem>
+   </SelectContent>
+  </Select>
+  </div>
+  <div>
+  <Label className="text-[12px] text-[var(--text-2)] mb-1 block">Status</Label>
+  <Select value={editStatus} onValueChange={setEditStatus}>
+   <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+   <SelectContent>
+    <SelectItem value="active">Active</SelectItem>
+    <SelectItem value="done">Done</SelectItem>
+   </SelectContent>
+  </Select>
+  </div>
  </div>
  <DialogFooter className="flex justify-between">
- {!deleteConfirm ? (
- <Button variant="ghost" onClick={() => setDeleteConfirm(true)} className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10">
- <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
- </Button>
- ) : (
- <Button variant="ghost" onClick={deleteReminder} className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10">
- <Trash2 className="h-3.5 w-3.5 mr-1" /> Confirm delete
- </Button>
- )}
- <Button onClick={saveEdit} className="bg-[var(--accent-subtle)] border border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent-subtle)]">Save</Button>
+  {!deleteConfirm ? (
+  <Button variant="ghost" onClick={() => setDeleteConfirm(true)} className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10">
+   <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+  </Button>
+  ) : (
+  <Button variant="ghost" onClick={deleteReminder} className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10">
+   <Trash2 className="h-3.5 w-3.5 mr-1" /> Confirm delete
+  </Button>
+  )}
+  <Button onClick={saveEdit} className="bg-[var(--accent-subtle)] border border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent-subtle)]">Save</Button>
  </DialogFooter>
  </DialogContent>
  </Dialog>
- </div>
+ </Card>
  )
 }
 
@@ -1554,7 +1443,7 @@ function DayPlannerModal({ plan, open, onClose, toast }: { plan: DayPlan; open: 
  const [sharing, setSharing] = useState(false)
  const [downloading, setDownloading] = useState(false)
 
- if (!open || !plan) return null
+ if (!plan) return null
 
  const stepTypeIcon = (type?: string) => {
  switch (type) {
@@ -1599,110 +1488,74 @@ function DayPlannerModal({ plan, open, onClose, toast }: { plan: DayPlan; open: 
  }
 
  return (
- <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={onClose}>
- <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
- <motion.div
- initial={{ opacity: 0, scale: 0.95, y: 20 }}
- animate={{ opacity: 1, scale: 1, y: 0 }}
- exit={{ opacity: 0, scale: 0.95, y: 20 }}
- transition={{ duration: 0.2 }}
- className="relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border border-[var(--accent-border)] bg-[rgba(255,255,255,0.04)]"
- onClick={e => e.stopPropagation()}
- >
- {/* Close button */}
- <button
- onClick={onClose}
- className="absolute top-4 right-4 p-1.5 rounded-full bg-[rgba(255,255,255,0.06)] hover:bg-white/[0.12] text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors z-10"
- >
- <X className="h-4 w-4" />
- </button>
-
- {/* Header */}
- <div className="p-6 pb-4">
- <div className="flex items-center gap-3 mb-1">
- <LucideCalendar className="h-5 w-5 text-[var(--accent)]" />
- <h2 style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)' }}>{plan.title}</h2>
- </div>
- <div className="ml-8">
- <span className="text-[12px]" style={{ color: 'var(--text-2, var(--text-2))' }}>
- {plan.day}
- </span>
- </div>
- </div>
+ <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
+ <DialogContent className="max-w-[640px] bg-[#1E1E20] border-[rgba(255,255,255,0.08)] max-h-[85vh] overflow-y-auto p-0">
+ <DialogHeader className="p-6 pb-4">
+ <DialogTitle className="flex items-center gap-3 text-[var(--text-1)]" style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }}>
+  <LucideCalendar className="h-5 w-5 text-[var(--accent)]" />
+  {plan.title}
+ </DialogTitle>
+ <DialogDescription className="text-[var(--text-2)] text-[12px] ml-8">
+  {plan.day}
+ </DialogDescription>
+ </DialogHeader>
 
  {/* Timeline */}
  <div className="px-6 pb-4">
  <div className="relative">
- {/* Vertical line */}
- <div className="absolute left-[27px] top-2 bottom-2 w-px bg-white/[0.08]" />
-
- <div className="space-y-0">
- {plan.steps.map((step: DayPlanStep, i: number) => (
- <div key={i} className="relative flex gap-4 py-3">
- {/* Time + dot */}
- <div className="flex items-start gap-2 shrink-0 w-[56px]">
- <span className="text-xs font-mono text-[var(--accent)] mt-0.5">{step.time}</span>
- </div>
- {/* Icon dot on line */}
- <div className="flex items-start shrink-0 -ml-1 mt-0.5">
- <span className="text-sm relative z-10 bg-[rgba(255,255,255,0.04)] px-0.5">{stepTypeIcon(step.type)}</span>
- </div>
- {/* Content */}
- <div className="flex-1 min-w-0">
- <p className="text-sm text-[var(--text-1)]">{step.action}</p>
- {step.place && (
- <p className="text-xs text-[var(--accent-muted)] mt-0.5">{step.place}{step.cuisine ? ` · ${step.cuisine}` : ''}{step.price ? ` · ${step.price}` : ''}</p>
- )}
- {step.parking && (
- <p className="text-[11px] text-[var(--text-3)] mt-0.5">🅿️ {step.parking}</p>
- )}
- {step.notes && (
- <p className="text-sm text-[var(--text-3)] mt-1 leading-relaxed">{step.notes}</p>
- )}
- {step.mapQuery && (
- <a
- href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(step.mapQuery)}`}
- target="_blank"
- rel="noopener noreferrer"
- className="inline-flex items-center gap-1 text-[11px] text-[var(--accent-muted)] hover:text-[var(--accent-text)] mt-1"
- >
- <MapPin className="h-2.5 w-2.5" /> Maps
- </a>
- )}
- </div>
- </div>
- ))}
- </div>
+  <div className="absolute left-[27px] top-2 bottom-2 w-px bg-white/[0.08]" />
+  <div className="space-y-0">
+  {plan.steps.map((step: DayPlanStep, i: number) => (
+  <div key={i} className="relative flex gap-4 py-3">
+   <div className="flex items-start gap-2 shrink-0 w-[56px]">
+   <span className="text-[12px] font-mono text-[var(--accent)] mt-0.5">{step.time}</span>
+   </div>
+   <div className="flex items-start shrink-0 -ml-1 mt-0.5">
+   <span className="text-[13px] relative z-10 bg-[rgba(255,255,255,0.04)] px-0.5">{stepTypeIcon(step.type)}</span>
+   </div>
+   <div className="flex-1 min-w-0">
+   <p className="text-[13px] text-[var(--text-1)]">{step.action}</p>
+   {step.place && (
+    <p className="text-[12px] text-[var(--accent-muted)] mt-0.5">{step.place}{step.cuisine ? ` · ${step.cuisine}` : ''}{step.price ? ` · ${step.price}` : ''}</p>
+   )}
+   {step.parking && (
+    <p className="text-[11px] text-[var(--text-3)] mt-0.5">🅿️ {step.parking}</p>
+   )}
+   {step.notes && (
+    <p className="text-[13px] text-[var(--text-3)] mt-1 leading-relaxed">{step.notes}</p>
+   )}
+   {step.mapQuery && (
+    <a
+    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(step.mapQuery)}`}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="inline-flex items-center gap-1 text-[11px] text-[var(--accent-muted)] hover:text-[var(--accent-text)] mt-1"
+    >
+    <MapPin className="h-2.5 w-2.5" /> Maps
+    </a>
+   )}
+   </div>
+  </div>
+  ))}
+  </div>
  </div>
  </div>
 
- {/* Footer actions */}
- <div className="p-6 pt-2 flex items-center gap-3 border-t border-[var(--border)]">
- <button
- onClick={handleShare}
- disabled={sharing}
- className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--accent-subtle)] border border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent-subtle)] text-xs transition-colors disabled:opacity-50"
- >
- {sharing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
- Share with Anne
- </button>
- <button
- onClick={handleDownloadIcs}
- disabled={downloading}
- className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.06)] hover:bg-white/[0.1] text-[var(--text-2)] hover:text-[var(--text-1)] text-xs transition-colors border border-[var(--border)] disabled:opacity-50"
- >
- {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
- Add to Calendar
- </button>
- <button
- onClick={onClose}
- className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.06)] hover:bg-white/[0.1] text-[var(--text-2)] hover:text-[var(--text-1)] text-xs transition-colors border border-[var(--border)]"
- >
- Close
- </button>
- </div>
- </motion.div>
- </div>
+ <DialogFooter className="p-6 pt-2 border-t border-[var(--border)] flex-row gap-3 sm:justify-start">
+ <Button variant="outline" size="sm" onClick={handleShare} disabled={sharing} className="bg-[var(--accent-subtle)] border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent-subtle)] text-[12px]">
+  {sharing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
+  Share with Anne
+ </Button>
+ <Button variant="outline" size="sm" onClick={handleDownloadIcs} disabled={downloading} className="text-[var(--text-2)] text-[12px]">
+  {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+  Add to Calendar
+ </Button>
+ <Button variant="outline" size="sm" onClick={onClose} className="text-[var(--text-2)] text-[12px]">
+  Close
+ </Button>
+ </DialogFooter>
+ </DialogContent>
+ </Dialog>
  )
 }
 
@@ -1774,155 +1627,112 @@ function IdeaCard({ idea, type, toast, onDidThis, weather, onOpenPlan }: { idea:
  style={{ borderRadius: tokens.radii.sm, padding: `${tokens.spacing.sm}px ${tokens.spacing.xs}px` }}
  onClick={() => setExpanded(!expanded)}
  >
- {/* Compact view — all items vertically centered on same baseline */}
- <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.md }}>
- <span style={{ fontSize: 16, lineHeight: 1, flexShrink: 0 }}>{idea.emoji}</span>
- <p className="truncate" style={{ ...tokens.typography.body, fontWeight: 500, color: tokens.colors.textPrimary, flexShrink: 1, minWidth: 0, maxWidth: '40%' }}>{idea.title}</p>
+ {/* Compact row — wraps on mobile */}
+ <div className="flex items-center gap-2 md:gap-3 flex-wrap md:flex-nowrap">
+ <span className="text-[16px] leading-none shrink-0">{idea.emoji}</span>
+ <p className="truncate text-[13px] font-medium text-[var(--text-1)] min-w-0 flex-1 md:flex-none md:max-w-[40%]">{idea.title}</p>
+ {/* Activity pills — shadcn Badge with semantic colors */}
+ <div className="hidden md:flex items-center gap-2">
  {idea.indoor !== undefined && (
- <span style={{
- ...tokens.typography.caption,
- color: tokens.colors.textSecondary,
- background: tokens.colors.surface,
- padding: `2px ${tokens.spacing.sm}px`,
- borderRadius: tokens.radii.sm,
- flexShrink: 0,
- lineHeight: '18px',
- }}>
- {idea.indoor ? 'Indoor' : 'Outdoor'}
- </span>
+ <Badge className={idea.indoor
+  ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/15'
+  : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/15'
+ }>
+  {idea.indoor ? 'Indoor' : 'Outdoor'}
+ </Badge>
  )}
- <span style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.xs, ...tokens.typography.caption, color: tokens.colors.textTertiary, flexShrink: 0 }}>
- <Car style={{ width: 12, height: 12 }} />
+ <Badge variant="secondary" className="gap-1">
+ <Car className="h-2.5 w-2.5" />
  {idea.driveTime}
- </span>
- <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.xs, flexShrink: 0, marginLeft: 'auto' }}>
- <button
- onClick={handleShare}
- disabled={sharing}
- className="p-1 rounded-md hover:bg-[rgba(255,255,255,0.06)] transition-colors"
- style={{ color: tokens.colors.textTertiary }}
- title="Share with Anne"
- >
- {sharing ? <Loader2 style={{ width: 14, height: 14 }} className="animate-spin" /> : <Share2 style={{ width: 14, height: 14 }} />}
- </button>
- <button
- onClick={handleDidThis}
- className="p-1 rounded-md hover:text-emerald-400 hover:bg-emerald-500/[0.08] transition-colors"
- style={{ color: tokens.colors.textTertiary }}
- title="We did this!"
- >
- <Check style={{ width: 14, height: 14 }} />
- </button>
- <ChevronDown className={`transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} style={{ width: 14, height: 14, color: tokens.colors.textTertiary }} />
+ </Badge>
+ </div>
+ <div className="flex items-center gap-1 shrink-0 ml-auto">
+ <Button variant="ghost" size="icon-xs" onClick={handleShare} disabled={sharing} title="Share with Anne" className="text-[var(--text-3)] hover:text-[var(--text-2)]">
+  {sharing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
+ </Button>
+ <Button variant="ghost" size="icon-xs" onClick={handleDidThis} title="We did this!" className="text-[var(--text-3)] hover:text-emerald-400 hover:bg-emerald-500/[0.08]">
+  <Check className="h-3.5 w-3.5" />
+ </Button>
+ <ChevronDown className={`transition-transform duration-200 h-3.5 w-3.5 text-[var(--text-3)] ${expanded ? 'rotate-180' : ''}`} />
  </div>
  </div>
 
- {/* Expanded detail panel */}
+ {/* Expanded detail */}
+ <AnimatePresence>
  {expanded && (
  <motion.div
- initial={{ height: 0, opacity: 0 }}
- animate={{ height: 'auto', opacity: 1 }}
- exit={{ height: 0, opacity: 0 }}
- transition={{ duration: 0.2 }}
- className="border-t border-[var(--divider)] mt-2"
+  initial={{ height: 0, opacity: 0 }}
+  animate={{ height: 'auto', opacity: 1 }}
+  exit={{ height: 0, opacity: 0 }}
+  transition={{ duration: 0.2 }}
+  className="mt-2"
  >
- <div className="pt-3 pb-1 px-1 space-y-3">
- <p className="text-sm text-[var(--text-2)] leading-relaxed">{idea.fullDescription}</p>
+  <Separator className="mb-3" />
+  <div className="flex flex-col gap-3 px-1 pb-1">
+  <p className="text-[13px] text-[var(--text-2)] leading-relaxed">{idea.fullDescription}</p>
 
- <div className="flex flex-wrap gap-2">
- <a
- href={mapsLink}
- target="_blank"
- rel="noopener noreferrer"
- onClick={(e) => e.stopPropagation()}
- className="inline-flex items-center gap-1.5 text-xs text-[var(--accent)] hover:text-[var(--accent-text)] bg-[var(--accent-subtle)] hover:bg-[var(--accent-subtle)] px-3 py-1.5 rounded-lg transition-colors"
- >
- <MapPin className="h-3 w-3" /> Google Maps
- </a>
- <a
- href={parkingLink}
- target="_blank"
- rel="noopener noreferrer"
- onClick={(e) => e.stopPropagation()}
- className="inline-flex items-center gap-1.5 text-xs text-[var(--text-2)] hover:text-[var(--text-2)] bg-[rgba(255,255,255,0.04)] hover:bg-white/[0.08] px-3 py-1.5 rounded-lg transition-colors"
- >
- <ParkingSquare className="h-3 w-3" /> Parking
- </a>
- <a
- href={hotelLink}
- target="_blank"
- rel="noopener noreferrer"
- onClick={(e) => e.stopPropagation()}
- className="inline-flex items-center gap-1.5 text-xs text-[var(--text-2)] hover:text-[var(--text-2)] bg-[rgba(255,255,255,0.04)] hover:bg-white/[0.08] px-3 py-1.5 rounded-lg transition-colors"
- >
- <Hotel className="h-3 w-3" /> Hotels
- </a>
- <a
- href={lunchLink}
- target="_blank"
- rel="noopener noreferrer"
- onClick={(e) => e.stopPropagation()}
- className="inline-flex items-center gap-1.5 text-xs text-[var(--text-2)] hover:text-[var(--text-2)] bg-[rgba(255,255,255,0.04)] hover:bg-white/[0.08] px-3 py-1.5 rounded-lg transition-colors"
- >
- <UtensilsCrossed className="h-3 w-3" /> Lunch
- </a>
- </div>
+  <div className="flex flex-wrap gap-2">
+   <Button variant="outline" size="sm" asChild className="bg-[var(--accent-subtle)] border-[var(--accent-border)] text-[var(--accent)] text-[12px] h-7">
+   <a href={mapsLink} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+    <MapPin className="h-3 w-3" /> Google Maps
+   </a>
+   </Button>
+   <Button variant="outline" size="sm" asChild className="text-[var(--text-2)] text-[12px] h-7">
+   <a href={parkingLink} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+    <ParkingSquare className="h-3 w-3" /> Parking
+   </a>
+   </Button>
+   <Button variant="outline" size="sm" asChild className="text-[var(--text-2)] text-[12px] h-7">
+   <a href={hotelLink} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+    <Hotel className="h-3 w-3" /> Hotels
+   </a>
+   </Button>
+   <Button variant="outline" size="sm" asChild className="text-[var(--text-2)] text-[12px] h-7">
+   <a href={lunchLink} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+    <UtensilsCrossed className="h-3 w-3" /> Lunch
+   </a>
+   </Button>
+  </div>
 
- {(idea.parking || idea.hotel || idea.lunchSpot) && (
- <div className="flex flex-col gap-1.5 pt-1">
- {idea.lunchSpot && (
- <p className="text-[11px] text-[var(--text-3)]"><span className="text-[var(--text-3)]">Lunch:</span> {idea.lunchSpot}</p>
- )}
- {idea.parking && (
- <p className="text-[11px] text-[var(--text-3)]"><span className="text-[var(--text-3)]">Parking:</span> {idea.parking}</p>
- )}
- {idea.hotel && (
- <p className="text-[11px] text-[var(--text-3)]"><span className="text-[var(--text-3)]">Stay:</span> {idea.hotel}</p>
- )}
- </div>
- )}
+  {(idea.parking || idea.hotel || idea.lunchSpot) && (
+   <div className="flex flex-col gap-1.5 pt-1">
+   {idea.lunchSpot && <p className="text-[12px] text-[var(--text-3)]">Lunch: {idea.lunchSpot}</p>}
+   {idea.parking && <p className="text-[12px] text-[var(--text-3)]">Parking: {idea.parking}</p>}
+   {idea.hotel && <p className="text-[12px] text-[var(--text-3)]">Stay: {idea.hotel}</p>}
+   </div>
+  )}
 
- {/* Plan this day */}
- <div className="flex items-center gap-2 pt-2 border-t border-[rgba(255,255,255,0.04)]">
- <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
- <select
- value={planDay}
- onChange={e => setPlanDay(e.target.value as 'Saturday' | 'Sunday')}
- className="text-[11px] bg-[rgba(255,255,255,0.04)] border border-[var(--border)] rounded-lg px-2 py-1.5 text-[var(--text-2)] appearance-none cursor-pointer focus:outline-none"
- >
- <option value="Saturday">Saturday</option>
- <option value="Sunday">Sunday</option>
- </select>
- <button
- onClick={handlePlanDay}
- disabled={planning}
- className="inline-flex items-center gap-1.5 text-xs text-[var(--text-2)] hover:text-[var(--accent-text)] bg-[var(--accent-subtle)] hover:bg-[var(--accent-subtle)] px-3 py-1.5 rounded-lg transition-colors border border-[var(--accent-border)] disabled:opacity-50"
- >
- {planning ? <Loader2 className="h-3 w-3 animate-spin" /> : <LucideCalendar className="h-3 w-3" />}
- Plan this day
- </button>
- </div>
- </div>
+  {/* Plan this day */}
+  <Separator />
+  <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+   <Select value={planDay} onValueChange={(v) => setPlanDay(v as 'Saturday' | 'Sunday')}>
+   <SelectTrigger size="sm" className="w-[110px] text-[12px] bg-transparent border-[var(--border)] text-[var(--text-2)]">
+    <SelectValue />
+   </SelectTrigger>
+   <SelectContent>
+    <SelectItem value="Saturday">Saturday</SelectItem>
+    <SelectItem value="Sunday">Sunday</SelectItem>
+   </SelectContent>
+   </Select>
+   <Button variant="outline" size="sm" onClick={handlePlanDay} disabled={planning} className="bg-[var(--accent-subtle)] border-[var(--accent-border)] text-[var(--accent)] text-[12px]">
+   {planning ? <Loader2 className="h-3 w-3 animate-spin" /> : <LucideCalendar className="h-3 w-3" />}
+   Plan this day
+   </Button>
+  </div>
 
- <div className="flex items-center gap-2 pt-1">
- <button
- onClick={handleShare}
- disabled={sharing}
- className="inline-flex items-center gap-1.5 text-xs text-[var(--text-2)] hover:text-[var(--accent)] bg-[rgba(255,255,255,0.04)] hover:bg-[var(--accent-subtle)] px-3 py-1.5 rounded-lg transition-colors"
- >
- {sharing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Share2 className="h-3 w-3" />}
- Share with Anne
- </button>
- <button
- onClick={handleDidThis}
- className="inline-flex items-center gap-1.5 text-xs text-[var(--text-2)] hover:text-emerald-400 bg-[rgba(255,255,255,0.04)] hover:bg-emerald-500/[0.1] px-3 py-1.5 rounded-lg transition-colors"
- >
- <Check className="h-3 w-3" /> We did this!
- </button>
- </div>
- </div>
+  <div className="flex items-center gap-2">
+   <Button variant="ghost" size="sm" onClick={handleShare} disabled={sharing} className="text-[var(--text-2)] hover:bg-[var(--accent-subtle)] hover:text-[var(--accent)] text-[12px]">
+   {sharing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Share2 className="h-3 w-3" />}
+   Share with Anne
+   </Button>
+   <Button variant="ghost" size="sm" onClick={handleDidThis} className="text-[var(--text-2)] hover:bg-emerald-500/10 hover:text-emerald-400 text-[12px]">
+   <Check className="h-3 w-3" /> We did this!
+   </Button>
+  </div>
+  </div>
  </motion.div>
  )}
+ </AnimatePresence>
  </div>
 
  </>
@@ -1948,14 +1758,14 @@ function WeekendTopCard({ weather, events }: { weather: WeekendWeather | null; e
  const homeCity = weather?.homeCity
 
  return (
- <div style={styles.glassCard}>
- {/* Header row: title left, weather right */}
- <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: events.length > 0 ? tokens.spacing.lg : 0 }}>
- <span style={{ ...tokens.typography.micro, color: tokens.colors.textTertiary }}>
+ <div style={styles.card} className="!p-4 md:!p-6">
+ {/* Header row: title left, weather right — stacks on mobile */}
+ <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2 md:gap-0" style={{ marginBottom: events.length > 0 ? tokens.spacing.lg : 0 }}>
+ <span style={{ ...tokens.typography.label, color: tokens.colors.textTertiary }}>
  This weekend{homeCity ? ` — ${homeCity}` : ''}
  </span>
  {weather && (
- <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.lg, flexShrink: 0 }}>
+ <div className="flex items-center gap-3 md:gap-4 flex-shrink-0 flex-wrap">
  <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.sm }}>
  <WeatherIcon code={weather.saturday.weatherCode} className="h-4 w-4 text-amber-400/80" />
  <span style={{ ...tokens.typography.body, color: tokens.colors.textSecondary }}>Sat</span>
@@ -1982,7 +1792,7 @@ function WeekendTopCard({ weather, events }: { weather: WeekendWeather | null; e
  {/* Local Events — wrapping chips */}
  {events.length > 0 && (
  <div>
- <p style={{ ...tokens.typography.micro, color: tokens.colors.textTertiary, marginBottom: tokens.spacing.sm }}>Local Events</p>
+ <p style={{ ...tokens.typography.label, color: tokens.colors.textTertiary, marginBottom: tokens.spacing.sm }}>Local Events</p>
  <div style={{ display: 'flex', flexWrap: 'wrap', gap: tokens.spacing.sm }}>
  {events.map((event, i) => (
  <a
@@ -1990,7 +1800,7 @@ function WeekendTopCard({ weather, events }: { weather: WeekendWeather | null; e
  href={`https://www.google.com/search?q=${encodeURIComponent(event.title + ' ' + (event.location || 'Toulouse'))}`}
  target="_blank"
  rel="noopener noreferrer"
- className="hover:bg-[rgba(255,255,255,0.06)] transition-colors group"
+ className="hover:bg-[var(--bg-surface)] transition-colors group min-w-0"
  style={{
  display: 'inline-flex',
  alignItems: 'center',
@@ -2000,12 +1810,12 @@ function WeekendTopCard({ weather, events }: { weather: WeekendWeather | null; e
  border: `1px solid ${tokens.colors.border}`,
  }}
  >
- <span style={{ fontSize: 14 }}>🎭</span>
- <span style={{ ...tokens.typography.body, color: tokens.colors.textSecondary }} className="group-hover:text-[var(--text-1)]">{event.title}</span>
+ <span style={{ fontSize: tokens.typography.body.fontSize }} className="shrink-0">🎭</span>
+ <span style={{ ...tokens.typography.body, color: tokens.colors.textSecondary }} className="group-hover:text-[var(--text-1)] truncate">{event.title}</span>
  {(event.location || event.driveTime) && (
- <span style={{ ...tokens.typography.caption, color: tokens.colors.textTertiary, whiteSpace: 'nowrap' }}>{event.location}{event.driveTime ? ` · ${event.driveTime}` : ''}</span>
+ <span className="hidden md:inline shrink-0" style={{ ...tokens.typography.caption, color: tokens.colors.textTertiary, whiteSpace: 'nowrap' }}>{event.location}{event.driveTime ? ` · ${event.driveTime}` : ''}</span>
  )}
- <ExternalLink style={{ width: 12, height: 12, color: tokens.colors.textTertiary, flexShrink: 0 }} className="group-hover:text-[var(--text-2)]" />
+ <ExternalLink style={{ width: 12, height: 12, color: tokens.colors.textTertiary, flexShrink: 0 }} className="group-hover:text-[var(--text-2)] shrink-0" />
  </a>
  ))}
  </div>
@@ -2029,7 +1839,7 @@ function TripHistorySection({ trips, expanded, onToggle }: { trips: Trip[]; expa
  className="flex items-center gap-2 mb-3 group"
  >
  <History className="h-3.5 w-3.5 text-[var(--text-3)]" />
- <span className="text-[13px] uppercase tracking-widest text-[var(--text-3)] group-hover:text-[var(--text-2)] transition-colors">
+ <span className="text-[11px] font-medium uppercase tracking-[0.05em] text-[var(--text-3)] group-hover:text-[var(--text-2)] transition-colors">
  Trip History
  </span>
  {trips.length > 0 && (
@@ -2037,16 +1847,17 @@ function TripHistorySection({ trips, expanded, onToggle }: { trips: Trip[]; expa
  )}
  <ChevronDown className={`h-3 w-3 text-[var(--text-3)] transition-transform duration-200 ml-auto ${expanded ? 'rotate-180' : ''}`} />
  </button>
+ <AnimatePresence>
  {(expanded || trips.length > 0) && (
- <div className="space-y-1">
+ <motion.div className="space-y-1" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}>
  {displayTrips.map((trip) => (
  <div key={trip.id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-[rgba(255,255,255,0.04)] transition-colors">
- <span className="text-[13px] text-[var(--text-3)] font-mono w-20 shrink-0">
+ <span className="text-[12px] font-medium text-[var(--text-3)] font-mono w-20 shrink-0">
  {new Date(trip.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
  </span>
- <span className="text-[14px] text-[var(--text-2)] flex-1 truncate">{trip.title}</span>
+ <span className="text-[13px] text-[var(--text-2)] flex-1 truncate">{trip.title}</span>
  {trip.location && (
- <span className="text-[13px] text-[var(--text-3)] truncate max-w-[120px]">{trip.location}</span>
+ <span className="text-[12px] font-medium text-[var(--text-3)] truncate max-w-[120px]">{trip.location}</span>
  )}
  {trip.rating && (
  <div className="flex items-center gap-0.5 shrink-0">
@@ -2058,25 +1869,35 @@ function TripHistorySection({ trips, expanded, onToggle }: { trips: Trip[]; expa
  </div>
  ))}
  {!expanded && trips.length > 3 && (
- <button onClick={onToggle} className="text-xs text-[var(--text-3)] hover:text-[var(--text-2)] w-full text-center py-1">
+ <button onClick={onToggle} className="text-[12px] text-[var(--text-3)] hover:text-[var(--text-2)] w-full text-center py-1">
  Show all {trips.length} trips
  </button>
  )}
  {expanded && trips.length > 3 && (
- <button onClick={onToggle} className="text-xs text-[var(--text-3)] hover:text-[var(--text-2)] w-full text-center py-1">
+ <button onClick={onToggle} className="text-[12px] text-[var(--text-3)] hover:text-[var(--text-2)] w-full text-center py-1">
  Show less
  </button>
  )}
  {trips.length === 0 && (
- <p className="text-xs text-[var(--text-3)] text-center py-4">No trips recorded yet</p>
+ <p className="text-[12px] text-[var(--text-3)] text-center py-4">No trips recorded yet</p>
  )}
- </div>
+ </motion.div>
  )}
+ </AnimatePresence>
  </div>
  )
 }
 
 // --- Ideas Section (weekend or date) ---
+const ideaStaggerContainer = {
+ hidden: {},
+ show: { transition: { staggerChildren: 0.06 } },
+}
+const ideaStaggerItem = {
+ hidden: { opacity: 0, y: 16 },
+ show: { opacity: 1, y: 0 },
+}
+
 function IdeasSection({ type, ideas, content, lastUpdated, refreshing, refreshDisabled, onRefresh, toast, onDidThis, weather, onOpenPlan }: {
  type: 'weekend' | 'date'
  ideas: Idea[]
@@ -2091,11 +1912,9 @@ function IdeasSection({ type, ideas, content, lastUpdated, refreshing, refreshDi
  onOpenPlan: (plan: DayPlan) => void
 }) {
  const isWeekend = type === 'weekend'
- const Icon = isWeekend ? Sparkles : Heart
  const label = isWeekend ? 'Weekend Ideas' : 'Date Ideas'
  const fallbackMsg = isWeekend ? 'No suggestions yet. Next update: Thursday 7pm.' : 'No suggestions yet. Next update: Monday 9am.'
 
- // Fallback: if backend returned ideas=[] but content is JSON, parse client-side
  const { parsedIdeas, parseError } = useMemo(() => {
  if (ideas.length > 0) return { parsedIdeas: ideas, parseError: false }
  if (!content.trim()) return { parsedIdeas: [] as Idea[], parseError: false }
@@ -2103,8 +1922,7 @@ function IdeasSection({ type, ideas, content, lastUpdated, refreshing, refreshDi
  const cleaned = content.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim()
  const parsed = JSON.parse(cleaned)
  if (Array.isArray(parsed)) return { parsedIdeas: parsed as Idea[], parseError: false }
- } catch { /* not valid JSON — likely truncated Gemini response */ }
- // Content exists but isn't valid JSON — show error state instead of raw text
+ } catch { /* not valid JSON */ }
  const looksLikeJson = content.trimStart().startsWith('[') || content.trimStart().startsWith('{')
  return { parsedIdeas: [] as Idea[], parseError: looksLikeJson }
  }, [ideas, content])
@@ -2112,74 +1930,46 @@ function IdeasSection({ type, ideas, content, lastUpdated, refreshing, refreshDi
  const hasIdeas = parsedIdeas.length > 0
 
  return (
- <div className="flex flex-col" style={{ ...styles.glassCard, minHeight: '200px' }}>
- {/* Header: emoji + title | updated date | refresh button */}
- <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.sm, marginBottom: tokens.spacing.lg }}>
- <span style={{ fontSize: 14 }}>{isWeekend ? '✨' : '❤️'}</span>
- <span style={{ ...tokens.typography.micro, color: tokens.colors.textTertiary }}>{label}</span>
- {lastUpdated && (
- <span style={{ ...tokens.typography.caption, color: tokens.colors.textQuaternary, marginLeft: 'auto' }}>Updated {lastUpdated}</span>
- )}
- <button
- onClick={onRefresh}
- disabled={refreshDisabled}
- style={{
- display: 'inline-flex',
- alignItems: 'center',
- gap: tokens.spacing.xs,
- fontSize: 13,
- color: tokens.colors.accent,
- background: 'none',
- border: 'none',
- cursor: refreshDisabled ? 'not-allowed' : 'pointer',
- opacity: refreshDisabled ? 0.5 : 1,
- padding: `${tokens.spacing.xs}px ${tokens.spacing.sm}px`,
- borderRadius: tokens.radii.sm,
- marginLeft: lastUpdated ? 0 : 'auto',
- transition: 'background 150ms',
- }}
- className="hover:bg-[rgba(255,255,255,0.04)]"
- >
- {refreshing ? <Loader2 style={{ width: 14, height: 14 }} className="animate-spin" /> : <RefreshCw style={{ width: 14, height: 14 }} />}
- <span className="hidden sm:inline">Refresh</span>
- </button>
- </div>
- <div className="flex-1">
- {refreshing ? (
- <p style={{ ...tokens.typography.body, color: tokens.colors.textTertiary, textAlign: 'center', padding: `${tokens.spacing.xxxl}px 0` }}>Generating suggestions...</p>
- ) : hasIdeas ? (
- <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.md }}>
- {parsedIdeas.map((idea, i) => (
- <IdeaCard key={i} idea={idea} type={type} toast={toast} onDidThis={onDidThis} weather={weather} onOpenPlan={onOpenPlan} />
- ))}
- </div>
- ) : parseError ? (
- <div className="text-center py-8 space-y-3">
- <p className="text-sm text-[var(--text-3)]">Data is corrupted or incomplete.</p>
- <Button
- variant="ghost"
- size="sm"
- onClick={onRefresh}
- disabled={refreshDisabled}
- className="text-xs text-[var(--accent)] hover:text-[var(--accent-text)] hover:bg-[var(--accent-subtle)]"
- >
- <RefreshCw className="h-3 w-3 mr-1.5" />
- Regenerate
- </Button>
- </div>
- ) : content.trim() ? (
- <div className="prose prose-invert prose-sm max-w-none
- prose-headings:text-[var(--text-1)] prose-headings:text-sm prose-headings:mb-2 prose-headings:mt-0
- prose-p:text-[var(--text-2)] prose-p:text-sm prose-p:leading-relaxed prose-p:my-1
- prose-li:text-[var(--text-2)] prose-li:text-sm prose-li:my-0
- prose-strong:text-[var(--text-2)] prose-ul:my-1 prose-ol:my-1">
- <ReactMarkdown>{content}</ReactMarkdown>
- </div>
- ) : (
- <p className="text-sm text-[var(--text-3)] text-center py-8">{fallbackMsg}</p>
- )}
- </div>
- </div>
+ <Card className="bg-transparent border-[rgba(255,255,255,0.08)] min-h-[200px] flex flex-col">
+ <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+  <CardTitle className="text-[15px] font-medium text-[var(--text-1)]">{label}</CardTitle>
+  <Button variant="ghost" size="sm" onClick={onRefresh} disabled={refreshDisabled} className="text-[var(--text-3)] hover:text-[var(--text-2)] h-7 gap-1.5">
+  {refreshing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+  <span className="hidden sm:inline">Refresh</span>
+  </Button>
+ </CardHeader>
+ <CardContent className="flex-1">
+  {refreshing ? (
+  <p className="text-[13px] text-[var(--text-3)] text-center py-8">Generating suggestions...</p>
+  ) : hasIdeas ? (
+  <motion.div variants={ideaStaggerContainer} initial="hidden" animate="show" className="flex flex-col gap-3">
+   {parsedIdeas.map((idea, i) => (
+   <motion.div key={i} variants={ideaStaggerItem} transition={{ duration: 0.25 }}>
+    <IdeaCard idea={idea} type={type} toast={toast} onDidThis={onDidThis} weather={weather} onOpenPlan={onOpenPlan} />
+   </motion.div>
+   ))}
+  </motion.div>
+  ) : parseError ? (
+  <div className="text-center py-8 space-y-3">
+   <p className="text-[13px] text-[var(--text-3)]">Data is corrupted or incomplete.</p>
+   <Button variant="outline" size="sm" onClick={onRefresh} disabled={refreshDisabled} className="bg-[var(--accent-subtle)] border-[var(--accent-border)] text-[var(--accent)]">
+   <RefreshCw className="h-3 w-3" />
+   Regenerate
+   </Button>
+  </div>
+  ) : content.trim() ? (
+  <div className="prose prose-invert prose-sm max-w-none
+   prose-headings:text-[var(--text-1)] prose-headings:text-[13px] prose-headings:mb-2 prose-headings:mt-0
+   prose-p:text-[var(--text-2)] prose-p:text-[13px] prose-p:leading-relaxed prose-p:my-1
+   prose-li:text-[var(--text-2)] prose-li:text-[13px] prose-li:my-0
+   prose-strong:text-[var(--text-2)] prose-ul:my-1 prose-ol:my-1">
+   <ReactMarkdown>{content}</ReactMarkdown>
+  </div>
+  ) : (
+  <p className="text-[13px] text-[var(--text-3)] text-center py-8">{fallbackMsg}</p>
+  )}
+ </CardContent>
+ </Card>
  )
 }
 
@@ -2203,9 +1993,12 @@ function EmailNotificationsSection({ toast }: { toast: (msg: string) => void }) 
  const [newEmails, setNewEmails] = useState<Record<string, string>>({})
  const [addingFor, setAddingFor] = useState<string | null>(null)
  const [testState, setTestState] = useState<Record<string, 'idle' | 'sending' | 'sent'>>({})
+ const [cooldown, setCooldown] = useState<Record<string, number>>({})
+ const cooldownRefs = useRef<Record<string, ReturnType<typeof setInterval>>>({})
 
  useEffect(() => {
  lifeApi.getEmailConfig().then(c => { setConfig(c); setLoading(false) }).catch(() => setLoading(false))
+ return () => { Object.values(cooldownRefs.current).forEach(clearInterval) }
  }, [])
 
  const save = async (updated: { recipients: Record<string, string[]> }) => {
@@ -2248,7 +2041,22 @@ function EmailNotificationsSection({ toast }: { toast: (msg: string) => void }) 
  } else {
  setTestState(prev => ({ ...prev, [testId]: 'sent' }))
  toast('Test email sent!')
- setTimeout(() => setTestState(prev => ({ ...prev, [testId]: 'idle' })), 2000)
+ // 30-second cooldown
+ setCooldown(prev => ({ ...prev, [testId]: 30 }))
+ if (cooldownRefs.current[testId]) clearInterval(cooldownRefs.current[testId])
+ cooldownRefs.current[testId] = setInterval(() => {
+  setCooldown(prev => {
+   const next = (prev[testId] || 0) - 1
+   if (next <= 0) {
+    clearInterval(cooldownRefs.current[testId])
+    delete cooldownRefs.current[testId]
+    setTestState(p => ({ ...p, [testId]: 'idle' }))
+    const { [testId]: _, ...rest } = prev
+    return rest
+   }
+   return { ...prev, [testId]: next }
+  })
+ }, 1000)
  }
  } catch {
  toast('Test failed')
@@ -2273,15 +2081,15 @@ function EmailNotificationsSection({ toast }: { toast: (msg: string) => void }) 
  <div key={id} className="group rounded-lg hover:bg-[rgba(255,255,255,0.04)] transition-colors px-2 py-2">
  {/* Row: name + test + pills + add */}
  <div className="flex items-center gap-2 flex-wrap">
- <span className="text-xs text-[var(--text-2)] shrink-0 w-28 truncate" title={label}>{label}</span>
+ <span className="text-[12px] text-[var(--text-2)] shrink-0 w-28 truncate" title={label}>{label}</span>
  {testId && (
  <button
  onClick={() => sendTest(testId)}
- disabled={tState !== 'idle'}
- className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] transition-all border border-[var(--border)] hover:bg-[rgba(255,255,255,0.06)] text-[var(--text-3)] hover:text-[var(--text-2)] disabled:opacity-50 shrink-0"
+ disabled={tState !== 'idle' || (cooldown[testId] || 0) > 0}
+ className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] transition-all border border-[var(--border)] hover:bg-[var(--bg-surface)] text-[var(--text-3)] hover:text-[var(--text-2)] disabled:opacity-50 shrink-0"
  >
- {tState === 'sending' ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : tState === 'sent' ? <Check className="h-2.5 w-2.5 text-emerald-400" /> : <Mail className="h-2.5 w-2.5" />}
- {tState === 'sent' ? 'Sent' : 'Test'}
+ {tState === 'sending' ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : (cooldown[testId] || 0) > 0 ? <Check className="h-2.5 w-2.5 text-emerald-400" /> : <Mail className="h-2.5 w-2.5" />}
+ {tState === 'sending' ? 'Test' : (cooldown[testId] || 0) > 0 ? `${cooldown[testId]}s` : 'Test'}
  </button>
  )}
  {!testId && <span className="w-[52px] shrink-0" />}
@@ -2339,7 +2147,7 @@ const TAG_COLORS: Record<string, { bg: string; border: string; text: string }> =
  colleague: { bg: 'bg-[var(--accent-subtle)]', border: 'border-[var(--accent-border)]', text: 'text-[var(--accent-text)]' },
  acquaintance:{ bg: 'bg-amber-500/10', border: 'border-amber-500/25', text: 'text-amber-300' },
  neighbor: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/25', text: 'text-emerald-300' },
- other: { bg: 'bg-[rgba(255,255,255,0.06)]', border: 'border-[var(--border)]', text: 'text-[var(--text-3)]' },
+ other: { bg: 'bg-[var(--bg-surface)]', border: 'border-[var(--border)]', text: 'text-[var(--text-3)]' },
 }
 
 function getTagColor(tag: string) {
@@ -2350,7 +2158,7 @@ function contactInitials(c: Contact): string {
  return ((c.firstName?.[0] || '') + (c.lastName?.[0] || '')).toUpperCase() || '?'
 }
 
-// --- Contact Detail (Right Panel) ---
+// --- Contact Detail (Sheet Panel) ---
 function ContactDetail({ contact, onSave, onDelete, saving, toast }: {
  contact: Contact
  onSave: (id: string, updates: Partial<Contact>) => Promise<void>
@@ -2372,6 +2180,7 @@ function ContactDetail({ contact, onSave, onDelete, saving, toast }: {
  })
  const [editNotes, setEditNotes] = useState(contact.notes)
  const [editTags, setEditTags] = useState<string[]>(contact.tags)
+ const [editRelationship, setEditRelationship] = useState(contact.relationship)
 
  useEffect(() => {
   setEditing(false)
@@ -2400,6 +2209,7 @@ function ContactDetail({ contact, onSave, onDelete, saving, toast }: {
   })
   setEditNotes(contact.notes)
   setEditTags([...contact.tags])
+  setEditRelationship(contact.relationship)
   setEditing(true)
  }
 
@@ -2415,6 +2225,7 @@ function ContactDetail({ contact, onSave, onDelete, saving, toast }: {
    birthYear,
    notes: editNotes.trim(),
    tags: editTags,
+   relationship: editRelationship,
   })
   setEditing(false)
  }
@@ -2435,95 +2246,97 @@ function ContactDetail({ contact, onSave, onDelete, saving, toast }: {
   }
  }
 
- const inputClass = "w-full h-8 rounded-md border border-[var(--accent-border)] bg-[rgba(255,255,255,0.04)] text-[var(--text-1)] text-sm px-2.5 outline-none focus:border-[var(--accent)] transition-colors"
-
  return (
   <div className="h-full flex flex-col">
-   {/* Sticky header */}
-   <div className="shrink-0 px-5 py-4 border-b" style={{ borderColor: tokens.colors.innerHighlight }}>
+   {/* Header */}
+   <SheetHeader className="border-b border-[rgba(255,255,255,0.08)] p-5">
     <div className="flex items-center gap-3">
-     <div className="h-10 w-10 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--bg-elevated)' }}>
-      <span className="text-sm font-semibold" style={{ color: 'var(--text-2)' }}>{contactInitials(contact)}</span>
-     </div>
+     <Avatar size="lg">
+      <AvatarFallback className="bg-[var(--surface)] text-[var(--text-2)]">{contactInitials(contact)}</AvatarFallback>
+     </Avatar>
      <div className="min-w-0 flex-1">
-      <h2 className="text-[22px] leading-snug" style={{ fontWeight: 600, color: 'var(--text-1)', letterSpacing: '-0.02em' }}>
+      <SheetTitle className="text-[var(--text-1)] text-[20px] tracking-tight">
        {contact.firstName} {contact.lastName}
-      </h2>
+      </SheetTitle>
       <div className="flex items-center gap-2 mt-0.5">
-       {contact.relationship && <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>{contact.relationship}</span>}
-       {contact.tags.length > 0 && (
-        <>
-         {contact.relationship && <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>&middot;</span>}
-         {contact.tags.map(tag => (
-          <span key={tag} className="text-[11px]" style={{ color: 'var(--text-2)' }}>{tag}</span>
-         ))}
-        </>
+       {contact.relationship && (
+        <Badge variant="secondary" className={getTagColor(contact.relationship).bg + ' ' + getTagColor(contact.relationship).text + ' ' + getTagColor(contact.relationship).border + ' border'}>
+         {contact.relationship}
+        </Badge>
        )}
+       {contact.tags.map(tag => (
+        <Badge key={tag} variant="secondary">{tag}</Badge>
+       ))}
       </div>
      </div>
      {!editing && (
-      <button
-       onClick={enterEdit}
-       className="shrink-0 h-8 w-8 flex items-center justify-center rounded-lg border border-[var(--divider)] hover:bg-[rgba(255,255,255,0.04)] transition-colors"
-       style={{ color: 'var(--text-2)' }}
-       title="Edit contact"
-      >
+      <Button variant="ghost" size="icon-sm" onClick={enterEdit} title="Edit contact" className="text-[var(--text-2)]">
        <Pencil className="h-3.5 w-3.5" />
-      </button>
+      </Button>
      )}
     </div>
-   </div>
+   </SheetHeader>
 
    {/* Scrollable content */}
-   <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+   <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
     {editing ? (
      <>
       <div className="grid grid-cols-2 gap-3">
-       <div>
-        <p className="section-label mb-1">First Name</p>
-        <input value={editFirstName} onChange={e => setEditFirstName(e.target.value)} className={inputClass} />
+       <div className="space-y-1.5">
+        <Label className="text-[var(--text-3)]">First Name</Label>
+        <Input value={editFirstName} onChange={e => setEditFirstName(e.target.value)} className="bg-[#1E1E20] border-[rgba(255,255,255,0.08)]" />
        </div>
-       <div>
-        <p className="section-label mb-1">Last Name</p>
-        <input value={editLastName} onChange={e => setEditLastName(e.target.value)} className={inputClass} />
+       <div className="space-y-1.5">
+        <Label className="text-[var(--text-3)]">Last Name</Label>
+        <Input value={editLastName} onChange={e => setEditLastName(e.target.value)} className="bg-[#1E1E20] border-[rgba(255,255,255,0.08)]" />
        </div>
       </div>
-      <div>
-       <p className="section-label mb-1">Phone</p>
-       <input value={editPhone} onChange={e => setEditPhone(e.target.value)} className={inputClass} placeholder="+33 6..." />
+      <div className="space-y-1.5">
+       <Label className="text-[var(--text-3)]">Phone</Label>
+       <Input value={editPhone} onChange={e => setEditPhone(e.target.value)} placeholder="+33 6..." className="bg-[#1E1E20] border-[rgba(255,255,255,0.08)]" />
       </div>
-      <div>
-       <p className="section-label mb-1">Email</p>
-       <input value={editEmail} onChange={e => setEditEmail(e.target.value)} className={inputClass} placeholder="email@..." />
+      <div className="space-y-1.5">
+       <Label className="text-[var(--text-3)]">Email</Label>
+       <Input value={editEmail} onChange={e => setEditEmail(e.target.value)} placeholder="email@..." className="bg-[#1E1E20] border-[rgba(255,255,255,0.08)]" />
       </div>
-      <div>
-       <p className="section-label mb-1">Birthday</p>
-       <input type="date" value={editBirthday} onChange={e => setEditBirthday(e.target.value)} className={inputClass} />
+      <div className="space-y-1.5">
+       <Label className="text-[var(--text-3)]">Birthday</Label>
+       <Input type="date" value={editBirthday} onChange={e => setEditBirthday(e.target.value)} className="bg-[#1E1E20] border-[rgba(255,255,255,0.08)]" />
       </div>
-      <div>
-       <p className="section-label mb-1">Notes</p>
-       <textarea
+      <div className="space-y-1.5">
+       <Label className="text-[var(--text-3)]">Relationship</Label>
+       <Select value={editRelationship} onValueChange={setEditRelationship}>
+        <SelectTrigger className="bg-[#1E1E20] border-[rgba(255,255,255,0.08)] text-[var(--text-2)]">
+         <SelectValue placeholder="Select..." />
+        </SelectTrigger>
+        <SelectContent>
+         {RELATIONSHIP_OPTIONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+        </SelectContent>
+       </Select>
+      </div>
+      <div className="space-y-1.5">
+       <Label className="text-[var(--text-3)]">Notes</Label>
+       <Textarea
         value={editNotes}
         onChange={e => setEditNotes(e.target.value)}
         rows={4}
-        className="w-full rounded-md border border-[var(--accent-border)] bg-[rgba(255,255,255,0.04)] text-[var(--text-1)] text-sm px-2.5 py-2 resize-none outline-none focus:border-[var(--accent)] transition-colors"
+        className="bg-[#1E1E20] border-[rgba(255,255,255,0.08)] resize-none"
        />
       </div>
-      <div>
-       <p className="section-label mb-1.5">Tags</p>
+      <div className="space-y-2">
+       <Label className="text-[var(--text-3)]">Tags</Label>
        <div className="flex flex-wrap gap-1.5">
         {RELATIONSHIP_OPTIONS.map(tag => {
          const active = editTags.includes(tag.toLowerCase())
          return (
-          <button
+          <Badge
            key={tag}
+           variant={active ? 'default' : 'secondary'}
+           className={`cursor-pointer transition-all ${active ? 'bg-[var(--accent-subtle)] text-[var(--accent)] border-[var(--accent-border)] border' : ''}`}
            onClick={() => toggleEditTag(tag.toLowerCase())}
-           className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
-            active ? 'border-[rgba(255,255,255,0.15)] text-[var(--text-2)] underline underline-offset-2' : 'border-transparent text-[var(--text-3)] hover:text-[var(--text-2)]'
-           }`}
           >
            {tag}
-          </button>
+          </Badge>
          )
         })}
        </div>
@@ -2534,46 +2347,41 @@ function ContactDetail({ contact, onSave, onDelete, saving, toast }: {
       {[
        { label: 'Phone', value: contact.phone, icon: Phone },
        { label: 'Email', value: contact.email, icon: Mail },
-      ].map(({ label, value, icon: Icon }) => (
-       <div key={label}>
-        <p className="section-label mb-1">{label}</p>
-        <div className="flex items-center gap-2 text-[14px]" style={{ color: value ? 'var(--text-2)' : 'var(--text-3)' }}>
-         <Icon className="h-3.5 w-3.5 shrink-0" />
+      ].map(({ label, value, icon: Ic }) => (
+       <div key={label} className="space-y-1">
+        <Label className="text-[var(--text-3)]">{label}</Label>
+        <div className="flex items-center gap-2 text-[13px]" style={{ color: value ? tokens.colors.textSecondary : tokens.colors.textTertiary }}>
+         <Ic className="h-3.5 w-3.5 shrink-0" />
          <span className="flex-1 min-w-0 truncate">{value || 'Not set'}</span>
         </div>
        </div>
       ))}
-      <div>
-       <p className="section-label mb-1">Birthday</p>
+      <div className="space-y-1">
+       <Label className="text-[var(--text-3)]">Birthday</Label>
        <div className="flex items-center gap-2">
-        <span className="text-[14px]" style={{ color: birthdayFormatted ? 'var(--text-2)' : 'var(--text-3)' }}>
+        <span className="text-[13px]" style={{ color: birthdayFormatted ? tokens.colors.textSecondary : tokens.colors.textTertiary }}>
          {birthdayFormatted || 'Not set'}{age !== null ? ` (${age})` : ''}
         </span>
         {daysUntil !== null && (
-         <span className="text-[11px]" style={{ color: daysUntil === 0 ? 'var(--accent)' : 'var(--text-3)' }}>
+         <Badge variant={daysUntil === 0 ? 'default' : 'secondary'} className="text-[10px]">
           {daysUntil === 0 ? 'Today!' : daysUntil === 1 ? 'Tomorrow' : `in ${daysUntil} days`}
-         </span>
+         </Badge>
         )}
        </div>
       </div>
-      <div>
-       <p className="section-label mb-1">Notes</p>
-       <p className="text-[14px] leading-relaxed" style={{ color: contact.notes ? 'var(--text-2)' : 'var(--text-3)' }}>
+      <div className="space-y-1">
+       <Label className="text-[var(--text-3)]">Notes</Label>
+       <p className="text-[13px] leading-relaxed" style={{ color: contact.notes ? tokens.colors.textSecondary : tokens.colors.textTertiary }}>
         {contact.notes || 'No notes'}
        </p>
       </div>
-      <div>
-       <p className="section-label mb-1.5">Tags</p>
+      <div className="space-y-2">
+       <Label className="text-[var(--text-3)]">Tags</Label>
        <div className="flex flex-wrap gap-1.5">
-        {contact.tags.length > 0 ? contact.tags.map(tag => {
-         const color = getTagColor(tag)
-         return (
-          <span key={tag} className={`text-[11px] px-2.5 py-1 rounded-full border ${color.bg} ${color.border} ${color.text}`}>
-           {tag}
-          </span>
-         )
-        }) : (
-         <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>No tags</span>
+        {contact.tags.length > 0 ? contact.tags.map(tag => (
+         <Badge key={tag} variant="secondary">{tag}</Badge>
+        )) : (
+         <span className="text-[12px] text-[var(--text-3)]">No tags</span>
         )}
        </div>
       </div>
@@ -2582,38 +2390,24 @@ function ContactDetail({ contact, onSave, onDelete, saving, toast }: {
    </div>
 
    {/* Footer actions */}
-   <div className="shrink-0 px-5 py-3 border-t flex items-center gap-2 flex-wrap" style={{ borderColor: tokens.colors.innerHighlight }}>
+   <SheetFooter className="border-t border-[rgba(255,255,255,0.08)] p-4 flex-row gap-2 flex-wrap">
     {editing ? (
      <>
-      <button
-       onClick={saveEdit}
-       disabled={saving === contact.id || !editFirstName.trim()}
-       className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-md transition-colors disabled:opacity-40"
-       style={{ color: 'var(--accent-text)', background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}
-      >
+      <Button variant="outline" size="sm" onClick={saveEdit} disabled={saving === contact.id || !editFirstName.trim()} className="bg-[var(--accent-subtle)] border-[var(--accent-border)] text-[var(--accent)]">
        {saving === contact.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
        Save
-      </button>
-      <button
-       onClick={() => setEditing(false)}
-       className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-md transition-colors"
-       style={{ color: 'var(--text-2)', background: 'rgba(255,255,255,0.04)', border: `1px solid ${tokens.colors.innerHighlight}` }}
-      >
-       <X className="h-3.5 w-3.5" />
-       Cancel
-      </button>
+      </Button>
+      <Button variant="outline" size="sm" onClick={() => setEditing(false)} className="text-[var(--text-2)]">
+       <X className="h-3.5 w-3.5" /> Cancel
+      </Button>
       <div className="flex-1" />
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
        <DialogTrigger asChild>
-        <button
-         className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-md transition-colors"
-         style={{ color: '#f87171', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)' }}
-        >
-         <Trash2 className="h-3.5 w-3.5" />
-         Delete
-        </button>
+        <Button variant="outline" size="sm" className="text-red-400 bg-red-500/[0.08] border-red-500/20 hover:bg-red-500/15">
+         <Trash2 className="h-3.5 w-3.5" /> Delete
+        </Button>
        </DialogTrigger>
-       <DialogContent>
+       <DialogContent className="bg-[#1E1E20] border-[rgba(255,255,255,0.08)]">
         <DialogHeader>
          <DialogTitle className="text-[var(--text-1)]">Delete contact</DialogTitle>
          <DialogDescription className="text-[var(--text-2)]">
@@ -2621,9 +2415,9 @@ function ContactDetail({ contact, onSave, onDelete, saving, toast }: {
          </DialogDescription>
         </DialogHeader>
         <DialogFooter className="gap-2 sm:gap-0">
-         <Button variant="outline" onClick={() => setDeleteOpen(false)} className="border-[var(--divider)] text-[var(--text-2)]">Cancel</Button>
+         <Button variant="outline" onClick={() => setDeleteOpen(false)} className="text-[var(--text-2)]">Cancel</Button>
          <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-          {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Trash2 className="h-3.5 w-3.5 mr-1.5" />}
+          {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
           Delete
          </Button>
         </DialogFooter>
@@ -2633,40 +2427,43 @@ function ContactDetail({ contact, onSave, onDelete, saving, toast }: {
     ) : (
      <>
       {contact.phone && (
-       <a
-        href={`tel:${contact.phone}`}
-        className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-md transition-colors"
-        style={{ color: 'var(--text-2)', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}
-       >
-        <Phone className="h-3.5 w-3.5" />
-        Call
-       </a>
+       <Button variant="outline" size="sm" asChild className="text-emerald-400 bg-emerald-500/[0.08] border-emerald-500/20">
+        <a href={`tel:${contact.phone}`}><Phone className="h-3.5 w-3.5" /> Call</a>
+       </Button>
       )}
       {contact.email && (
-       <a
-        href={`mailto:${contact.email}`}
-        className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-md transition-colors"
-        style={{ color: 'var(--accent-text)', background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}
-       >
-        <Mail className="h-3.5 w-3.5" />
-        Email
-       </a>
+       <Button variant="outline" size="sm" asChild className="bg-[var(--accent-subtle)] border-[var(--accent-border)] text-[var(--accent)]">
+        <a href={`mailto:${contact.email}`}><Mail className="h-3.5 w-3.5" /> Email</a>
+       </Button>
       )}
+      <Button variant="ghost" size="sm" onClick={enterEdit} className="text-[var(--text-2)] ml-auto">
+       <Pencil className="h-3.5 w-3.5" /> Edit
+      </Button>
      </>
     )}
-   </div>
+   </SheetFooter>
   </div>
  )
 }
 
-// --- Contacts Section (2-panel) ---
+// --- Contacts Section (DataGrid + Sheet + Autocomplete) ---
 function ContactsSection({ toast }: { toast: (msg: string) => void }) {
  const [contacts, setContacts] = useState<Contact[]>([])
  const [loading, setLoading] = useState(true)
  const [search, setSearch] = useState('')
  const [selectedId, setSelectedId] = useState<string | null>(null)
+ const [sheetOpen, setSheetOpen] = useState(false)
  const [addOpen, setAddOpen] = useState(false)
  const [saving, setSaving] = useState<string | null>(null)
+ const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768)
+
+ useEffect(() => {
+  const mq = window.matchMedia('(max-width: 767px)')
+  const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+  mq.addEventListener('change', handler)
+  return () => mq.removeEventListener('change', handler)
+ }, [])
+ const [sorting, setSorting] = useState<SortingState>([{ id: 'lastName', desc: false }])
 
  // Add form state
  const [newFirstName, setNewFirstName] = useState('')
@@ -2684,9 +2481,8 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
 
  const filtered = useMemo(() => {
   const q = search.toLowerCase().trim()
-  const list = contacts.filter(c => !c.deceased && !c.hidden)
-  const sortByName = (a: Contact, b: Contact) => (a.lastName || '').localeCompare(b.lastName || '') || (a.firstName || '').localeCompare(b.firstName || '')
-  if (!q) return list.sort(sortByName)
+  const list = contacts.filter(c => !c.deceased && !c.hidden && (c.firstName || c.lastName))
+  if (!q) return list
   return list.filter(c =>
    `${c.lastName} ${c.firstName}`.toLowerCase().includes(q) ||
    `${c.firstName} ${c.lastName}`.toLowerCase().includes(q) ||
@@ -2694,13 +2490,110 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
    c.email.toLowerCase().includes(q) ||
    c.relationship.toLowerCase().includes(q) ||
    c.tags.some(t => t.toLowerCase().includes(q))
-  ).sort(sortByName)
+  )
  }, [contacts, search])
 
  const selectedContact = useMemo(
-  () => filtered.find(c => c.id === selectedId) || null,
-  [filtered, selectedId]
+  () => contacts.find(c => c.id === selectedId) || null,
+  [contacts, selectedId]
  )
+
+ const openContactSheet = useCallback((id: string) => {
+  setSelectedId(id)
+  setSheetOpen(true)
+ }, [])
+
+ // DataGrid columns
+ const columns = useMemo<ColumnDef<Contact>[]>(() => [
+  {
+   id: 'avatar',
+   header: '',
+   cell: ({ row }) => (
+    <Avatar size="sm">
+     <AvatarFallback className="bg-[var(--bg-surface)] text-[var(--text-2)] text-[10px]">{contactInitials(row.original)}</AvatarFallback>
+    </Avatar>
+   ),
+   size: 40,
+   enableSorting: false,
+  },
+  {
+   accessorKey: 'lastName',
+   header: ({ column }) => <DataGridColumnHeader column={column} title="Name" />,
+   cell: ({ row }) => (
+    <span className="font-medium text-[var(--text-1)] text-[13px]">
+     {row.original.lastName}{row.original.lastName && row.original.firstName ? ' ' : ''}{row.original.firstName}
+    </span>
+   ),
+   sortingFn: (a, b) => {
+    const aName = `${a.original.lastName} ${a.original.firstName}`.toLowerCase()
+    const bName = `${b.original.lastName} ${b.original.firstName}`.toLowerCase()
+    return aName.localeCompare(bName)
+   },
+  },
+  {
+   accessorKey: 'relationship',
+   header: ({ column }) => <DataGridColumnHeader column={column} title="Relationship" />,
+   cell: ({ row }) => {
+    const rel = row.original.relationship
+    if (!rel) return null
+    const colors = getTagColor(rel)
+    return <Badge variant="secondary" className={`${colors.bg} ${colors.text} ${colors.border} border text-[11px]`}>{rel}</Badge>
+   },
+   size: 120,
+  },
+  {
+   accessorKey: 'birthday',
+   header: ({ column }) => <DataGridColumnHeader column={column} title="Birthday" />,
+   cell: ({ row }) => {
+    if (!row.original.birthday) return <span className="text-[var(--text-3)] text-[12px]">—</span>
+    const formatted = formatBirthdayDate(row.original.birthday)
+    const days = daysUntilBirthday(row.original.birthday)
+    return (
+     <div className="flex items-center gap-1.5">
+      <span className="text-[var(--text-2)] text-[12px]">{formatted}</span>
+      {days <= 7 && <Badge variant="default" className="text-[10px] px-1.5 py-0">{days === 0 ? 'Today!' : days === 1 ? 'Tomorrow' : `${days}d`}</Badge>}
+     </div>
+    )
+   },
+   size: 130,
+   sortingFn: (a, b) => {
+    const aDays = a.original.birthday ? daysUntilBirthday(a.original.birthday) : 999
+    const bDays = b.original.birthday ? daysUntilBirthday(b.original.birthday) : 999
+    return aDays - bDays
+   },
+  },
+  {
+   accessorKey: 'phone',
+   header: 'Phone',
+   cell: ({ row }) => <span className="text-[var(--text-2)] text-[12px] tabular-nums">{row.original.phone || '—'}</span>,
+   size: 140,
+   enableSorting: false,
+  },
+  {
+   id: 'actions',
+   header: '',
+   cell: ({ row }) => (
+    <div className="flex gap-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity">
+     <Button variant="ghost" size="icon-xs" onClick={(e) => { e.stopPropagation(); openContactSheet(row.original.id) }} className="text-[var(--text-3)] hover:text-[var(--text-2)]">
+      <Pencil className="h-3 w-3" />
+     </Button>
+    </div>
+   ),
+   size: 40,
+   enableSorting: false,
+  },
+ ], [openContactSheet])
+
+ const table = useReactTable({
+  data: filtered,
+  columns,
+  getCoreRowModel: getCoreRowModel(),
+  getSortedRowModel: getSortedRowModel(),
+  getPaginationRowModel: getPaginationRowModel(),
+  state: { sorting },
+  onSortingChange: setSorting,
+  initialState: { pagination: { pageSize: 20 } },
+ })
 
  const resetAddForm = () => {
   setNewFirstName(''); setNewLastName(''); setNewBirthday(''); setNewPhone('')
@@ -2750,6 +2643,7 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
   await lifeApi.deleteContact(id)
   setContacts(prev => prev.filter(c => c.id !== id))
   setSelectedId(null)
+  setSheetOpen(false)
   toast('Contact deleted')
  }
 
@@ -2757,192 +2651,131 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
   setNewTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
  }
 
- if (loading) {
-  return (
-   <div className="flex items-center justify-center py-20">
-    <Loader2 className="h-5 w-5 animate-spin text-[var(--text-3)]" />
-   </div>
-  )
- }
+ // Autocomplete search suggestions (top 8)
+ const searchSuggestions = useMemo(() => {
+  if (!search.trim()) return []
+  return filtered.slice(0, 8)
+ }, [filtered, search])
 
  return (
-  <div
-   className="flex flex-col md:flex-row"
-   style={{
-    height: 'calc(100vh - 100px)',
-    background: tokens.colors.bg,
-   }}
-  >
-    {/* Left Panel — 380px */}
-    <div
-     className={`shrink-0 flex flex-col md:w-[380px] ${selectedContact ? 'hidden md:flex' : 'flex'}`}
-     style={{ borderRight: `1px solid ${tokens.colors.innerHighlight}`, height: '100%' }}
-    >
-     {/* Search + Add */}
-     <div className="shrink-0 px-5 pt-3 pb-2 flex items-center gap-2">
-      <div className="relative flex-1">
-       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5" style={{ color: 'var(--text-3)' }} />
-       <input
-        type="text"
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        placeholder="Search contacts..."
-        className="w-full pl-8 pr-3 py-2 rounded-lg text-[14px] transition-all duration-150 focus:outline-none"
-        style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${tokens.colors.innerHighlight}`, color: 'var(--text-1)' }}
-       />
-      </div>
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
-       <DialogTrigger asChild>
-        <button className="shrink-0 h-[36px] w-[36px] flex items-center justify-center rounded-lg border border-[var(--divider)] hover:bg-[rgba(255,255,255,0.04)] transition-colors" style={{ color: 'var(--text-2)' }}>
-         <Plus className="h-3.5 w-3.5" />
-        </button>
-       </DialogTrigger>
-       <DialogContent className="max-h-[85vh] overflow-y-auto">
-        <DialogHeader><DialogTitle className="text-[var(--text-1)]">New Contact</DialogTitle></DialogHeader>
-        <div className="space-y-3">
-         <div className="grid grid-cols-2 gap-3">
-          <div>
-           <label className="text-xs text-[var(--text-2)] mb-1 block">First name *</label>
-           <Input value={newFirstName} onChange={e => setNewFirstName(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" placeholder="Jean" />
+  <div className="flex flex-col p-4 md:p-6" style={{ minHeight: 'calc(100vh - 100px)' }}>
+   {/* Search bar + Add button */}
+   <div className="flex items-center gap-3 mb-4">
+    <div className="flex-1 relative">
+     <Autocomplete
+      value={search}
+      onValueChange={(val) => {
+       setSearch(val)
+       // If a full name match, open the sheet
+       const match = filtered.find(c => `${c.firstName} ${c.lastName}`.toLowerCase() === val.toLowerCase() || `${c.lastName} ${c.firstName}`.toLowerCase() === val.toLowerCase())
+       if (match) openContactSheet(match.id)
+      }}
+     >
+      <AutocompleteInput
+       placeholder="Search contacts by name, phone, email..."
+       showClear
+       size="default"
+       className="bg-[#1E1E20] border-[rgba(255,255,255,0.08)] text-[var(--text-1)] placeholder:text-[var(--text-3)]"
+      />
+      <AutocompleteContent className="bg-[#1E1E20] border-[rgba(255,255,255,0.08)]">
+       <AutocompleteList>
+        {searchSuggestions.map(c => (
+         <AutocompleteItem key={c.id} value={`${c.firstName} ${c.lastName}`} className="text-[var(--text-2)]">
+          <div className="flex items-center gap-2.5">
+           <Avatar size="sm">
+            <AvatarFallback className="bg-[var(--bg-surface)] text-[var(--text-3)] text-[10px]">{contactInitials(c)}</AvatarFallback>
+           </Avatar>
+           <div className="flex-1 min-w-0">
+            <span className="text-[13px] text-[var(--text-1)]">{c.firstName} {c.lastName}</span>
+            {c.phone && <span className="text-[11px] text-[var(--text-3)] ml-2">{c.phone}</span>}
+           </div>
+           {c.relationship && <Badge variant="secondary" className="text-[10px]">{c.relationship}</Badge>}
           </div>
-          <div>
-           <label className="text-xs text-[var(--text-2)] mb-1 block">Last name</label>
-           <Input value={newLastName} onChange={e => setNewLastName(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" placeholder="Dupont" />
-          </div>
-         </div>
-         <div>
-          <label className="text-xs text-[var(--text-2)] mb-1 block">Birthday</label>
-          <Input type="date" value={newBirthday} onChange={e => setNewBirthday(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" />
-         </div>
-         <div className="grid grid-cols-2 gap-3">
-          <div>
-           <label className="text-xs text-[var(--text-2)] mb-1 block">Phone</label>
-           <Input value={newPhone} onChange={e => setNewPhone(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" placeholder="+33 6..." />
-          </div>
-          <div>
-           <label className="text-xs text-[var(--text-2)] mb-1 block">Email</label>
-           <Input value={newEmail} onChange={e => setNewEmail(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" placeholder="email@..." />
-          </div>
-         </div>
-         <div>
-          <label className="text-xs text-[var(--text-2)] mb-1 block">Relationship</label>
-          <select
-           value={newRelationship}
-           onChange={e => setNewRelationship(e.target.value)}
-           className="w-full h-9 rounded-md border border-[var(--border)] bg-[rgba(255,255,255,0.04)] text-[var(--text-1)] text-sm px-3"
-          >
-           <option value="">Select...</option>
-           {RELATIONSHIP_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
-          </select>
-         </div>
-         <div>
-          <label className="text-xs text-[var(--text-2)] mb-1 block">Tags</label>
-          <div className="flex flex-wrap gap-1.5">
-           {RELATIONSHIP_OPTIONS.map(tag => {
-            const active = newTags.includes(tag.toLowerCase())
-            return (
-             <button
-              key={tag}
-              onClick={() => toggleTag(tag.toLowerCase())}
-              className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
-               active ? 'border-[rgba(255,255,255,0.15)] text-[var(--text-2)] underline underline-offset-2' : 'border-transparent text-[var(--text-3)] hover:text-[var(--text-2)]'
-              }`}
-             >
-              {tag}
-             </button>
-            )
-           })}
-          </div>
-         </div>
-         <div>
-          <label className="text-xs text-[var(--text-2)] mb-1 block">Notes</label>
-          <textarea
-           value={newNotes}
-           onChange={e => setNewNotes(e.target.value)}
-           rows={3}
-           className="w-full rounded-md border border-[var(--border)] bg-[rgba(255,255,255,0.04)] text-[var(--text-1)] text-sm px-3 py-2 resize-none placeholder:text-[var(--text-3)]"
-           placeholder="Additional notes..."
-          />
-         </div>
-        </div>
-        <DialogFooter>
-         <Button onClick={addContact} disabled={!newFirstName.trim()} className="bg-[var(--accent-subtle)] border border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent-subtle)]">Add Contact</Button>
-        </DialogFooter>
-       </DialogContent>
-      </Dialog>
-     </div>
-
-     {/* Contact count */}
-     <div className="shrink-0 px-5 pb-2">
-      <span className="text-[13px]" style={{ color: 'var(--text-3)' }}>{filtered.length} contact{filtered.length !== 1 ? 's' : ''}</span>
-     </div>
-
-     {/* Scrollable contact list */}
-     <div className="flex-1 overflow-y-auto" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-      {filtered.length === 0 ? (
-       <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-        <Users className="h-6 w-6 mb-3" style={{ color: 'rgba(255,255,255,0.08)' }} />
-        <p className="text-[13px]" style={{ color: 'var(--text-3)' }}>
-         {search ? 'No contacts matching your search' : 'No contacts yet'}
-        </p>
-       </div>
-      ) : (
-       filtered.map(contact => {
-        if (!contact.firstName && !contact.lastName) return null
-        return (
-         <button
-          key={contact.id}
-          onClick={() => setSelectedId(contact.id)}
-          className="w-full text-left flex items-center gap-2.5 px-5 transition-colors duration-100"
-          style={{
-           height: 48,
-           background: selectedId === contact.id ? 'var(--accent-subtle)' : 'transparent',
-           borderLeft: selectedId === contact.id ? '2px solid var(--accent)' : '2px solid transparent',
-          }}
-         >
-          {/* Avatar */}
-          <div className="h-7 w-7 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--bg-elevated)' }}>
-           <span className="text-[10px] font-semibold" style={{ color: 'var(--text-2)' }}>{contactInitials(contact)}</span>
-          </div>
-          {/* Name */}
-          <span
-           className="text-[14px] truncate flex-1 min-w-0"
-           style={{ color: selectedId === contact.id ? 'var(--text-1)' : 'var(--text-2)', fontWeight: selectedId === contact.id ? 500 : 400 }}
-          >
-           {contact.lastName} {contact.firstName}
-          </span>
-          {/* Phone */}
-          {contact.phone && (
-           <span className="text-[13px] tabular-nums shrink-0 hidden sm:inline" style={{ color: 'var(--text-3)' }}>
-            {contact.phone}
-           </span>
-          )}
-         </button>
-        )
-       })
-      )}
-     </div>
+         </AutocompleteItem>
+        ))}
+        <AutocompleteEmpty className="text-[var(--text-3)]">No contacts found</AutocompleteEmpty>
+       </AutocompleteList>
+      </AutocompleteContent>
+     </Autocomplete>
     </div>
+    <Button variant="ghost" size="sm" onClick={() => setAddOpen(true)} className="text-[var(--accent)] hover:bg-[var(--accent-subtle)] shrink-0">
+     <UserPlus className="h-3.5 w-3.5" /> Add
+    </Button>
+   </div>
 
-    {/* Right Panel */}
-    <div className={`flex-1 min-w-0 ${selectedContact ? 'flex' : 'hidden md:flex'} flex-col`}>
-     {/* Mobile back button */}
-     {selectedContact && (
-      <div
-       className="md:hidden shrink-0 flex items-center gap-2 px-4 py-3 border-b"
-       style={{ borderColor: tokens.colors.innerHighlight, background: 'rgba(255,255,255,0.04)' }}
+   {/* Contact count */}
+   <div className="mb-3">
+    <span className="text-[12px] text-[var(--text-3)]">{filtered.length} contact{filtered.length !== 1 ? 's' : ''}</span>
+   </div>
+
+   {/* Mobile: simple list view */}
+   <div className="md:hidden flex flex-col">
+    {loading ? (
+     <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-[var(--text-3)]" /></div>
+    ) : filtered.length === 0 ? (
+     <div className="flex flex-col items-center justify-center py-12 text-center">
+      <Users className="h-6 w-6 mb-3 text-[rgba(255,255,255,0.08)]" />
+      <p className="text-[13px] text-[var(--text-3)]">{search ? 'No contacts matching your search' : 'No contacts yet'}</p>
+     </div>
+    ) : (
+     filtered.map(c => (
+      <motion.div
+       key={c.id}
+       whileHover={{ backgroundColor: 'rgba(255,255,255,0.04)' }}
+       className="flex items-center gap-3 px-4 py-3 border-b border-[rgba(255,255,255,0.05)]"
+       onClick={() => openContactSheet(c.id)}
       >
-       <button
-        onClick={() => setSelectedId(null)}
-        className="flex items-center gap-1 text-[13px]"
-        style={{ color: 'var(--accent)' }}
-       >
-        <ChevronLeft className="h-4 w-4" />
-        Back
-       </button>
-      </div>
-     )}
+       <Avatar className="h-10 w-10 shrink-0">
+        <AvatarFallback className="bg-[#1E1E20] text-[12px]">{contactInitials(c)}</AvatarFallback>
+       </Avatar>
+       <div className="flex-1 min-w-0">
+        <div className="text-[13px] truncate">{c.firstName} {c.lastName}</div>
+        <div className="text-[12px] text-[rgba(255,255,255,0.35)]">{c.relationship || c.phone || ''}</div>
+       </div>
+       <ChevronRight className="h-4 w-4 text-[rgba(255,255,255,0.18)] flex-shrink-0" />
+      </motion.div>
+     ))
+    )}
+   </div>
 
+   {/* Desktop: DataGrid */}
+   <div className="hidden md:block">
+   <DataGrid
+    table={table}
+    recordCount={filtered.length}
+    isLoading={loading}
+    loadingMode="skeleton"
+    onRowClick={(row) => openContactSheet(row.id)}
+    emptyMessage={
+     <div className="flex flex-col items-center justify-center py-12 text-center">
+      <Users className="h-6 w-6 mb-3 text-[rgba(255,255,255,0.08)]" />
+      <p className="text-[13px] text-[var(--text-3)]">{search ? 'No contacts matching your search' : 'No contacts yet'}</p>
+     </div>
+    }
+    tableLayout={{ dense: false, rowBorder: true, headerBackground: true, headerBorder: true, width: 'fixed' }}
+    tableClassNames={{
+     base: 'text-[13px]',
+     bodyRow: 'group/row cursor-pointer hover:bg-[rgba(255,255,255,0.03)] transition-colors',
+     headerRow: 'border-b border-[rgba(255,255,255,0.08)]',
+    }}
+   >
+    <DataGridContainer className="border-[rgba(255,255,255,0.08)] bg-transparent rounded-lg">
+     <DataGridTable />
+     {filtered.length > 20 && (
+      <DataGridPagination
+       sizes={[20, 50, 100]}
+       info="{from} - {to} of {count}"
+       className="border-t border-[rgba(255,255,255,0.08)] text-[var(--text-3)]"
+      />
+     )}
+    </DataGridContainer>
+   </DataGrid>
+   </div>
+
+   {/* Contact Detail Sheet — bottom on mobile, right on desktop */}
+   {/* Mobile: bottom sheet */}
+   <Sheet open={sheetOpen && isMobile} onOpenChange={setSheetOpen}>
+    <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl overflow-y-auto bg-[#1E1E20] border-t border-[rgba(255,255,255,0.08)] p-0" showCloseButton={false}>
      {selectedContact ? (
       <ContactDetail
        contact={selectedContact}
@@ -2952,28 +2785,119 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
        toast={toast}
       />
      ) : (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center h-full">
        <div className="text-center">
-        <Users className="h-8 w-8 mx-auto mb-3" style={{ color: 'rgba(255,255,255,0.06)' }} />
-        <p className="text-[13px]" style={{ color: 'var(--text-3)' }}>Select a contact</p>
+        <Users className="h-8 w-8 mx-auto mb-3 text-[rgba(255,255,255,0.08)]" />
+        <p className="text-[13px] text-[var(--text-3)]">Select a contact</p>
        </div>
       </div>
      )}
-    </div>
-  </div>
- )
-}
+    </SheetContent>
+   </Sheet>
+   {/* Desktop: right sheet */}
+   <Sheet open={sheetOpen && !isMobile} onOpenChange={setSheetOpen}>
+    <SheetContent side="right" className="w-[400px] bg-[#1E1E20] border-l border-[rgba(255,255,255,0.08)] p-0" showCloseButton={false}>
+     {selectedContact ? (
+      <ContactDetail
+       contact={selectedContact}
+       onSave={saveContact}
+       onDelete={deleteContact}
+       saving={saving}
+       toast={toast}
+      />
+     ) : (
+      <div className="flex-1 flex items-center justify-center h-full">
+       <div className="text-center">
+        <Users className="h-8 w-8 mx-auto mb-3 text-[rgba(255,255,255,0.08)]" />
+        <p className="text-[13px] text-[var(--text-3)]">Select a contact</p>
+       </div>
+      </div>
+     )}
+    </SheetContent>
+   </Sheet>
 
-// --- Toast component ---
-function ToastContainer({ toasts }: { toasts: { id: number; message: string }[] }) {
- return (
- <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
- {toasts.map(t => (
- <div key={t.id} className="pointer-events-auto px-4 py-2.5 rounded-2xl text-sm shadow-lg shadow-black/20 animate-in slide-in-from-right-5 fade-in duration-200 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
- {t.message}
- </div>
- ))}
- </div>
+   {/* Add Contact Dialog */}
+   <Dialog open={addOpen} onOpenChange={setAddOpen}>
+    <DialogContent className="max-w-[640px] bg-[#1E1E20] border-[rgba(255,255,255,0.08)] max-h-[85vh] overflow-y-auto">
+     <DialogHeader>
+      <DialogTitle className="text-[var(--text-1)]">New Contact</DialogTitle>
+     </DialogHeader>
+
+     <div className="flex flex-col gap-4 py-2">
+      <div className="grid grid-cols-2 gap-3">
+       <div className="space-y-1.5">
+        <Label className="text-[var(--text-3)]">First name *</Label>
+        <Input value={newFirstName} onChange={e => setNewFirstName(e.target.value)} placeholder="Jean" className="bg-[rgba(255,255,255,0.04)] border-[rgba(255,255,255,0.08)]" />
+       </div>
+       <div className="space-y-1.5">
+        <Label className="text-[var(--text-3)]">Last name</Label>
+        <Input value={newLastName} onChange={e => setNewLastName(e.target.value)} placeholder="Dupont" className="bg-[rgba(255,255,255,0.04)] border-[rgba(255,255,255,0.08)]" />
+       </div>
+      </div>
+      <div className="space-y-1.5">
+       <Label className="text-[var(--text-3)]">Birthday</Label>
+       <Input type="date" value={newBirthday} onChange={e => setNewBirthday(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[rgba(255,255,255,0.08)]" />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+       <div className="space-y-1.5">
+        <Label className="text-[var(--text-3)]">Phone</Label>
+        <Input value={newPhone} onChange={e => setNewPhone(e.target.value)} placeholder="+33 6..." className="bg-[rgba(255,255,255,0.04)] border-[rgba(255,255,255,0.08)]" />
+       </div>
+       <div className="space-y-1.5">
+        <Label className="text-[var(--text-3)]">Email</Label>
+        <Input value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="email@..." className="bg-[rgba(255,255,255,0.04)] border-[rgba(255,255,255,0.08)]" />
+       </div>
+      </div>
+      <div className="space-y-1.5">
+       <Label className="text-[var(--text-3)]">Relationship</Label>
+       <Select value={newRelationship} onValueChange={setNewRelationship}>
+        <SelectTrigger className="bg-[rgba(255,255,255,0.04)] border-[rgba(255,255,255,0.08)] text-[var(--text-2)]">
+         <SelectValue placeholder="Select..." />
+        </SelectTrigger>
+        <SelectContent>
+         {RELATIONSHIP_OPTIONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+        </SelectContent>
+       </Select>
+      </div>
+      <div className="space-y-2">
+       <Label className="text-[var(--text-3)]">Tags</Label>
+       <div className="flex flex-wrap gap-1.5">
+        {RELATIONSHIP_OPTIONS.map(tag => {
+         const active = newTags.includes(tag.toLowerCase())
+         return (
+          <Badge
+           key={tag}
+           variant={active ? 'default' : 'secondary'}
+           className={`cursor-pointer transition-all ${active ? 'bg-[var(--accent-subtle)] text-[var(--accent)] border-[var(--accent-border)] border' : ''}`}
+           onClick={() => toggleTag(tag.toLowerCase())}
+          >
+           {tag}
+          </Badge>
+         )
+        })}
+       </div>
+      </div>
+      <div className="space-y-1.5">
+       <Label className="text-[var(--text-3)]">Notes</Label>
+       <Textarea
+        value={newNotes}
+        onChange={e => setNewNotes(e.target.value)}
+        rows={3}
+        placeholder="Additional notes..."
+        className="bg-[rgba(255,255,255,0.04)] border-[rgba(255,255,255,0.08)] resize-none"
+       />
+      </div>
+     </div>
+
+     <DialogFooter>
+      <Button variant="outline" onClick={() => { resetAddForm(); setAddOpen(false) }} className="text-[var(--text-2)]">Cancel</Button>
+      <Button onClick={addContact} disabled={!newFirstName.trim()} className="bg-[var(--accent-subtle)] border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent-subtle)]">
+       <UserPlus className="h-3.5 w-3.5" /> Add Contact
+      </Button>
+     </DialogFooter>
+    </DialogContent>
+   </Dialog>
+  </div>
  )
 }
 
@@ -2990,16 +2914,10 @@ export default function LifePage() {
  const [loading, setLoading] = useState(true)
  const [refreshingWeekend, setRefreshingWeekend] = useState(false)
  const [refreshingDates, setRefreshingDates] = useState(false)
- const [toasts, setToasts] = useState<{ id: number; message: string }[]>([])
  const [activeTab, setActiveTab] = useState<TabId>('dashboard')
  const [globalDayPlan, setGlobalDayPlan] = useState<DayPlan | null>(null)
  const [globalPlanModalOpen, setGlobalPlanModalOpen] = useState(false)
-
- const addToast = useCallback((message: string) => {
- const id = Date.now()
- setToasts(prev => [...prev, { id, message }])
- setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000)
- }, [])
+ const [resendConfirmBirthday, setResendConfirmBirthday] = useState<Birthday | null>(null)
 
  const loadData = useCallback(async () => {
  try {
@@ -3034,14 +2952,14 @@ export default function LifePage() {
  try {
  const result = await lifeApi.refreshWeekendActivities()
  if (result.success) {
- addToast('Weekend ideas refreshed')
+ toast.success('Weekend ideas refreshed')
  const activitiesData = await lifeApi.getActivities()
  setActivities(activitiesData)
  } else {
- addToast('Refresh failed: ' + (result.error || 'Unknown'))
+ toast.error('Refresh failed: ' + (result.error || 'Unknown'))
  }
  } catch (err: unknown) {
- addToast('Refresh failed: ' + (err instanceof Error ? err.message : String(err)))
+ toast.error('Refresh failed: ' + (err instanceof Error ? err.message : String(err)))
  } finally {
  setRefreshingWeekend(false)
  }
@@ -3052,14 +2970,14 @@ export default function LifePage() {
  try {
  const result = await lifeApi.refreshDateActivities()
  if (result.success) {
- addToast('Date ideas refreshed')
+ toast.success('Date ideas refreshed')
  const activitiesData = await lifeApi.getActivities()
  setActivities(activitiesData)
  } else {
- addToast('Refresh failed: ' + (result.error || 'Unknown'))
+ toast.error('Refresh failed: ' + (result.error || 'Unknown'))
  }
  } catch (err: unknown) {
- addToast('Refresh failed: ' + (err instanceof Error ? err.message : String(err)))
+ toast.error('Refresh failed: ' + (err instanceof Error ? err.message : String(err)))
  } finally {
  setRefreshingDates(false)
  }
@@ -3079,7 +2997,7 @@ export default function LifePage() {
  }
 
  if (!data) {
- return <p className="text-sm text-[var(--text-3)] text-center py-12">Failed to load data</p>
+ return <p className="text-[13px] text-[var(--text-3)] text-center py-12">Failed to load data</p>
  }
 
  const updateBirthdays = async (birthdays: Birthday[]) => {
@@ -3096,19 +3014,24 @@ export default function LifePage() {
  const sendBirthdayEmail = async (b: Birthday) => {
  const currentYear = new Date().getFullYear()
  if (b.emailSentYear === currentYear) {
- if (!window.confirm('Already sent — resend?')) return
+ setResendConfirmBirthday(b)
+ return
  }
+ await doSendBirthdayEmail(b)
+ }
+
+ const doSendBirthdayEmail = async (b: Birthday) => {
  try {
  const result = await lifeApi.sendBirthdayEmail(b.id)
  if (result.success) {
- addToast('Email envoyé')
+ toast.success('Email envoyé')
  const lifeData = await lifeApi.getData()
  setData(prev => prev ? { ...prev, birthdays: lifeData.birthdays } : prev)
  } else {
- addToast('Erreur: ' + (result.error || 'Unknown'))
+ toast.error('Erreur: ' + (result.error || 'Unknown'))
  }
  } catch (err: unknown) {
- addToast('Erreur envoi email: ' + (err instanceof Error ? err.message : String(err)))
+ toast.error('Erreur envoi email: ' + (err instanceof Error ? err.message : String(err)))
  }
  }
 
@@ -3140,23 +3063,24 @@ export default function LifePage() {
  notes: idea.description,
  })
  setTrips(prev => [...prev, trip])
- addToast('Trip logged!')
+ toast.success('Trip logged!')
  } catch {
- addToast('Failed to log trip')
+ toast.error('Failed to log trip')
  }
  }
 
  return (
  <>
  <div className="min-h-full">
- {/* Sub-nav bar — aligned with header nav tabs */}
- <div className="border-b border-white/[0.08] pt-2 pb-2.5">
- <div className="flex items-center px-5 md:px-6">
- <span className="hidden md:inline mr-8 shrink-0" style={styles.brandSpacer} aria-hidden="true">
- River
- </span>
- <TabControl active={activeTab} onChange={setActiveTab} />
- </div>
+ {/* Sub-nav bar — left-aligned, horizontal scroll on mobile */}
+ <div className="border-b border-border px-4 md:px-6 pt-2 pb-0 overflow-x-auto">
+ <Tabs value={activeTab} onValueChange={v => setActiveTab(v as TabId)}>
+  <TabsList variant="line" className="justify-start gap-5 md:gap-6">
+   <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+   <TabsTrigger value="ideas">Ideas</TabsTrigger>
+   <TabsTrigger value="contacts">Contacts</TabsTrigger>
+  </TabsList>
+ </Tabs>
  </div>
 
  {/* TAB 1 — Dashboard */}
@@ -3166,21 +3090,19 @@ export default function LifePage() {
  initial={{ opacity: 0, y: 8 }}
  animate={{ opacity: 1, y: 0 }}
  transition={{ duration: 0.15 }}
- className="p-6"
+ className="p-4 md:p-6"
  >
- {/* Trip banner card */}
- {upcomingTrip && <TripHelper trip={upcomingTrip} toast={addToast} />}
+ {/* Trip hero card (full width) */}
+ {upcomingTrip && <TripHelper trip={upcomingTrip} toast={toast} />}
 
- {/* Two-column grid */}
- <div className="flex flex-col md:flex-row gap-4" style={{ marginTop: upcomingTrip ? '20px' : '0' }}>
- {/* Left: This Week (flex 3 ≈ 60%) */}
- <div className="flex-[3] min-w-0">
+ {/* Two-column grid: Calendar ~65% | Reminders + Birthdays ~35% */}
+ <div className="flex flex-col md:flex-row" style={{ gap: tokens.spacing.xxl, marginTop: upcomingTrip ? tokens.spacing.xxl : 0 }}>
+ <div style={{ flex: '1.85 1 0%', minWidth: 0 }}>
  <CalendarSection events={calendar} />
  </div>
- {/* Right: Reminders + Birthdays (flex 2 ≈ 40%) */}
- <div className="flex-[2] min-w-0 flex flex-col gap-4">
+ <div className="flex flex-col" style={{ flex: '1 1 0%', minWidth: 0, gap: tokens.spacing.xxl }}>
  <RemindersSection reminders={data.reminders} onUpdate={updateReminders} onRefresh={refreshReminders} />
- <BirthdaysSection birthdays={data.birthdays} onUpdate={updateBirthdays} onPatchBirthday={patchBirthday} onSendEmail={sendBirthdayEmail} toast={addToast} />
+ <BirthdaysSection birthdays={data.birthdays} onUpdate={updateBirthdays} onPatchBirthday={patchBirthday} onSendEmail={sendBirthdayEmail} toast={toast} />
  </div>
  </div>
  </motion.div>
@@ -3193,15 +3115,15 @@ export default function LifePage() {
  initial={{ opacity: 0, y: 8 }}
  animate={{ opacity: 1, y: 0 }}
  transition={{ duration: 0.15 }}
- style={{ padding: `${tokens.spacing.xxl}px ${tokens.spacing.xl}px`, display: 'flex', flexDirection: 'column', gap: tokens.spacing.xl }}
+ className="p-4 md:p-6 flex flex-col gap-4 md:gap-5"
  >
  {/* Top card: weather + local events */}
  <WeekendTopCard weather={weather} events={localEvents} />
 
  {/* Idea cards — equal height, 16px gap */}
  <div className="grid grid-cols-1 md:grid-cols-2 items-stretch" style={{ gap: tokens.spacing.lg }}>
- <IdeasSection type="weekend" ideas={activities.weekend.ideas} content={activities.weekend.content} lastUpdated={activities.weekend.lastUpdated} refreshing={refreshingWeekend} refreshDisabled={refreshingWeekend || refreshingDates} onRefresh={refreshWeekend} toast={addToast} onDidThis={handleDidThis} weather={weather} onOpenPlan={openDayPlan} />
- <IdeasSection type="date" ideas={activities.date.ideas} content={activities.date.content} lastUpdated={activities.date.lastUpdated} refreshing={refreshingDates} refreshDisabled={refreshingDates || refreshingWeekend} onRefresh={refreshDates} toast={addToast} onDidThis={handleDidThis} weather={weather} onOpenPlan={openDayPlan} />
+ <IdeasSection type="weekend" ideas={activities.weekend.ideas} content={activities.weekend.content} lastUpdated={activities.weekend.lastUpdated} refreshing={refreshingWeekend} refreshDisabled={refreshingWeekend || refreshingDates} onRefresh={refreshWeekend} toast={toast} onDidThis={handleDidThis} weather={weather} onOpenPlan={openDayPlan} />
+ <IdeasSection type="date" ideas={activities.date.ideas} content={activities.date.content} lastUpdated={activities.date.lastUpdated} refreshing={refreshingDates} refreshDisabled={refreshingDates || refreshingWeekend} onRefresh={refreshDates} toast={toast} onDidThis={handleDidThis} weather={weather} onOpenPlan={openDayPlan} />
  </div>
 
  {/* Trip History */}
@@ -3218,7 +3140,7 @@ export default function LifePage() {
  transition={{ duration: 0.15 }}
  className=""
  >
- <ContactsSection toast={addToast} />
+ <ContactsSection toast={toast} />
  </motion.div>
  )}
 
@@ -3228,10 +3150,23 @@ export default function LifePage() {
  plan={globalDayPlan}
  open={globalPlanModalOpen}
  onClose={() => setGlobalPlanModalOpen(false)}
- toast={addToast}
+ toast={toast}
  />
  )}
- <ToastContainer toasts={toasts} />
+
+ {/* Resend birthday email confirm */}
+ <AlertDialog open={!!resendConfirmBirthday} onOpenChange={(open) => { if (!open) setResendConfirmBirthday(null) }}>
+ <AlertDialogContent>
+  <AlertDialogHeader>
+  <AlertDialogTitle>Resend email?</AlertDialogTitle>
+  <AlertDialogDescription>A birthday email was already sent this year. Send again?</AlertDialogDescription>
+  </AlertDialogHeader>
+  <AlertDialogFooter>
+  <AlertDialogCancel>Cancel</AlertDialogCancel>
+  <AlertDialogAction onClick={() => { if (resendConfirmBirthday) { doSendBirthdayEmail(resendConfirmBirthday); setResendConfirmBirthday(null) } }}>Resend</AlertDialogAction>
+  </AlertDialogFooter>
+ </AlertDialogContent>
+ </AlertDialog>
  </>
  )
 }

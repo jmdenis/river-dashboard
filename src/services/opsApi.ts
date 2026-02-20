@@ -127,6 +127,11 @@ export const opsApi = {
     return res.json()
   },
 
+  async killTask(id: string): Promise<{ ok: boolean; killed?: string[]; error?: string }> {
+    const res = await fetch(`${API_BASE}/tasks/${id}/kill`, { method: 'POST' })
+    return res.json()
+  },
+
   async queueTask(prompt: string): Promise<{ ok: boolean; taskId?: string; error?: string }> {
     const res = await fetch(`${API_BASE}/tasks/queue`, {
       method: 'POST',
