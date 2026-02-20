@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { Card, CardContent } from '../components/ui/card'
-import { Loader2, FileText, Download, Upload, CheckCircle2, AlertCircle, Folder, ChevronRight, ArrowLeft } from 'lucide-react'
+import { Loading03Icon, Note01Icon, Download02Icon, Upload02Icon, CheckmarkCircle02Icon, Alert02Icon, Folder01Icon, ArrowRight01Icon, ArrowLeft01Icon } from 'hugeicons-react'
 import { AnimatedIcon } from '../components/AnimatedIcon'
 import { tokens, styles } from '../designTokens'
 
@@ -124,7 +124,7 @@ export default function FilesPage() {
 
   if (isLoading && !currentDir) return (
     <div className="flex items-center justify-center py-20">
-      <Loader2 className="h-6 w-6 animate-spin text-[var(--text-3)]" />
+      <Loading03Icon className="h-6 w-6 animate-spin text-[var(--text-3)]" strokeWidth={1.5} />
     </div>
   )
 
@@ -141,10 +141,10 @@ export default function FilesPage() {
               className="flex items-center gap-1.5 text-[13px] transition-colors duration-150 hover:text-[var(--accent)]"
               style={{ color: 'var(--text-3)' }}
             >
-              <ArrowLeft className="h-3.5 w-3.5" />
+              <ArrowLeft01Icon className="h-3.5 w-3.5" strokeWidth={1.5} />
               Files
             </button>
-            <ChevronRight className="h-3 w-3" style={{ color: 'var(--text-3)' }} />
+            <ArrowRight01Icon className="h-3 w-3" strokeWidth={1.5} style={{ color: 'var(--text-3)' }} />
             <span className="text-[13px]" style={{ color: 'var(--text-1)' }}>{currentDir}/</span>
           </div>
         ) : null}
@@ -171,7 +171,7 @@ export default function FilesPage() {
           background: dragOver ? 'var(--accent-subtle)' : 'transparent',
         }}
       >
-        <div className="flex justify-center mb-2"><AnimatedIcon icon={Upload} className="h-5 w-5" style={{ color: dragOver ? 'var(--accent)' : 'var(--text-3)' }} /></div>
+        <div className="flex justify-center mb-2"><AnimatedIcon icon={Upload02Icon} strokeWidth={1.5} className="h-5 w-5" style={{ color: dragOver ? 'var(--accent)' : 'var(--text-3)' }} /></div>
         <p className="text-[13px]" style={{ color: 'var(--text-2)' }}>{dragOver ? 'Drop files here' : 'Drag & drop files, or click to browse'}</p>
         <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-3)' }}>Up to 200 MB per file</p>
         <input ref={fileInputRef} type="file" multiple onChange={handleFileSelect} className="hidden" />
@@ -188,9 +188,9 @@ export default function FilesPage() {
           >
             {uploads.map((u, i) => (
               <div key={i} className="flex items-center gap-3 text-[13px] px-2 py-1.5">
-                {u.status === 'uploading' && <Loader2 className="h-4 w-4 animate-spin text-[var(--accent)] shrink-0" />}
-                {u.status === 'done' && <CheckCircle2 className="h-4 w-4 text-emerald-400/80 shrink-0" />}
-                {u.status === 'error' && <AlertCircle className="h-4 w-4 text-rose-400/80 shrink-0" />}
+                {u.status === 'uploading' && <Loading03Icon className="h-4 w-4 animate-spin text-[var(--accent)] shrink-0" strokeWidth={1.5} />}
+                {u.status === 'done' && <CheckmarkCircle02Icon className="h-4 w-4 text-emerald-400/80 shrink-0" strokeWidth={1.5} />}
+                {u.status === 'error' && <Alert02Icon className="h-4 w-4 text-rose-400/80 shrink-0" strokeWidth={1.5} />}
                 <span className="truncate text-[var(--text-2)]">{u.name}</span>
                 {u.error && <span className="text-[12px] text-rose-400/80">Error {u.error}</span>}
               </div>
@@ -235,10 +235,10 @@ export default function FilesPage() {
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-3">
                               <div
-                                className="flex items-center justify-center w-9 h-9 rounded-lg"
+                                className="flex items-center justify-center w-9 h-9 rounded-md"
                                 style={{ background: 'var(--accent-subtle)' }}
                               >
-                                <Folder className="h-4.5 w-4.5" style={{ color: 'var(--accent)' }} />
+                                <Folder01Icon className="h-4.5 w-4.5" strokeWidth={1.5} style={{ color: 'var(--accent)' }} />
                               </div>
                               <div>
                                 <p className="text-[14px] font-medium" style={{ color: 'var(--text-1)' }}>
@@ -254,7 +254,7 @@ export default function FilesPage() {
                                 </p>
                               </div>
                             </div>
-                            <ChevronRight className="h-4 w-4 mt-1" style={{ color: 'var(--text-3)' }} />
+                            <ArrowRight01Icon className="h-4 w-4 mt-1" strokeWidth={1.5} style={{ color: 'var(--text-3)' }} />
                           </div>
                           {latestMtime > 0 && (
                             <p className="text-[11px] mt-3 pl-12" style={{ color: 'var(--text-3)' }}>
@@ -288,7 +288,7 @@ export default function FilesPage() {
                         style={{ borderBottom: i < rootFiles.length - 1 ? '1px solid var(--divider)' : 'none' }}
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <AnimatedIcon icon={FileText} className="h-4 w-4" style={{ color: 'var(--text-3)' }} />
+                          <AnimatedIcon icon={Note01Icon} strokeWidth={1.5} className="h-4 w-4" style={{ color: 'var(--text-3)' }} />
                           <div className="min-w-0">
                             <p className="text-[13px] truncate" style={{ color: 'var(--text-1)' }}>{f.name}</p>
                             <p className="text-[12px]" style={{ color: 'var(--text-3)' }}>{formatDate(f.mtime)}</p>
@@ -312,7 +312,7 @@ export default function FilesPage() {
           >
             {activeFolderData?.loading ? (
               <div className="flex items-center justify-center py-16">
-                <Loader2 className="h-5 w-5 animate-spin text-[var(--text-3)]" />
+                <Loading03Icon className="h-5 w-5 animate-spin text-[var(--text-3)]" strokeWidth={1.5} />
               </div>
             ) : (
               <Card>
@@ -332,7 +332,7 @@ export default function FilesPage() {
                           style={{ borderBottom: i < activeFolderData.files.length - 1 ? '1px solid var(--divider)' : 'none' }}
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            <AnimatedIcon icon={FileText} className="h-4 w-4" style={{ color: 'var(--text-3)' }} />
+                            <AnimatedIcon icon={Note01Icon} strokeWidth={1.5} className="h-4 w-4" style={{ color: 'var(--text-3)' }} />
                             <div className="min-w-0">
                               <p className="text-[13px] truncate" style={{ color: 'var(--text-1)' }}>{f.name}</p>
                               <p className="text-[12px]" style={{ color: 'var(--text-3)' }}>{formatSize(f.size)} · {formatDate(f.mtime)}</p>
@@ -346,7 +346,7 @@ export default function FilesPage() {
                             title="Download"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <AnimatedIcon icon={Download} className="h-4 w-4" />
+                            <AnimatedIcon icon={Download02Icon} strokeWidth={1.5} className="h-4 w-4" />
                           </a>
                         </motion.div>
                       ))}

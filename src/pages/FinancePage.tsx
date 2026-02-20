@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { api, type SpendingAnalysis, type WasteReport } from '../services/api'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
-import { Loader2 } from 'lucide-react'
+import { Loading03Icon } from 'hugeicons-react'
 import { ResponsiveContainer, PieChart, Pie, Cell, BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart as RechartsAreaChart, Area } from 'recharts'
 import { tokens } from '../designTokens'
 
@@ -14,7 +14,7 @@ const statValue: React.CSSProperties = { ...tokens.typography.display, letterSpa
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null
   return (
-    <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-2" style={{ fontSize: 13 }}>
+    <div className="rounded-md border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-2" style={{ fontSize: 13 }}>
       {label && <p className="mb-1" style={{ fontWeight: 500, color: tokens.colors.textPrimary }}>{label}</p>}
       {payload.map((entry: any, i: number) => (
         <p key={i} style={{ color: entry.color, fontSize: 12 }}>
@@ -52,7 +52,7 @@ export default function FinancePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-[var(--text-2)]" />
+        <Loading03Icon className="h-8 w-8 animate-spin text-[var(--text-2)]" strokeWidth={1.5} />
       </div>
     )
   }
@@ -254,7 +254,7 @@ export default function FinancePage() {
               { title: 'Optimize Insurance', description: 'Compare and switch insurers', savings: insurance.totals.total_potential_savings },
               { title: 'Cancel Forgotten Charges', description: 'Remove unused subscriptions', savings: waste.totals.breakdown.small_forgotten_charges },
             ].sort((a, b) => b.savings - a.savings).map((action, i) => (
-              <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
+              <div key={i} className="flex items-center justify-between p-4 border rounded-md">
                 <div><p style={{ fontWeight: 500, color: tokens.colors.textPrimary }}>{action.title}</p><p className="text-[13px] text-[var(--text-2)]">{action.description}</p></div>
                 <div className="text-green-400" style={statValue}>{'\u20AC'}{action.savings.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}/yr</div>
               </div>

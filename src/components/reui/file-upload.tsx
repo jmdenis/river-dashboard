@@ -68,7 +68,7 @@ function FileUpload({
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
         className={cn(
-          "group relative flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-8 text-center cursor-pointer transition-all duration-200",
+          "group relative flex flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed p-8 text-center cursor-pointer transition-all duration-200",
           dragOver
             ? "border-primary bg-primary/5 [&_svg]:text-primary"
             : "border-muted-foreground/25 hover:border-muted-foreground/40 hover:bg-muted/30"

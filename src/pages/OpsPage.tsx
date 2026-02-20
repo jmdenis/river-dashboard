@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { toast } from 'sonner'
 import { opsApi, type Task, type SystemInfo } from '../services/opsApi'
-import { Loader2, Trash2, Check, X, Send, Copy, ChevronDown, ChevronRight, CheckCircle2, Circle, XCircle, ChevronsUpDown } from 'lucide-react'
+import { Loading03Icon, Delete02Icon, Tick02Icon, SentIcon, Copy01Icon, ArrowDown01Icon, ArrowRight01Icon, CheckmarkCircle02Icon, CircleIcon, Cancel01Icon, UnfoldMoreIcon } from 'hugeicons-react'
 import { TerminalIcon } from '../components/ui/terminal-icon'
 import { AnimatedIcon } from '../components/AnimatedIcon'
 import { tokens } from '../designTokens'
@@ -42,10 +42,10 @@ function formatDuration(task: Task): string | null {
 }
 
 const statusDotColor: Record<string, string> = {
-  running: tokens.colors.blue,
+  running: tokens.colors.accent,
   done: tokens.colors.green,
   failed: tokens.colors.red,
-  queued: tokens.colors.orange,
+  queued: tokens.colors.textSecondary,
   cancelled: tokens.colors.textQuaternary,
 }
 
@@ -189,9 +189,9 @@ function TaskRow({
         {editMode && (
           <div className="shrink-0 flex items-center justify-center" style={{ width: 24 }}>
             {isSelected ? (
-              <CheckCircle2 className="h-5 w-5" style={{ color: tokens.colors.accent }} />
+              <CheckmarkCircle02Icon className="h-5 w-5" strokeWidth={1.5} style={{ color: tokens.colors.accent }} />
             ) : (
-              <Circle className="h-5 w-5" style={{ color: tokens.colors.textQuaternary }} />
+              <CircleIcon className="h-5 w-5" strokeWidth={1.5} style={{ color: tokens.colors.textQuaternary }} />
             )}
           </div>
         )}
@@ -269,7 +269,7 @@ function CommandBlock({ text }: { text: string }) {
               style={{ color: tokens.colors.textTertiary }}
               onClick={() => setExpanded(!expanded)}
             >
-              <AnimatedIcon icon={ChevronsUpDown} className="h-3.5 w-3.5" />
+              <AnimatedIcon icon={UnfoldMoreIcon} className="h-3.5 w-3.5" strokeWidth={1.5} />
               <span className="ml-1 text-[11px]">{expanded ? 'Collapse' : 'Expand'}</span>
             </Button>
           )}
@@ -280,7 +280,7 @@ function CommandBlock({ text }: { text: string }) {
             style={{ color: tokens.colors.textTertiary }}
             onClick={handleCopy}
           >
-            {copied ? <AnimatedIcon icon={Check} className="h-3.5 w-3.5" noStroke /> : <AnimatedIcon icon={Copy} className="h-3.5 w-3.5" />}
+            {copied ? <AnimatedIcon icon={Tick02Icon} className="h-3.5 w-3.5" strokeWidth={1.5} noStroke /> : <AnimatedIcon icon={Copy01Icon} className="h-3.5 w-3.5" strokeWidth={1.5} />}
             <span className="ml-1 text-[11px]">{copied ? 'Copied' : 'Copy'}</span>
           </Button>
         </div>
@@ -349,12 +349,12 @@ function TaskDetail({
         actions={
           <>
             {isKillable && (
-              <ToolbarAction icon={XCircle} label="Kill" destructive onClick={() => onKill(task.id)} />
+              <ToolbarAction icon={Cancel01Icon} label="Kill" destructive onClick={() => onKill(task.id)} />
             )}
             {logContent && (
-              <ToolbarAction icon={Copy} label="Copy log" onClick={handleCopyLog} />
+              <ToolbarAction icon={Copy01Icon} label="Copy log" onClick={handleCopyLog} />
             )}
-            <ToolbarAction icon={Trash2} label="Delete" destructive onClick={() => onDelete(task.id)} />
+            <ToolbarAction icon={Delete02Icon} label="Delete" destructive onClick={() => onDelete(task.id)} />
           </>
         }
       />
@@ -837,9 +837,9 @@ export default function OpsPage() {
             style={{ ...tokens.typography.caption, color: tokens.colors.accent }}
           >
             {selectedIds.size === filteredTasks.length ? (
-              <><CheckCircle2 className="h-3.5 w-3.5" /> Deselect All</>
+              <><CheckmarkCircle02Icon className="h-3.5 w-3.5" strokeWidth={1.5} /> Deselect All</>
             ) : (
-              <><Circle className="h-3.5 w-3.5" /> Select All</>
+              <><CircleIcon className="h-3.5 w-3.5" strokeWidth={1.5} /> Select All</>
             )}
           </button>
           {selectedIds.size > 0 && (
@@ -898,8 +898,8 @@ export default function OpsPage() {
                     }}
                   >
                     {isExpanded
-                      ? <AnimatedIcon icon={ChevronDown} className="h-3.5 w-3.5" style={{ color: tokens.colors.textTertiary }} />
-                      : <AnimatedIcon icon={ChevronRight} className="h-3.5 w-3.5" style={{ color: tokens.colors.textTertiary }} />
+                      ? <AnimatedIcon icon={ArrowDown01Icon} className="h-3.5 w-3.5" strokeWidth={1.5} style={{ color: tokens.colors.textTertiary }} />
+                      : <AnimatedIcon icon={ArrowRight01Icon} className="h-3.5 w-3.5" strokeWidth={1.5} style={{ color: tokens.colors.textTertiary }} />
                     }
                     <span style={{ ...tokens.typography.title, color: tokens.colors.textSecondary }} className="flex-1 truncate">
                       {group.label}
@@ -959,7 +959,7 @@ export default function OpsPage() {
               <div className="flex justify-center py-4">
                 <button
                   onClick={() => setVisibleCount(prev => prev + TASKS_PAGE_SIZE)}
-                  className="px-4 py-2 rounded-lg text-[12px] font-medium transition-colors"
+                  className="px-4 py-2 rounded-md text-[12px] font-medium transition-colors"
                   style={{
                     background: tokens.colors.surface,
                     color: tokens.colors.textTertiary,
@@ -997,7 +997,7 @@ export default function OpsPage() {
               onClick={handleBulkDelete}
               className="flex-1"
             >
-              {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <AnimatedIcon icon={Trash2} className="h-3.5 w-3.5 mr-1" />}
+              {bulkDeleting ? <Loading03Icon className="h-3.5 w-3.5 animate-spin mr-1" strokeWidth={1.5} /> : <AnimatedIcon icon={Delete02Icon} className="h-3.5 w-3.5 mr-1" strokeWidth={1.5} />}
               Delete {selectedIds.size}
             </Button>
             {selectedHasKillable && (
@@ -1008,7 +1008,7 @@ export default function OpsPage() {
                 onClick={handleBulkKill}
                 className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
               >
-                {bulkKilling ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <AnimatedIcon icon={XCircle} className="h-3.5 w-3.5 mr-1" />}
+                {bulkKilling ? <Loading03Icon className="h-3.5 w-3.5 animate-spin mr-1" strokeWidth={1.5} /> : <AnimatedIcon icon={Cancel01Icon} className="h-3.5 w-3.5 mr-1" strokeWidth={1.5} />}
                 Kill Active
               </Button>
             )}
@@ -1045,7 +1045,7 @@ export default function OpsPage() {
         {/* Composer — premium chat-style input */}
         <div className="shrink-0 px-4 pt-3 pb-2 md:px-6">
           <div
-            className={`composer-container flex items-center rounded-2xl px-4 py-3${isComposerLoading ? ' composer-loading-border' : ''}`}
+            className={`composer-container flex items-center rounded-xl px-4 py-3${isComposerLoading ? ' composer-loading-border' : ''}`}
             style={{
               background: '#1a1a1a',
               border: `1px solid ${inputFocused && !isComposerLoading ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.10)'}`,
@@ -1116,7 +1116,7 @@ export default function OpsPage() {
                   transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                   onClick={handleQuickTask}
                   disabled={isComposerLoading || !quickTaskText.trim()}
-                  className="shrink-0 ml-3 flex items-center justify-center rounded-lg transition-colors duration-150"
+                  className="shrink-0 ml-3 flex items-center justify-center rounded-md transition-colors duration-150"
                   style={{
                     width: 28,
                     height: 28,
@@ -1126,9 +1126,9 @@ export default function OpsPage() {
                   whileTap={!isComposerLoading ? { scale: 0.92 } : undefined}
                 >
                   {isComposerLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" style={{ color: '#0A84FF' }} />
+                    <Loading03Icon className="h-4 w-4 animate-spin" strokeWidth={1.5} style={{ color: '#0A84FF' }} />
                   ) : (
-                    <Send className="h-3.5 w-3.5 text-white" />
+                    <SentIcon className="h-3.5 w-3.5 text-white" strokeWidth={1.5} />
                   )}
                 </motion.button>
               )}

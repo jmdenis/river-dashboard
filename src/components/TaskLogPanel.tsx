@@ -7,7 +7,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from './ui/sheet'
-import { Loader2 } from 'lucide-react'
+import { Loading03Icon } from 'hugeicons-react'
 import { tokens } from '../designTokens'
 
 interface TaskLogPanelProps {
@@ -89,7 +89,7 @@ export default function TaskLogPanel({ task, open, onOpenChange }: TaskLogPanelP
         <div className="flex-1 overflow-auto p-4" style={{ background: tokens.colors.bg }}>
           {loading ? (
             <div className="flex items-center justify-center h-full">
-              <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--text-3)' }} />
+              <Loading03Icon strokeWidth={1.5} className="h-5 w-5 animate-spin" style={{ color: 'var(--text-3)' }} />
             </div>
           ) : notFound ? (
             <div className="flex items-center justify-center h-full">

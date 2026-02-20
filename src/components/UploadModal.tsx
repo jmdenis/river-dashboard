@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Upload, Loader2, CheckCircle2, AlertCircle, Download, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Upload02Icon, Loading03Icon, CheckmarkCircle02Icon, Alert02Icon, Download02Icon, ArrowLeft01Icon, ArrowRight01Icon } from 'hugeicons-react'
 import { AnimatedIcon } from './AnimatedIcon'
 import { Progress } from './ui/progress'
 import { lifeApi } from '../services/lifeApi'
@@ -157,7 +157,7 @@ export default function UploadModal({
             background: dragOver ? 'var(--accent-subtle)' : 'transparent',
           }}
         >
-          <div className="flex justify-center mb-2"><AnimatedIcon icon={Upload} className="h-5 w-5" style={{ color: dragOver ? 'var(--accent)' : 'var(--text-3)' }} /></div>
+          <div className="flex justify-center mb-2"><AnimatedIcon icon={Upload02Icon} strokeWidth={1.5} className="h-5 w-5" style={{ color: dragOver ? 'var(--accent)' : 'var(--text-3)' }} /></div>
           <p style={{ ...tokens.typography.body, color: 'var(--text-2)' }}>
             {dragOver ? 'Drop files here' : 'Drop files here or click to browse'}
           </p>
@@ -176,9 +176,9 @@ export default function UploadModal({
             {uploads.map((u, i) => (
               <div key={i} className="space-y-1">
                 <div className="flex items-center gap-2 text-[12px]">
-                  {u.status === 'uploading' && <Loader2 className="h-3 w-3 animate-spin text-[var(--accent)] shrink-0" />}
-                  {u.status === 'done' && <CheckCircle2 className="h-3 w-3 text-emerald-400 shrink-0" />}
-                  {u.status === 'error' && <AlertCircle className="h-3 w-3 text-rose-400 shrink-0" />}
+                  {u.status === 'uploading' && <Loading03Icon strokeWidth={1.5} className="h-3 w-3 animate-spin text-[var(--accent)] shrink-0" />}
+                  {u.status === 'done' && <CheckmarkCircle02Icon strokeWidth={1.5} className="h-3 w-3 text-emerald-400 shrink-0" />}
+                  {u.status === 'error' && <Alert02Icon strokeWidth={1.5} className="h-3 w-3 text-rose-400 shrink-0" />}
                   <span className="truncate text-[var(--text-2)]">{u.name}</span>
                   {u.status === 'uploading' && (
                     <span className="text-[var(--text-3)] ml-auto">{u.progress}%</span>
@@ -196,7 +196,7 @@ export default function UploadModal({
         <div style={{ borderTop: `1px solid ${tokens.colors.border}` }}>
           {loadingFiles ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-4 w-4 animate-spin text-[var(--text-3)]" />
+              <Loading03Icon strokeWidth={1.5} className="h-4 w-4 animate-spin text-[var(--text-3)]" />
             </div>
           ) : files.length === 0 ? (
             <p className="text-center py-6" style={{ ...tokens.typography.body, color: 'var(--text-2)' }}>No files uploaded</p>
@@ -213,7 +213,7 @@ export default function UploadModal({
                     <p className="truncate transition-colors" style={{ ...tokens.typography.body, fontWeight: 500, color: 'var(--text-1)' }}>{f.name}</p>
                     <p style={{ ...tokens.typography.caption, color: 'var(--text-2)' }}>{f.sizeHuman} &middot; {formatDate(f.date)}</p>
                   </div>
-                  <AnimatedIcon icon={Download} className="h-3.5 w-3.5 text-[var(--text-3)] group-hover:text-[var(--text-2)] transition-colors" />
+                  <AnimatedIcon icon={Download02Icon} strokeWidth={1.5} className="h-3.5 w-3.5 text-[var(--text-3)] group-hover:text-[var(--text-2)] transition-colors" />
                 </a>
               ))}
             </div>
@@ -226,7 +226,7 @@ export default function UploadModal({
                 disabled={page <= 1}
                 className="text-[12px] text-[var(--text-3)] hover:text-[var(--text-2)] disabled:text-white/10 disabled:cursor-default flex items-center gap-1 transition-colors"
               >
-                <AnimatedIcon icon={ChevronLeft} className="h-3 w-3" /> Prev
+                <AnimatedIcon icon={ArrowLeft01Icon} strokeWidth={1.5} className="h-3 w-3" /> Prev
               </button>
               <span style={{ ...tokens.typography.caption, color: 'var(--text-2)' }}>{page} / {totalPages}</span>
               <button
@@ -234,7 +234,7 @@ export default function UploadModal({
                 disabled={page >= totalPages}
                 className="text-[12px] text-[var(--text-3)] hover:text-[var(--text-2)] disabled:text-white/10 disabled:cursor-default flex items-center gap-1 transition-colors"
               >
-                Next <AnimatedIcon icon={ChevronRight} className="h-3 w-3" />
+                Next <AnimatedIcon icon={ArrowRight01Icon} strokeWidth={1.5} className="h-3 w-3" />
               </button>
             </div>
           )}

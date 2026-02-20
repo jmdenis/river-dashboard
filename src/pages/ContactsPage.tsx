@@ -3,10 +3,11 @@ import { motion, AnimatePresence } from 'motion/react'
 import { toast } from 'sonner'
 import { lifeApi, type Contact } from '../services/lifeApi'
 import {
-  Users, Pencil, Phone, Mail, Trash2, Loader2, Search,
-  CheckCircle2, Circle, SquarePen, Plus, Gift, Calendar, Tag,
-  Clock, ChevronRight,
-} from 'lucide-react'
+  UserMultiple02Icon, PencilEdit02Icon, SmartPhone01Icon, Mail01Icon,
+  Delete02Icon, Loading03Icon, Search01Icon, CheckmarkCircle02Icon,
+  CircleIcon, PlusSignIcon, GiftIcon, Calendar01Icon, Tag01Icon,
+  Clock01Icon, ArrowRight01Icon,
+} from 'hugeicons-react'
 import { AnimatedIcon } from '../components/AnimatedIcon'
 import { tokens } from '../designTokens'
 import { TwoPanelLayout } from '../components/TwoPanelLayout'
@@ -126,9 +127,9 @@ function ContactRow({
         {editMode && (
           <div className="shrink-0 flex items-center justify-center" style={{ width: 24 }}>
             {isSelected ? (
-              <CheckCircle2 className="h-5 w-5" style={{ color: tokens.colors.accent }} />
+              <CheckmarkCircle02Icon className="h-5 w-5" strokeWidth={1.5} style={{ color: tokens.colors.accent }} />
             ) : (
-              <Circle className="h-5 w-5" style={{ color: tokens.colors.textQuaternary }} />
+              <CircleIcon className="h-5 w-5" strokeWidth={1.5} style={{ color: tokens.colors.textQuaternary }} />
             )}
           </div>
         )}
@@ -162,7 +163,7 @@ function ContactRow({
 
         {/* Mobile chevron */}
         {!editMode && (
-          <AnimatedIcon icon={ChevronRight} className="h-4 w-4 md:hidden" style={{ color: tokens.colors.textQuaternary }} />
+          <AnimatedIcon icon={ArrowRight01Icon} className="h-4 w-4 md:hidden" strokeWidth={1.5} style={{ color: tokens.colors.textQuaternary }} />
         )}
       </div>
 
@@ -204,7 +205,7 @@ function ContactDetail({ contact }: { contact: Contact }) {
       {/* Contact info cards */}
       <div className="space-y-4">
         {contact.phone && (
-          <DetailField icon={Phone} label="Phone">
+          <DetailField icon={SmartPhone01Icon} label="Phone">
             <a href={`tel:${contact.phone}`} className="hover:underline" style={{ color: tokens.colors.accent }}>
               {contact.phone}
             </a>
@@ -212,7 +213,7 @@ function ContactDetail({ contact }: { contact: Contact }) {
         )}
 
         {contact.email && (
-          <DetailField icon={Mail} label="Email">
+          <DetailField icon={Mail01Icon} label="Email">
             <a href={`mailto:${contact.email}`} className="hover:underline" style={{ color: tokens.colors.accent }}>
               {contact.email}
             </a>
@@ -220,7 +221,7 @@ function ContactDetail({ contact }: { contact: Contact }) {
         )}
 
         {contact.birthday && (
-          <DetailField icon={Calendar} label="Birthday">
+          <DetailField icon={Calendar01Icon} label="Birthday">
             <span style={{ color: tokens.colors.textSecondary }}>
               {formatBirthday(contact.birthday, contact.birthYear)}
             </span>
@@ -228,7 +229,7 @@ function ContactDetail({ contact }: { contact: Contact }) {
         )}
 
         {contact.tags.length > 0 && (
-          <DetailField icon={Tag} label="Tags">
+          <DetailField icon={Tag01Icon} label="Tags">
             <div className="flex flex-wrap gap-1.5">
               {contact.tags.map(tag => (
                 <Badge key={tag} variant="secondary" className="text-[11px] px-2 py-0.5">
@@ -240,7 +241,7 @@ function ContactDetail({ contact }: { contact: Contact }) {
         )}
 
         {contact.lastContact && (
-          <DetailField icon={Clock} label="Last Contact">
+          <DetailField icon={Clock01Icon} label="Last Contact">
             <span style={{ color: tokens.colors.textSecondary }}>
               {formatLastContact(contact.lastContact)}
             </span>
@@ -248,7 +249,7 @@ function ContactDetail({ contact }: { contact: Contact }) {
         )}
 
         {contact.giftHistory && contact.giftHistory.length > 0 && (
-          <DetailField icon={Gift} label="Gift History">
+          <DetailField icon={GiftIcon} label="Gift History">
             <ul className="space-y-1">
               {contact.giftHistory.map((gift, i) => (
                 <li key={i} className="text-[13px]" style={{ color: tokens.colors.textSecondary }}>
@@ -260,7 +261,7 @@ function ContactDetail({ contact }: { contact: Contact }) {
         )}
 
         {contact.notes && (
-          <DetailField icon={Pencil} label="Notes">
+          <DetailField icon={PencilEdit02Icon} label="Notes">
             <p className="text-[13px] whitespace-pre-wrap leading-relaxed" style={{ color: tokens.colors.textSecondary }}>
               {contact.notes}
             </p>
@@ -282,7 +283,7 @@ function DetailField({
 }) {
   return (
     <div className="flex gap-3">
-      <AnimatedIcon icon={Icon} className="h-4 w-4 mt-0.5" style={{ color: tokens.colors.textQuaternary }} />
+      <AnimatedIcon icon={Icon} className="h-4 w-4 mt-0.5" strokeWidth={1.5} style={{ color: tokens.colors.textQuaternary }} />
       <div className="min-w-0">
         <p style={{ ...tokens.typography.label, color: tokens.colors.textQuaternary, marginBottom: 4 }}>{label}</p>
         {children}
@@ -410,7 +411,7 @@ function EditContactDialog({
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSubmit} disabled={saving}>
-            {saving && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />}
+            {saving && <Loading03Icon className="h-3.5 w-3.5 animate-spin mr-1" strokeWidth={1.5} />}
             Save
           </Button>
         </DialogFooter>
@@ -567,8 +568,8 @@ export default function ContactsPage() {
       >
         <div className="h-full flex max-w-7xl mx-auto w-full md:px-6">
           <div className="w-full md:w-[35%] md:max-w-[420px] shrink-0 p-4 space-y-3" style={{ background: tokens.colors.surface, borderRight: '1px solid ' + tokens.colors.borderSubtle }}>
-            <Skeleton className="h-9 w-full rounded-lg" />
-            {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-[72px] w-full rounded-lg" />)}
+            <Skeleton className="h-9 w-full rounded-md" />
+            {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-[72px] w-full rounded-md" />)}
           </div>
           <div className="hidden md:flex flex-1 p-6 space-y-4 flex-col">
             <Skeleton className="h-16 w-48 rounded-full" />
@@ -624,8 +625,8 @@ export default function ContactsPage() {
             style={{ ...tokens.typography.caption, color: tokens.colors.accent }}
           >
             {selectedIds.size === filteredContacts.length
-              ? <><CheckCircle2 className="h-3.5 w-3.5" /> Deselect All</>
-              : <><Circle className="h-3.5 w-3.5" /> Select All</>}
+              ? <><CheckmarkCircle02Icon className="h-3.5 w-3.5" strokeWidth={1.5} /> Deselect All</>
+              : <><CircleIcon className="h-3.5 w-3.5" strokeWidth={1.5} /> Select All</>}
           </button>
           {selectedIds.size > 0 && (
             <span style={{ ...tokens.typography.caption, color: tokens.colors.textTertiary }}>
@@ -642,7 +643,7 @@ export default function ContactsPage() {
       >
         {filteredContacts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-5">
-            <AnimatedIcon icon={Users} className="h-8 w-8 mb-3" style={{ color: tokens.colors.textQuaternary, opacity: 0.4 }} />
+            <AnimatedIcon icon={UserMultiple02Icon} className="h-8 w-8 mb-3" strokeWidth={1.5} style={{ color: tokens.colors.textQuaternary, opacity: 0.4 }} />
             <p className="text-[13px]" style={{ color: tokens.colors.textQuaternary }}>
               {contacts.length === 0 ? 'No contacts yet' : 'No matches'}
             </p>
@@ -696,8 +697,8 @@ export default function ContactsPage() {
               className="flex-1"
             >
               {bulkDeleting
-                ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
-                : <AnimatedIcon icon={Trash2} className="h-3.5 w-3.5 mr-1" />}
+                ? <Loading03Icon className="h-3.5 w-3.5 animate-spin mr-1" strokeWidth={1.5} />
+                : <AnimatedIcon icon={Delete02Icon} className="h-3.5 w-3.5 mr-1" strokeWidth={1.5} />}
               Delete {selectedIds.size}
             </Button>
           </motion.div>
@@ -726,13 +727,13 @@ export default function ContactsPage() {
         actions={
           <>
             {selectedContact.phone && (
-              <ToolbarAction icon={Phone} label="Call" onClick={() => window.open(`tel:${selectedContact.phone}`)} />
+              <ToolbarAction icon={SmartPhone01Icon} label="Call" onClick={() => window.open(`tel:${selectedContact.phone}`)} />
             )}
             {selectedContact.email && (
-              <ToolbarAction icon={Mail} label="Email" onClick={() => window.open(`mailto:${selectedContact.email}`)} />
+              <ToolbarAction icon={Mail01Icon} label="Email" onClick={() => window.open(`mailto:${selectedContact.email}`)} />
             )}
-            <ToolbarAction icon={Pencil} label="Edit" onClick={() => setEditDialogOpen(true)} />
-            <ToolbarAction icon={Trash2} label="Delete" destructive onClick={() => setDeleteConfirmId(selectedContact.id)} />
+            <ToolbarAction icon={PencilEdit02Icon} label="Edit" onClick={() => setEditDialogOpen(true)} />
+            <ToolbarAction icon={Delete02Icon} label="Delete" destructive onClick={() => setDeleteConfirmId(selectedContact.id)} />
           </>
         }
       />
@@ -785,8 +786,8 @@ export default function ContactsPage() {
             style={{ ...tokens.typography.caption, color: tokens.colors.accent }}
           >
             {selectedIds.size === filteredContacts.length
-              ? <><CheckCircle2 className="h-3.5 w-3.5" /> Deselect All</>
-              : <><Circle className="h-3.5 w-3.5" /> Select All</>}
+              ? <><CheckmarkCircle02Icon className="h-3.5 w-3.5" strokeWidth={1.5} /> Deselect All</>
+              : <><CircleIcon className="h-3.5 w-3.5" strokeWidth={1.5} /> Select All</>}
           </button>
           {selectedIds.size > 0 && (
             <span style={{ ...tokens.typography.caption, color: tokens.colors.textTertiary }}>
@@ -803,7 +804,7 @@ export default function ContactsPage() {
       >
         {filteredContacts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-5">
-            <AnimatedIcon icon={Users} className="h-8 w-8 mb-3" style={{ color: tokens.colors.textQuaternary, opacity: 0.4 }} />
+            <AnimatedIcon icon={UserMultiple02Icon} className="h-8 w-8 mb-3" strokeWidth={1.5} style={{ color: tokens.colors.textQuaternary, opacity: 0.4 }} />
             <p className="text-[13px]" style={{ color: tokens.colors.textQuaternary }}>
               {contacts.length === 0 ? 'No contacts yet' : 'No matches'}
             </p>
@@ -825,9 +826,9 @@ export default function ContactsPage() {
                   {editMode ? (
                     <div className="shrink-0 flex items-center justify-center" style={{ width: 24 }}>
                       {isSelected ? (
-                        <CheckCircle2 className="h-5 w-5" style={{ color: tokens.colors.accent }} />
+                        <CheckmarkCircle02Icon className="h-5 w-5" strokeWidth={1.5} style={{ color: tokens.colors.accent }} />
                       ) : (
-                        <Circle className="h-5 w-5" style={{ color: tokens.colors.textQuaternary }} />
+                        <CircleIcon className="h-5 w-5" strokeWidth={1.5} style={{ color: tokens.colors.textQuaternary }} />
                       )}
                     </div>
                   ) : (
@@ -851,7 +852,7 @@ export default function ContactsPage() {
                     )}
                   </div>
                   {!editMode && (
-                    <AnimatedIcon icon={ChevronRight} className="h-4 w-4" style={{ color: tokens.colors.textQuaternary }} />
+                    <AnimatedIcon icon={ArrowRight01Icon} className="h-4 w-4" strokeWidth={1.5} style={{ color: tokens.colors.textQuaternary }} />
                   )}
                 </div>
                 {/* Indented divider */}
@@ -886,8 +887,8 @@ export default function ContactsPage() {
               className="flex-1"
             >
               {bulkDeleting
-                ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
-                : <AnimatedIcon icon={Trash2} className="h-3.5 w-3.5 mr-1" />}
+                ? <Loading03Icon className="h-3.5 w-3.5 animate-spin mr-1" strokeWidth={1.5} />
+                : <AnimatedIcon icon={Delete02Icon} className="h-3.5 w-3.5 mr-1" strokeWidth={1.5} />}
               Delete {selectedIds.size}
             </Button>
           </motion.div>
@@ -924,13 +925,13 @@ export default function ContactsPage() {
               actions={
                 <>
                   {selectedContact.phone && (
-                    <ToolbarAction icon={Phone} label="Call" onClick={() => window.open(`tel:${selectedContact.phone}`)} />
+                    <ToolbarAction icon={SmartPhone01Icon} label="Call" onClick={() => window.open(`tel:${selectedContact.phone}`)} />
                   )}
                   {selectedContact.email && (
-                    <ToolbarAction icon={Mail} label="Email" onClick={() => window.open(`mailto:${selectedContact.email}`)} />
+                    <ToolbarAction icon={Mail01Icon} label="Email" onClick={() => window.open(`mailto:${selectedContact.email}`)} />
                   )}
-                  <ToolbarAction icon={Pencil} label="Edit" onClick={() => setEditDialogOpen(true)} />
-                  <ToolbarAction icon={Trash2} label="Delete" destructive onClick={() => setDeleteConfirmId(selectedContact.id)} />
+                  <ToolbarAction icon={PencilEdit02Icon} label="Edit" onClick={() => setEditDialogOpen(true)} />
+                  <ToolbarAction icon={Delete02Icon} label="Delete" destructive onClick={() => setDeleteConfirmId(selectedContact.id)} />
                 </>
               }
             />
@@ -949,7 +950,7 @@ export default function ContactsPage() {
             <TwoPanelLayout
               leftPanel={leftPanel}
               rightPanel={rightPanel}
-              emptyState={{ icon: <AnimatedIcon icon={Users} className="h-12 w-12" />, text: 'Select a contact' }}
+              emptyState={{ icon: <AnimatedIcon icon={UserMultiple02Icon} className="h-12 w-12" strokeWidth={1.5} />, text: 'Select a contact' }}
               selectedKey={selectedContact?.id}
               mobileOpen={mobileOpen}
               onMobileClose={handleClose}

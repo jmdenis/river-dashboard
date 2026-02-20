@@ -27,10 +27,10 @@ function PageSkeleton() {
           className="w-full md:w-[35%] md:max-w-[420px] shrink-0 p-4 space-y-3"
           style={{ background: tokens.colors.surface, borderRight: '1px solid ' + tokens.colors.borderSubtle }}
         >
-          <Skeleton className="h-9 w-full rounded-lg" />
-          <Skeleton className="h-6 w-64 rounded-lg" />
+          <Skeleton className="h-9 w-full rounded-md" />
+          <Skeleton className="h-6 w-64 rounded-md" />
           {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-[72px] w-full rounded-lg" />
+            <Skeleton key={i} className="h-[72px] w-full rounded-md" />
           ))}
         </div>
         <div className="hidden md:flex flex-1 p-6 space-y-4 flex-col">
