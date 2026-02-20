@@ -359,9 +359,9 @@ function TaskDetail({
         }
       />
 
-      {/* 2. Status row + 3. Tags */}
+      {/* 2. Status row + 3. Tags — single inline row */}
       <div className="shrink-0 px-6 py-4" style={{ borderBottom: '1px solid ' + tokens.colors.borderSubtle }}>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
           {isRunning && (
             <Badge variant="default" className="bg-[var(--accent-subtle)] text-[var(--accent-text)] border-[var(--accent-border)] text-[11px]">running</Badge>
           )}
@@ -386,16 +386,12 @@ function TaskDetail({
           {costVal > 0 && (
             <span className="text-[11px] text-amber-400 tabular-nums">${costVal.toFixed(4)}</span>
           )}
+          {modelNames.map(name => (
+            <Badge key={name} variant="secondary" className="text-[10px]">
+              {name === 'jm-direct' ? 'manual' : name}
+            </Badge>
+          ))}
         </div>
-        {modelNames.length > 0 && (
-          <div className="flex items-center gap-1.5 mt-2">
-            {modelNames.map(name => (
-              <Badge key={name} variant="secondary" className="text-[10px]">
-                {name === 'jm-direct' ? 'manual' : name}
-              </Badge>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Scrollable content area: 4. Command + 5. Output + 6. Exit code */}
