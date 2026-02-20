@@ -1,7 +1,12 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { motion } from 'motion/react'
+import { toast } from 'sonner'
 import { opsApi, type InboxItem, type IntegrationProposal } from '../services/opsApi'
 import { Alert, AlertTitle, AlertDescription } from '@/components/reui/alert'
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
