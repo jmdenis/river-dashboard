@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { motion } from 'motion/react'
 import { toast } from 'sonner'
-import { Loader2, MapPin, Check, Plus, Trash2, Mail, X, Shield, FileText, Settings, AlertTriangle, Key, Bug, Inbox, RefreshCw, ChevronRight, Copy, Clock, Brain } from 'lucide-react'
+import { Loader2, MapPin, Check, Plus, Trash2, Mail, X, Shield, Settings, AlertTriangle, Key, Bug, Inbox, RefreshCw, Copy, Clock, Brain } from 'lucide-react'
 import { AnimatedIcon } from '../components/AnimatedIcon'
 import ReactMarkdown from 'react-markdown'
 
@@ -20,10 +20,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 
 // ReUI
 import { Alert, AlertTitle, AlertDescription } from '../components/reui/alert'
-import { FileUpload, type FileUploadEntry } from '../components/reui/file-upload'
 
 // APIs
-import { profileApi, type SecurityStatus, type DocFile, type MemoryData } from '../services/profileApi'
+import { profileApi, type SecurityStatus, type MemoryData } from '../services/profileApi'
 import { lifeApi, type CronJob, type HomeSettings } from '../services/lifeApi'
 import { tokens } from '../designTokens'
 
@@ -838,193 +837,6 @@ function SecurityTab() {
   )
 }
 
-// ─── Docs Tab ────────────────────────────────────────────────────────────────
-
-function DocsTab() {
-  const [docs, setDocs] = useState<DocFile[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selectedDoc, setSelectedDoc] = useState<string | null>(null)
-  const [docContent, setDocContent] = useState<string>('')
-  const [docModified, setDocModified] = useState<string>('')
-  const [docLoading, setDocLoading] = useState(false)
-  const [uploads, setUploads] = useState<FileUploadEntry[]>([])
-
-  useEffect(() => {
-    profileApi.getDocs().then(d => { setDocs(d); setLoading(false) }).catch(() => setLoading(false))
-  }, [])
-
-  const uploadFile = useCallback(async (file: File) => {
-    const entry: FileUploadEntry = { name: file.name, status: 'uploading', progress: 0 }
-    setUploads(prev => [...prev, entry])
-    try {
-      const xhr = new XMLHttpRequest()
-      const promise = new Promise<void>((resolve, reject) => {
-        xhr.upload.addEventListener('progress', (e) => {
-          if (e.lengthComputable) {
-            const pct = Math.round((e.loaded / e.total) * 100)
-            setUploads(prev => prev.map(u => u.name === file.name ? { ...u, progress: pct } : u))
-          }
-        })
-        xhr.addEventListener('load', () => {
-          if (xhr.status >= 200 && xhr.status < 300) resolve()
-          else reject(new Error(`${xhr.status}`))
-        })
-        xhr.addEventListener('error', () => reject(new Error('Network error')))
-        xhr.open('POST', `${API_BASE_URL}/api/files`)
-        xhr.setRequestHeader('x-upload-token', TOKEN)
-        xhr.setRequestHeader('x-file-name', file.name)
-        xhr.send(file)
-      })
-      await promise
-      setUploads(prev => prev.map(u => u.name === file.name ? { ...u, status: 'done', progress: 100 } : u))
-      toast.success(`${file.name} uploaded`)
-      // Refresh docs list
-      profileApi.getDocs().then(d => setDocs(d))
-    } catch (e: any) {
-      setUploads(prev => prev.map(u => u.name === file.name ? { ...u, status: 'error', error: e.message } : u))
-      toast.error(`Upload failed: ${e.message}`)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (uploads.length === 0) return
-    const allDone = uploads.every(u => u.status === 'done' || u.status === 'error')
-    if (allDone) {
-      const timer = setTimeout(() => setUploads([]), 3000)
-      return () => clearTimeout(timer)
-    }
-  }, [uploads])
-
-  const handleFilesSelected = useCallback((files: File[]) => {
-    files.forEach(uploadFile)
-  }, [uploadFile])
-
-  const openDoc = async (name: string) => {
-    setSelectedDoc(name)
-    setDocLoading(true)
-    try {
-      const result = await profileApi.getDocContent(name)
-      if (result) {
-        setDocContent(result.content)
-        setDocModified(result.modified)
-      }
-    } catch {
-      setDocContent('Failed to load file')
-    } finally {
-      setDocLoading(false)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="size-5 animate-spin text-muted-foreground" />
-      </div>
-    )
-  }
-
-  // Document content view
-  if (selectedDoc) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.15 }}
-        className="max-w-3xl"
-      >
-        <div className="flex items-center gap-2 mb-4">
-          <button
-            onClick={() => { setSelectedDoc(null); setDocContent('') }}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Docs
-          </button>
-          <AnimatedIcon icon={ChevronRight} className="size-3 text-muted-foreground" />
-          <span className="text-sm text-foreground">{selectedDoc}</span>
-        </div>
-        <Card>
-          <CardContent className="pt-6">
-            {docLoading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="size-5 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
-              <>
-                {docModified && (
-                  <p className="text-xs text-muted-foreground mb-4">
-                    Last modified: {new Date(docModified).toLocaleString()}
-                  </p>
-                )}
-                <div className="prose prose-invert prose-sm max-w-none prose-headings:text-foreground prose-headings:font-medium prose-a:text-primary prose-strong:text-foreground prose-code:text-primary prose-p:text-muted-foreground prose-li:text-muted-foreground">
-                  <ReactMarkdown>{docContent}</ReactMarkdown>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
-    )
-  }
-
-  return (
-    <div className="max-w-3xl space-y-4">
-      {/* File Upload */}
-      <FileUpload
-        onFilesSelected={handleFilesSelected}
-        accept=".md,.txt,.json,.yaml,.yml"
-        uploads={uploads}
-      />
-
-      {/* File List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <AnimatedIcon icon={FileText} className="size-4 text-muted-foreground" />
-            Markdown Files
-            <Badge variant="secondary" className="ml-1">{docs.length}</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {docs.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">No .md files found</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Filename</TableHead>
-                  <TableHead className="text-right">Size</TableHead>
-                  <TableHead className="text-right">Modified</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {docs.map(doc => (
-                  <TableRow
-                    key={doc.name}
-                    className="cursor-pointer"
-                    onClick={() => openDoc(doc.name)}
-                  >
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <AnimatedIcon icon={FileText} className="size-3.5 text-muted-foreground" />
-                        <span className="font-mono text-sm">{doc.name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground tabular-nums">
-                      {doc.size < 1024 ? `${doc.size}B` : `${(doc.size / 1024).toFixed(1)}KB`}
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground tabular-nums">
-                      {new Date(doc.modified).toLocaleDateString()}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
 
 // ─── Memory Tab ──────────────────────────────────────────────────────────────
 
@@ -1149,7 +961,6 @@ export default function ProfilePage() {
               <TabsTrigger value="cron" className="whitespace-nowrap">Cron Jobs</TabsTrigger>
               <TabsTrigger value="security" className="whitespace-nowrap">Security</TabsTrigger>
               <TabsTrigger value="memory" className="whitespace-nowrap">Memory</TabsTrigger>
-              <TabsTrigger value="docs" className="whitespace-nowrap">Docs</TabsTrigger>
             </TabsList>
           </div>
         </div>
@@ -1184,11 +995,6 @@ export default function ProfilePage() {
           </motion.div>
         </TabsContent>
 
-        <TabsContent value="docs">
-          <motion.div key="docs" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }} className="px-5 md:px-6 py-6">
-            <DocsTab />
-          </motion.div>
-        </TabsContent>
       </Tabs>
     </div>
   )
