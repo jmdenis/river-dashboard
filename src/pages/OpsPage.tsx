@@ -509,7 +509,7 @@ export default function OpsPage() {
 
   useEffect(() => {
     loadData()
-    const interval = setInterval(loadData, 5000)
+    const interval = setInterval(loadData, 60000)
     return () => clearInterval(interval)
   }, [])
 

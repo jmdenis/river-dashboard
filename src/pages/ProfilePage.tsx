@@ -377,8 +377,8 @@ function NotificationsTab() {
 const systemJobs = [
   { id: 'backup', label: 'GitHub Backup', schedule: 'Daily 3:00 AM', cron: '0 3 * * *', enabled: true },
   { id: 'heartbeat', label: 'Heartbeat Check', schedule: 'Every 30 min', cron: '*/30 * * * *', enabled: true },
-  { id: 'stats', label: 'Stats Polling', schedule: 'Every 5s', cron: '*/5 * * * *', enabled: true },
-  { id: 'logrotate', label: 'Log Rotation', schedule: 'Daily midnight', cron: '0 0 * * *', enabled: false },
+  { id: 'stats', label: 'Stats Polling', schedule: 'Every 60s', cron: '* * * * *', enabled: true },
+  { id: 'logrotate', label: 'Log Rotation', schedule: 'Daily midnight', cron: '0 0 * * *', enabled: true },
 ]
 
 // ─── Cron Jobs Tab ───────────────────────────────────────────────────────────
