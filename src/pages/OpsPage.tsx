@@ -970,7 +970,7 @@ export default function OpsPage() {
       </AnimatePresence>
 
       {/* Filter tabs + status pills */}
-      <div className="shrink-0 px-4 flex items-center gap-4" style={{ height: 36 }}>
+      <div className="shrink-0 px-4 flex items-center gap-4 overflow-x-auto overflow-y-hidden whitespace-nowrap scrollbar-hide" style={{ height: 36, WebkitOverflowScrolling: 'touch' }}>
         {([
           { key: 'all' as const, label: 'All', count: tasks.length },
           { key: 'running' as const, label: 'Running', count: runningCount },

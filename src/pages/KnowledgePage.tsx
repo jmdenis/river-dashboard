@@ -666,7 +666,7 @@ export default function KnowledgePage() {
       </div>
 
       {/* Filter tabs */}
-      <div className="shrink-0 px-4 flex items-center gap-4 overflow-x-auto whitespace-nowrap scrollbar-hide" style={{ height: 36 }}>
+      <div className="shrink-0 px-4 flex items-center gap-4 overflow-x-auto overflow-y-hidden whitespace-nowrap scrollbar-hide" style={{ height: 36, WebkitOverflowScrolling: 'touch' }}>
         {filters.map(f => (
           <button
             key={f.key}

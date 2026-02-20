@@ -3091,7 +3091,7 @@ export default function LifePage() {
  <>
  <div className="min-h-full max-w-7xl mx-auto px-4 md:px-8 pt-6">
  {/* Sub-nav bar — left-aligned, horizontal scroll on mobile */}
- <div className="border-b border-border px-4 md:px-6 pt-2 pb-0 overflow-x-auto">
+ <div className="border-b border-border px-4 md:px-6 pt-2 pb-0 overflow-x-auto overflow-y-hidden" style={{ WebkitOverflowScrolling: 'touch' }}>
  <Tabs value={activeTab} onValueChange={v => {
   if (v === 'contacts') { navigate('/contacts'); return }
   setActiveTab(v as TabId)

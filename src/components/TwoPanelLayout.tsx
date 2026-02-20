@@ -1,14 +1,7 @@
-import { ReactNode } from 'react'
+import { ReactNode, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { tokens } from '../designTokens'
 import { DetailEmptyState } from './DetailEmptyState'
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from './ui/sheet'
 
 interface TwoPanelLayoutProps {
   leftPanel: ReactNode
@@ -29,11 +22,26 @@ export function TwoPanelLayout({
   onMobileClose,
   mobileTitle = 'Detail',
 }: TwoPanelLayoutProps) {
+  /* ── Swipe: right on detail → back to list ──────── */
+  const touchRef = useRef({ x: 0, y: 0 })
+
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    touchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+  }, [])
+
+  const onDetailTouchEnd = useCallback((e: React.TouchEvent) => {
+    const dx = e.changedTouches[0].clientX - touchRef.current.x
+    const dy = e.changedTouches[0].clientY - touchRef.current.y
+    if (dx > 50 && Math.abs(dx) > Math.abs(dy)) {
+      onMobileClose?.()
+    }
+  }, [onMobileClose])
+
   return (
     <>
       {/* iPadOS Mail-style card container */}
       <div
-        className="flex-1 min-h-0 flex flex-col md:flex-row md:border md:border-[rgba(255,255,255,0.08)] md:rounded-xl md:overflow-hidden"
+        className="flex-1 min-h-0 flex flex-col md:flex-row md:border md:border-[rgba(255,255,255,0.08)] md:rounded-xl overflow-hidden relative"
         style={{
           background: tokens.colors.bg,
           marginTop: 12,
@@ -72,29 +80,22 @@ export function TwoPanelLayout({
             )}
           </AnimatePresence>
         </div>
-      </div>
 
-      {/* Mobile bottom Sheet */}
-      <Sheet
-        open={mobileOpen && !!rightPanel}
-        onOpenChange={(open) => {
-          if (!open && onMobileClose) onMobileClose()
-        }}
-      >
-        <SheetContent
-          side="bottom"
-          showCloseButton={false}
-          hideOverlay
-          className="md:hidden h-[85vh] rounded-t-2xl p-0 flex flex-col"
-          style={{ background: tokens.colors.bg, minHeight: 'calc(100vh - 64px)' }}
+        {/* Mobile slide-in detail panel (iOS-style push) */}
+        <div
+          className="md:hidden absolute inset-0 z-20 flex flex-col"
+          style={{
+            transform: mobileOpen && rightPanel ? 'translateX(0)' : 'translateX(100%)',
+            transition: 'transform 300ms ease',
+            background: tokens.colors.bg,
+            maxHeight: 'calc(100vh - 120px)',
+          }}
+          onTouchStart={onTouchStart}
+          onTouchEnd={onDetailTouchEnd}
         >
-          <SheetHeader className="sr-only">
-            <SheetTitle>{mobileTitle}</SheetTitle>
-            <SheetDescription>Detail view</SheetDescription>
-          </SheetHeader>
           {rightPanel}
-        </SheetContent>
-      </Sheet>
+        </div>
+      </div>
     </>
   )
 }

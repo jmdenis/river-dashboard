@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { toast } from 'sonner'
 import { lifeApi, type Contact } from '../services/lifeApi'
@@ -10,13 +10,6 @@ import {
 import { tokens } from '../designTokens'
 import { TwoPanelLayout } from '../components/TwoPanelLayout'
 import { PanelToolbar, ToolbarAction } from '../components/PanelToolbar'
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from '../components/ui/sheet'
 import { Avatar, AvatarFallback } from '../components/ui/avatar'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
@@ -485,6 +478,19 @@ export default function ContactsPage() {
     setSelectedId(null)
   }, [])
 
+  /* ── Swipe handling ────────────────────────────────── */
+  const swipeRef = useRef({ x: 0, y: 0 })
+  const onSwipeStart = useCallback((e: React.TouchEvent) => {
+    swipeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+  }, [])
+  const onSwipeEnd = useCallback((e: React.TouchEvent) => {
+    const dx = e.changedTouches[0].clientX - swipeRef.current.x
+    const dy = e.changedTouches[0].clientY - swipeRef.current.y
+    if (dx > 50 && Math.abs(dx) > Math.abs(dy)) {
+      handleClose()
+    }
+  }, [handleClose])
+
   const toggleEditMode = useCallback(() => {
     setEditMode(prev => {
       if (prev) setSelectedIds(new Set())
@@ -737,7 +743,7 @@ export default function ContactsPage() {
 
   /* Mobile list view */
   const mobileList = (
-    <div className="h-[calc(100vh-48px)] flex flex-col" style={{ background: tokens.colors.bg }}>
+    <div className="h-[calc(100vh-48px)] flex flex-col relative overflow-hidden" style={{ background: tokens.colors.bg }}>
       {/* Search + edit */}
       <div className="shrink-0 flex items-center" style={{ borderBottom: '1px solid ' + tokens.colors.borderSubtle }}>
         <input
@@ -897,44 +903,40 @@ export default function ContactsPage() {
         </div>
       )}
 
-      {/* Mobile bottom Sheet */}
-      <Sheet
-        open={mobileOpen && !!selectedContact}
-        onOpenChange={(open) => { if (!open) handleClose() }}
+      {/* Mobile slide-in detail panel (iOS-style push) */}
+      <div
+        className="absolute inset-0 z-20 flex flex-col"
+        style={{
+          transform: mobileOpen && selectedContact ? 'translateX(0)' : 'translateX(100%)',
+          transition: 'transform 300ms ease',
+          background: tokens.colors.bg,
+          maxHeight: 'calc(100vh - 120px)',
+        }}
+        onTouchStart={onSwipeStart}
+        onTouchEnd={onSwipeEnd}
       >
-        <SheetContent
-          side="bottom"
-          showCloseButton={false}
-          className="h-[85vh] rounded-t-2xl p-0 flex flex-col"
-          style={{ background: tokens.colors.bg }}
-        >
-          <SheetHeader className="sr-only">
-            <SheetTitle>{selectedContact ? `${selectedContact.firstName} ${selectedContact.lastName}`.trim() : 'Contact'}</SheetTitle>
-            <SheetDescription>Contact detail</SheetDescription>
-          </SheetHeader>
-          {selectedContact && (
-            <div className="h-full flex flex-col">
-              <PanelToolbar
-                title={`${selectedContact.firstName} ${selectedContact.lastName}`.trim()}
-                onBack={handleClose}
-                actions={
-                  <>
-                    {selectedContact.phone && (
-                      <ToolbarAction icon={Phone} label="Call" onClick={() => window.open(`tel:${selectedContact.phone}`)} />
-                    )}
-                    {selectedContact.email && (
-                      <ToolbarAction icon={Mail} label="Email" onClick={() => window.open(`mailto:${selectedContact.email}`)} />
-                    )}
-                    <ToolbarAction icon={Pencil} label="Edit" onClick={() => setEditDialogOpen(true)} />
-                    <ToolbarAction icon={Trash2} label="Delete" destructive onClick={() => setDeleteConfirmId(selectedContact.id)} />
-                  </>
-                }
-              />
-              <ContactDetail contact={selectedContact} />
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
+        {selectedContact && (
+          <div className="h-full flex flex-col">
+            <PanelToolbar
+              title={`${selectedContact.firstName} ${selectedContact.lastName}`.trim()}
+              onBack={handleClose}
+              actions={
+                <>
+                  {selectedContact.phone && (
+                    <ToolbarAction icon={Phone} label="Call" onClick={() => window.open(`tel:${selectedContact.phone}`)} />
+                  )}
+                  {selectedContact.email && (
+                    <ToolbarAction icon={Mail} label="Email" onClick={() => window.open(`mailto:${selectedContact.email}`)} />
+                  )}
+                  <ToolbarAction icon={Pencil} label="Edit" onClick={() => setEditDialogOpen(true)} />
+                  <ToolbarAction icon={Trash2} label="Delete" destructive onClick={() => setDeleteConfirmId(selectedContact.id)} />
+                </>
+              }
+            />
+            <ContactDetail contact={selectedContact} />
+          </div>
+        )}
+      </div>
     </div>
   )
 
