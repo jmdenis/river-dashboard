@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'motion/react'
 import { TextMorph } from 'torph/react'
@@ -2917,7 +2916,6 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
 
 // --- Main Life Page ---
 export default function LifePage() {
- const navigate = useNavigate()
  const [data, setData] = useState<LifeData | null>(null)
  const [calendar, setCalendar] = useState<CalendarEvent[]>([])
  const [activities, setActivities] = useState<Activities>({ weekend: { content: '', ideas: [], lastUpdated: null }, date: { content: '', ideas: [], lastUpdated: null } })
@@ -3093,10 +3091,7 @@ export default function LifePage() {
  <div className="min-h-full max-w-7xl mx-auto px-4 md:px-8 pt-6">
  {/* Sub-nav bar — left-aligned, horizontal scroll on mobile */}
  <div className="border-b border-border px-4 md:px-6 pt-2 pb-0 overflow-x-auto overflow-y-hidden" style={{ WebkitOverflowScrolling: 'touch' }}>
- <Tabs value={activeTab} onValueChange={v => {
-  if (v === 'contacts') { navigate('/contacts'); return }
-  setActiveTab(v as TabId)
- }}>
+ <Tabs value={activeTab} onValueChange={v => setActiveTab(v as TabId)}>
   <TabsList variant="line" className="justify-start gap-5 md:gap-6">
    <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
    <TabsTrigger value="ideas">Ideas</TabsTrigger>
@@ -3239,7 +3234,18 @@ export default function LifePage() {
  </motion.div>
  )}
 
- {/* TAB 3 — Contacts (navigates to /contacts) */}
+ {/* TAB 3 — Contacts */}
+ {activeTab === 'contacts' && (
+ <motion.div
+  key="contacts"
+  initial={{ opacity: 0, y: 8 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.15 }}
+  className="p-5 md:p-6"
+ >
+  <ContactsSection toast={toast} />
+ </motion.div>
+ )}
 
  </div>
  {globalDayPlan && (
