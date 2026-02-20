@@ -26,6 +26,7 @@ import {
   Instagram,
   type LucideIcon,
 } from 'lucide-react'
+import { AnimatedIcon } from '../components/AnimatedIcon'
 import { tokens } from '../designTokens'
 import { TwoPanelLayout } from '../components/TwoPanelLayout'
 import { PanelToolbar, ToolbarAction } from '../components/PanelToolbar'
@@ -50,7 +51,7 @@ const categoryIcons: Record<string, LucideIcon> = {
 
 function CategoryIcon({ category, className }: { category?: string; className?: string }) {
   const Icon = categoryIcons[category || 'other'] || Package
-  return <Icon className={className || 'h-4 w-4 shrink-0'} style={{ color: tokens.colors.textTertiary }} />
+  return <AnimatedIcon icon={Icon} className={className || 'h-4 w-4'} style={{ color: tokens.colors.textTertiary }} />
 }
 
 /* ── Helpers ───────────────────────────────────────────── */
@@ -347,8 +348,8 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
                 onClick={() => onCopy(rrCmd!, item.id)}
               >
                 {copiedId === item.id
-                  ? <Check className="h-3.5 w-3.5 text-emerald-400" />
-                  : <Copy className="h-3.5 w-3.5" />}
+                  ? <AnimatedIcon icon={Check} className="h-3.5 w-3.5 text-emerald-400" noStroke />
+                  : <AnimatedIcon icon={Copy} className="h-3.5 w-3.5" />}
                 Copy
               </Button>
               <Button
@@ -360,8 +361,8 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
                 {executingId === item.id
                   ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   : executedId === item.id
-                    ? <Check className="h-3.5 w-3.5 text-emerald-400" />
-                    : <Play className="h-3.5 w-3.5" />}
+                    ? <AnimatedIcon icon={Check} className="h-3.5 w-3.5 text-emerald-400" noStroke />
+                    : <AnimatedIcon icon={Play} className="h-3.5 w-3.5" />}
                 {executedId === item.id ? 'Executed' : 'Execute'}
               </Button>
             </ButtonGroup>
@@ -373,7 +374,7 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
           <div className="mb-6">
             <p style={{ ...tokens.typography.label, color: tokens.colors.textQuaternary, marginBottom: 8 }}>Command</p>
             <Button variant="ghost" size="sm" disabled>
-              <Play className="h-3.5 w-3.5" />
+              <AnimatedIcon icon={Play} className="h-3.5 w-3.5" />
               Generate rr
             </Button>
           </div>
@@ -405,7 +406,7 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
             className="inline-flex items-center gap-1.5 text-[12px] hover:underline mb-6"
             style={{ color: tokens.colors.accent }}
           >
-            <ExternalLink className="h-3.5 w-3.5" />
+            <AnimatedIcon icon={ExternalLink} className="h-3.5 w-3.5" noStroke />
             Open source
           </a>
         )}
@@ -421,7 +422,7 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
         >
           {recheckingId === item.id
             ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            : <RefreshCw className="h-3.5 w-3.5" />}
+            : <AnimatedIcon icon={RefreshCw} className="h-3.5 w-3.5" />}
           <span className="ml-1">Recheck</span>
         </Button>
       </div>
@@ -687,7 +688,7 @@ export default function KnowledgePage() {
       <div className="flex-1 overflow-y-auto">
         {filteredItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-5">
-            <BookOpen className="h-8 w-8 mb-3" style={{ color: tokens.colors.textQuaternary, opacity: 0.4 }} />
+            <AnimatedIcon icon={BookOpen} className="h-8 w-8 mb-3" style={{ color: tokens.colors.textQuaternary, opacity: 0.4 }} />
             <p className="text-[13px]" style={{ color: tokens.colors.textQuaternary }}>
               {nonJunk.length === 0 ? 'No articles yet' : 'No matches'}
             </p>
@@ -802,7 +803,7 @@ export default function KnowledgePage() {
         <TwoPanelLayout
           leftPanel={leftPanel}
           rightPanel={rightPanel}
-          emptyState={{ icon: <BookOpen className="h-12 w-12" />, text: 'Select an article' }}
+          emptyState={{ icon: <AnimatedIcon icon={BookOpen} className="h-12 w-12" />, text: 'Select an article' }}
           selectedKey={selectedItem?.id}
           mobileOpen={mobileOpen}
           onMobileClose={handleMobileClose}

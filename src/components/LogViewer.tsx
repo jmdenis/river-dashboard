@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Copy, Check, Loader2 } from 'lucide-react'
+import { AnimatedIcon } from './AnimatedIcon'
 import { Button } from './ui/button'
 import { ScrollArea } from './ui/scroll-area'
 import { tokens } from '../designTokens'
@@ -58,7 +59,7 @@ export function LogViewer({ content, loading, notFound, autoScroll, maxHeight = 
             style={{ color: tokens.colors.textTertiary }}
             onClick={handleCopy}
           >
-            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? <AnimatedIcon icon={Check} className="h-3.5 w-3.5" noStroke /> : <AnimatedIcon icon={Copy} className="h-3.5 w-3.5" />}
             <span className="ml-1 text-[11px]">{copied ? 'Copied' : 'Copy'}</span>
           </Button>
         )}

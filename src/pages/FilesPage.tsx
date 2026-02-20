@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { motion } from 'motion/react'
 import { Card, CardContent } from '../components/ui/card'
 import { Loader2, FileText, Download, Upload, CheckCircle2, AlertCircle } from 'lucide-react'
+import { AnimatedIcon } from '../components/AnimatedIcon'
 import { tokens, styles } from '../designTokens'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
@@ -94,7 +95,7 @@ export default function FilesPage() {
           background: dragOver ? 'var(--accent-subtle)' : 'transparent',
         }}
       >
-        <Upload className="h-6 w-6 mx-auto mb-3" style={{ color: dragOver ? 'var(--accent)' : 'var(--text-3)' }} />
+        <div className="flex justify-center mb-3"><AnimatedIcon icon={Upload} className="h-6 w-6" style={{ color: dragOver ? 'var(--accent)' : 'var(--text-3)' }} /></div>
         <p className="text-[13px]" style={{ color: 'var(--text-2)' }}>{dragOver ? 'Drop files here' : 'Drag & drop files, or click to browse'}</p>
         <p className="text-[12px] mt-1" style={{ color: 'var(--text-3)' }}>Up to 200 MB per file</p>
         <input ref={fileInputRef} type="file" multiple onChange={handleFileSelect} className="hidden" />
@@ -133,14 +134,14 @@ export default function FilesPage() {
                     style={{ borderBottom: '1px solid var(--divider)' }}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <FileText className="h-4 w-4 shrink-0" style={{ color: 'var(--text-3)' }} />
+                      <AnimatedIcon icon={FileText} className="h-4 w-4" style={{ color: 'var(--text-3)' }} />
                       <div className="min-w-0">
                         <p className="text-[13px] truncate" style={{ color: 'var(--text-1)' }}>{f.name}</p>
                         <p className="text-[12px]" style={{ color: 'var(--text-3)' }}>{formatSize(f.size)} · {formatDate(f.mtime)}</p>
                       </div>
                     </div>
                     <a href={`${API_BASE_URL}/api/files/${encodeURIComponent(f.name)}`} target="_blank" rel="noopener noreferrer" className="p-2 text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors duration-150" title="Download">
-                      <Download className="h-4 w-4" />
+                      <AnimatedIcon icon={Download} className="h-4 w-4" />
                     </a>
                   </motion.div>
                 ))}

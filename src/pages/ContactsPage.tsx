@@ -7,6 +7,7 @@ import {
   CheckCircle2, Circle, SquarePen, Plus, Gift, Calendar, Tag,
   Clock, ChevronRight,
 } from 'lucide-react'
+import { AnimatedIcon } from '../components/AnimatedIcon'
 import { tokens } from '../designTokens'
 import { TwoPanelLayout } from '../components/TwoPanelLayout'
 import { PanelToolbar, ToolbarAction } from '../components/PanelToolbar'
@@ -161,7 +162,7 @@ function ContactRow({
 
         {/* Mobile chevron */}
         {!editMode && (
-          <ChevronRight className="h-4 w-4 shrink-0 md:hidden" style={{ color: tokens.colors.textQuaternary }} />
+          <AnimatedIcon icon={ChevronRight} className="h-4 w-4 md:hidden" style={{ color: tokens.colors.textQuaternary }} />
         )}
       </div>
 
@@ -281,7 +282,7 @@ function DetailField({
 }) {
   return (
     <div className="flex gap-3">
-      <Icon className="h-4 w-4 shrink-0 mt-0.5" style={{ color: tokens.colors.textQuaternary }} />
+      <AnimatedIcon icon={Icon} className="h-4 w-4 mt-0.5" style={{ color: tokens.colors.textQuaternary }} />
       <div className="min-w-0">
         <p style={{ ...tokens.typography.label, color: tokens.colors.textQuaternary, marginBottom: 4 }}>{label}</p>
         {children}
@@ -641,7 +642,7 @@ export default function ContactsPage() {
       >
         {filteredContacts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-5">
-            <Users className="h-8 w-8 mb-3" style={{ color: tokens.colors.textQuaternary, opacity: 0.4 }} />
+            <AnimatedIcon icon={Users} className="h-8 w-8 mb-3" style={{ color: tokens.colors.textQuaternary, opacity: 0.4 }} />
             <p className="text-[13px]" style={{ color: tokens.colors.textQuaternary }}>
               {contacts.length === 0 ? 'No contacts yet' : 'No matches'}
             </p>
@@ -696,7 +697,7 @@ export default function ContactsPage() {
             >
               {bulkDeleting
                 ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
-                : <Trash2 className="h-3.5 w-3.5 mr-1" />}
+                : <AnimatedIcon icon={Trash2} className="h-3.5 w-3.5 mr-1" />}
               Delete {selectedIds.size}
             </Button>
           </motion.div>
@@ -802,7 +803,7 @@ export default function ContactsPage() {
       >
         {filteredContacts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-5">
-            <Users className="h-8 w-8 mb-3" style={{ color: tokens.colors.textQuaternary, opacity: 0.4 }} />
+            <AnimatedIcon icon={Users} className="h-8 w-8 mb-3" style={{ color: tokens.colors.textQuaternary, opacity: 0.4 }} />
             <p className="text-[13px]" style={{ color: tokens.colors.textQuaternary }}>
               {contacts.length === 0 ? 'No contacts yet' : 'No matches'}
             </p>
@@ -850,7 +851,7 @@ export default function ContactsPage() {
                     )}
                   </div>
                   {!editMode && (
-                    <ChevronRight className="h-4 w-4 shrink-0" style={{ color: tokens.colors.textQuaternary }} />
+                    <AnimatedIcon icon={ChevronRight} className="h-4 w-4" style={{ color: tokens.colors.textQuaternary }} />
                   )}
                 </div>
                 {/* Indented divider */}
@@ -886,7 +887,7 @@ export default function ContactsPage() {
             >
               {bulkDeleting
                 ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
-                : <Trash2 className="h-3.5 w-3.5 mr-1" />}
+                : <AnimatedIcon icon={Trash2} className="h-3.5 w-3.5 mr-1" />}
               Delete {selectedIds.size}
             </Button>
           </motion.div>
@@ -948,7 +949,7 @@ export default function ContactsPage() {
             <TwoPanelLayout
               leftPanel={leftPanel}
               rightPanel={rightPanel}
-              emptyState={{ icon: <Users className="h-12 w-12" />, text: 'Select a contact' }}
+              emptyState={{ icon: <AnimatedIcon icon={Users} className="h-12 w-12" />, text: 'Select a contact' }}
               selectedKey={selectedContact?.id}
               mobileOpen={mobileOpen}
               onMobileClose={handleClose}

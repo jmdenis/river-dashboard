@@ -300,6 +300,23 @@ html, body {
   }
 }
 
+/* ─── Animated Icon Stroke Transition ─── */
+
+:root {
+  --accent-cyan: rgba(34, 211, 238, 0.85);
+}
+
+.animated-icon svg path,
+.animated-icon svg circle,
+.animated-icon svg line {
+  transition: stroke 0.15s ease;
+}
+
+.animated-icon:not(.animated-icon--colored):hover svg path,
+.animated-icon:not(.animated-icon--colored):hover svg circle {
+  stroke: var(--accent-cyan);
+}
+
 /* ─── Respect Reduced Motion ─── */
 
 @media (prefers-reduced-motion: reduce) {

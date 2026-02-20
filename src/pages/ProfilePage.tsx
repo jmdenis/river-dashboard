@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { motion } from 'motion/react'
 import { toast } from 'sonner'
 import { Loader2, MapPin, Check, Plus, Trash2, Mail, X, Shield, FileText, Settings, AlertTriangle, Key, Bug, Inbox, RefreshCw, ChevronRight, Copy, Clock } from 'lucide-react'
+import { AnimatedIcon } from '../components/AnimatedIcon'
 import ReactMarkdown from 'react-markdown'
 
 // shadcn/ui
@@ -80,7 +81,7 @@ function GeneralTab() {
       <Card className="md:py-6 py-4">
         <CardHeader className="md:px-6 px-4">
           <CardTitle className="flex items-center gap-2 text-sm">
-            <MapPin className="size-4 text-muted-foreground" />
+            <AnimatedIcon icon={MapPin} className="size-4 text-muted-foreground" />
             Home Location
           </CardTitle>
           <CardDescription>Your home address for weather, commute, and location-based features.</CardDescription>
@@ -97,7 +98,7 @@ function GeneralTab() {
               />
               {dirty && (
                 <Button onClick={save} disabled={saving} size="icon" variant="outline">
-                  {saving ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+                  {saving ? <Loader2 className="size-4 animate-spin" /> : <AnimatedIcon icon={Check} className="size-4" />}
                 </Button>
               )}
             </div>
@@ -115,7 +116,7 @@ function GeneralTab() {
       <Card className="md:py-6 py-4">
         <CardHeader className="md:px-6 px-4">
           <CardTitle className="flex items-center gap-2 text-sm">
-            <Settings className="size-4 text-muted-foreground" />
+            <AnimatedIcon icon={Settings} className="size-4 text-muted-foreground" />
             Configuration
           </CardTitle>
         </CardHeader>
@@ -272,7 +273,7 @@ function NotificationsTab() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <CardTitle className="flex items-center gap-2 text-sm">
-              <Mail className="size-4 text-muted-foreground" />
+              <AnimatedIcon icon={Mail} className="size-4 text-muted-foreground" />
               Email Notifications
             </CardTitle>
             {saving && <Loader2 className="size-3.5 animate-spin text-primary ml-auto" />}
@@ -308,7 +309,7 @@ function NotificationsTab() {
                           onClick={() => removeRecipient(id, email)}
                           className="text-muted-foreground hover:text-destructive transition-colors ml-0.5"
                         >
-                          <X className="size-3" />
+                          <AnimatedIcon icon={X} className="size-3" />
                         </button>
                       </Badge>
                     ))}
@@ -328,7 +329,7 @@ function NotificationsTab() {
                           className="h-7 w-40 text-xs"
                         />
                         <Button size="icon-xs" variant="ghost" onClick={() => addRecipient(id)}>
-                          <Check className="size-3" />
+                          <AnimatedIcon icon={Check} className="size-3" />
                         </Button>
                       </div>
                     ) : (
@@ -338,7 +339,7 @@ function NotificationsTab() {
                         onClick={() => setAddingFor(id)}
                         className="text-muted-foreground"
                       >
-                        <Plus className="size-3" />
+                        <AnimatedIcon icon={Plus} className="size-3" />
                       </Button>
                     )}
                   </div>
@@ -355,9 +356,9 @@ function NotificationsTab() {
                       {tState === 'sending' ? (
                         <Loader2 className="size-3 animate-spin" />
                       ) : (cooldown[testId] || 0) > 0 ? (
-                        <Check className="size-3 text-emerald-400" />
+                        <AnimatedIcon icon={Check} className="size-3 text-emerald-400" noStroke />
                       ) : (
-                        <Mail className="size-3" />
+                        <AnimatedIcon icon={Mail} className="size-3" />
                       )}
                       {tState === 'sending' ? 'Test' : (cooldown[testId] || 0) > 0 ? `${cooldown[testId]}s` : 'Test'}
                     </Button>
@@ -436,12 +437,12 @@ function CronJobsTab({ cronJobs, cronLoading, onAdd, onDelete }: {
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: `1px solid ${tokens.colors.borderSubtle}` }}>
           <div className="flex items-center gap-2">
-            <Clock className="size-4 text-muted-foreground" />
+            <AnimatedIcon icon={Clock} className="size-4 text-muted-foreground" />
             <span className="text-sm font-medium">Cron Jobs</span>
             <Badge variant="secondary" className="ml-1">{systemJobs.length + cronJobs.length}</Badge>
           </div>
           <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-            <Plus className="size-3.5" />
+            <AnimatedIcon icon={Plus} className="size-3.5" />
             Add
           </Button>
         </div>
@@ -524,7 +525,7 @@ function CronJobsTab({ cronJobs, cronLoading, onAdd, onDelete }: {
                           }}
                           className="text-muted-foreground hover:text-destructive"
                         >
-                          <Trash2 className="size-3" />
+                          <AnimatedIcon icon={Trash2} className="size-3" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -583,7 +584,7 @@ function CronJobsTab({ cronJobs, cronLoading, onAdd, onDelete }: {
                     }}
                     className="text-muted-foreground hover:text-destructive shrink-0"
                   >
-                    <Trash2 className="size-3" />
+                    <AnimatedIcon icon={Trash2} className="size-3" />
                   </Button>
                 </div>
               )
@@ -702,7 +703,7 @@ function SecurityTab() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm">
-            <Key className="size-4 text-muted-foreground" />
+            <AnimatedIcon icon={Key} className="size-4 text-muted-foreground" />
             API Keys & Secrets
             <Badge variant="secondary" className="ml-1">{Object.keys(vars).length}</Badge>
           </CardTitle>
@@ -733,7 +734,7 @@ function SecurityTab() {
                       onClick={() => copyToClipboard(key, masked)}
                       className="shrink-0"
                     >
-                      <Copy className="size-3.5" />
+                      <AnimatedIcon icon={Copy} className="size-3.5" />
                       Copy
                     </Button>
                   </div>
@@ -748,7 +749,7 @@ function SecurityTab() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm">
-            <Shield className="size-4 text-muted-foreground" />
+            <AnimatedIcon icon={Shield} className="size-4 text-muted-foreground" />
             Connected Services
           </CardTitle>
         </CardHeader>
@@ -773,7 +774,7 @@ function SecurityTab() {
               </div>
               <Separator />
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Shield className="size-3.5" />
+                <AnimatedIcon icon={Shield} className="size-3.5" />
                 Auth: {status.auth.method}
                 <span className="text-xs">(user: {status.auth.user})</span>
               </div>
@@ -784,7 +785,7 @@ function SecurityTab() {
 
       {/* Danger Zone */}
       <Alert variant="destructive">
-        <AlertTriangle className="size-4" />
+        <AnimatedIcon icon={AlertTriangle} className="size-4" />
         <AlertTitle>Danger Zone</AlertTitle>
         <AlertDescription>
           <p className="mb-3">These actions are irreversible. Proceed with caution.</p>
@@ -938,7 +939,7 @@ function DocsTab() {
           >
             Docs
           </button>
-          <ChevronRight className="size-3 text-muted-foreground" />
+          <AnimatedIcon icon={ChevronRight} className="size-3 text-muted-foreground" />
           <span className="text-sm text-foreground">{selectedDoc}</span>
         </div>
         <Card>
@@ -978,7 +979,7 @@ function DocsTab() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm">
-            <FileText className="size-4 text-muted-foreground" />
+            <AnimatedIcon icon={FileText} className="size-4 text-muted-foreground" />
             Markdown Files
             <Badge variant="secondary" className="ml-1">{docs.length}</Badge>
           </CardTitle>
@@ -1004,7 +1005,7 @@ function DocsTab() {
                   >
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <FileText className="size-3.5 text-muted-foreground shrink-0" />
+                        <AnimatedIcon icon={FileText} className="size-3.5 text-muted-foreground" />
                         <span className="font-mono text-sm">{doc.name}</span>
                       </div>
                     </TableCell>

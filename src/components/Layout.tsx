@@ -4,6 +4,7 @@ import { AnimatePresence } from 'motion/react'
 import { Upload, Terminal, Home, BookOpen, Settings, type LucideIcon } from 'lucide-react'
 
 import UploadModal from './UploadModal'
+import { AnimatedIcon } from './AnimatedIcon'
 import { Popover, PopoverTrigger, PopoverContent } from './ui/popover'
 import { tokens } from '../designTokens'
 
@@ -112,7 +113,7 @@ export default function Layout() {
                       }
                     }}
                   >
-                    <item.Icon style={{ width: 20, height: 20 }} strokeWidth={1.5} />
+                    <AnimatedIcon icon={item.Icon} style={{ width: 20, height: 20 }} strokeWidth={1.5} />
                     <span style={{ fontSize: 14, fontWeight: 500, lineHeight: '20px' }}>
                       {item.name}
                     </span>
@@ -163,7 +164,7 @@ export default function Layout() {
                   e.currentTarget.style.borderColor = tokens.colors.borderSubtle
                 }}
               >
-                <Upload style={{ width: 16, height: 16 }} strokeWidth={1.5} />
+                <AnimatedIcon icon={Upload} style={{ width: 16, height: 16 }} strokeWidth={1.5} />
                 Upload
               </button>
             </PopoverTrigger>
@@ -221,7 +222,7 @@ export default function Layout() {
                   cursor: 'pointer',
                 }}
               >
-                <item.Icon className="h-7 w-7 shrink-0" strokeWidth={1.5} />
+                <AnimatedIcon icon={item.Icon} className="h-7 w-7" strokeWidth={1.5} />
                 <span style={{ fontSize: 10, fontWeight: 500, lineHeight: '12px', color }}>
                   {item.name}
                 </span>

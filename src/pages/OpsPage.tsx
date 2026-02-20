@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { opsApi, type Task, type SystemInfo } from '../services/opsApi'
 import { Loader2, Trash2, Check, X, Send, Copy, ChevronDown, ChevronRight, SquarePen, CheckCircle2, Circle, XCircle, ChevronsUpDown, Sparkles, Pencil } from 'lucide-react'
 import { TerminalIcon } from '../components/ui/terminal-icon'
+import { AnimatedIcon } from '../components/AnimatedIcon'
 import { tokens } from '../designTokens'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
@@ -268,7 +269,7 @@ function CommandBlock({ text }: { text: string }) {
               style={{ color: tokens.colors.textTertiary }}
               onClick={() => setExpanded(!expanded)}
             >
-              <ChevronsUpDown className="h-3.5 w-3.5" />
+              <AnimatedIcon icon={ChevronsUpDown} className="h-3.5 w-3.5" />
               <span className="ml-1 text-[11px]">{expanded ? 'Collapse' : 'Expand'}</span>
             </Button>
           )}
@@ -279,7 +280,7 @@ function CommandBlock({ text }: { text: string }) {
             style={{ color: tokens.colors.textTertiary }}
             onClick={handleCopy}
           >
-            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? <AnimatedIcon icon={Check} className="h-3.5 w-3.5" noStroke /> : <AnimatedIcon icon={Copy} className="h-3.5 w-3.5" />}
             <span className="ml-1 text-[11px]">{copied ? 'Copied' : 'Copy'}</span>
           </Button>
         </div>
@@ -874,9 +875,9 @@ export default function OpsPage() {
         >
           {enhancing ? <Loader2 className="h-4 w-4 animate-spin" /> :
            quickTaskState === 'loading' ? <Loader2 className="h-4 w-4 animate-spin" /> :
-           quickTaskState === 'success' ? <Check className="h-4 w-4" /> :
-           quickTaskText.trim() && !quickTaskText.trim().toLowerCase().startsWith('rr ') ? <Sparkles className="h-4 w-4" /> :
-           <Send className="h-4 w-4" />}
+           quickTaskState === 'success' ? <AnimatedIcon icon={Check} className="h-4 w-4" noStroke /> :
+           quickTaskText.trim() && !quickTaskText.trim().toLowerCase().startsWith('rr ') ? <AnimatedIcon icon={Sparkles} className="h-4 w-4" /> :
+           <AnimatedIcon icon={Send} className="h-4 w-4" />}
         </button>
       </div>
 
@@ -901,7 +902,7 @@ export default function OpsPage() {
                 className="flex items-center gap-1.5 px-3 py-1.5"
                 style={{ borderBottom: `1px solid ${tokens.colors.borderSubtle}`, background: `${tokens.colors.accent}08` }}
               >
-                <Sparkles className="h-3 w-3" style={{ color: tokens.colors.accent }} />
+                <AnimatedIcon icon={Sparkles} className="h-3 w-3" style={{ color: tokens.colors.accent }} noStroke />
                 <span style={{ ...tokens.typography.caption, color: tokens.colors.accent }}>Generated command</span>
               </div>
               <textarea
@@ -938,7 +939,7 @@ export default function OpsPage() {
                   style={{ background: tokens.colors.accent, color: '#fff' }}
                   onClick={handleQueueSmart}
                 >
-                  <Send className="h-3 w-3 mr-1.5" />
+                  <AnimatedIcon icon={Send} className="h-3 w-3 mr-1.5" />
                   Queue
                 </Button>
                 <Button
@@ -948,7 +949,7 @@ export default function OpsPage() {
                   style={{ color: tokens.colors.textTertiary }}
                   onClick={handleEditSmart}
                 >
-                  <Pencil className="h-3 w-3 mr-1.5" />
+                  <AnimatedIcon icon={Pencil} className="h-3 w-3 mr-1.5" />
                   Edit
                 </Button>
                 <Button
@@ -958,7 +959,7 @@ export default function OpsPage() {
                   style={{ color: tokens.colors.textQuaternary }}
                   onClick={() => setSmartCommand(null)}
                 >
-                  <X className="h-3 w-3" />
+                  <AnimatedIcon icon={X} className="h-3 w-3" />
                 </Button>
                 <span className="ml-auto text-[10px]" style={{ color: tokens.colors.textQuaternary }}>
                   {'\u2318'}+Enter to queue
@@ -1086,8 +1087,8 @@ export default function OpsPage() {
                     }}
                   >
                     {isExpanded
-                      ? <ChevronDown className="h-3.5 w-3.5 shrink-0" style={{ color: tokens.colors.textTertiary }} />
-                      : <ChevronRight className="h-3.5 w-3.5 shrink-0" style={{ color: tokens.colors.textTertiary }} />
+                      ? <AnimatedIcon icon={ChevronDown} className="h-3.5 w-3.5" style={{ color: tokens.colors.textTertiary }} />
+                      : <AnimatedIcon icon={ChevronRight} className="h-3.5 w-3.5" style={{ color: tokens.colors.textTertiary }} />
                     }
                     <span style={{ ...tokens.typography.title, color: tokens.colors.textSecondary }} className="flex-1 truncate">
                       {group.label}
@@ -1185,7 +1186,7 @@ export default function OpsPage() {
               onClick={handleBulkDelete}
               className="flex-1"
             >
-              {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Trash2 className="h-3.5 w-3.5 mr-1" />}
+              {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <AnimatedIcon icon={Trash2} className="h-3.5 w-3.5 mr-1" />}
               Delete {selectedIds.size}
             </Button>
             {selectedHasKillable && (
@@ -1196,7 +1197,7 @@ export default function OpsPage() {
                 onClick={handleBulkKill}
                 className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
               >
-                {bulkKilling ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <XCircle className="h-3.5 w-3.5 mr-1" />}
+                {bulkKilling ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <AnimatedIcon icon={XCircle} className="h-3.5 w-3.5 mr-1" />}
                 Kill Active
               </Button>
             )}

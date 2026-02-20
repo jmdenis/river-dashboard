@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { Upload, Loader2, CheckCircle2, AlertCircle, Download, ChevronLeft, ChevronRight } from 'lucide-react'
+import { AnimatedIcon } from './AnimatedIcon'
 import { Progress } from './ui/progress'
 import { lifeApi } from '../services/lifeApi'
 import { tokens } from '../designTokens'
@@ -156,7 +157,7 @@ export default function UploadModal({
             background: dragOver ? 'var(--accent-subtle)' : 'transparent',
           }}
         >
-          <Upload className="h-5 w-5 mx-auto mb-2" style={{ color: dragOver ? 'var(--accent)' : 'var(--text-3)' }} />
+          <div className="flex justify-center mb-2"><AnimatedIcon icon={Upload} className="h-5 w-5" style={{ color: dragOver ? 'var(--accent)' : 'var(--text-3)' }} /></div>
           <p style={{ ...tokens.typography.body, color: 'var(--text-2)' }}>
             {dragOver ? 'Drop files here' : 'Drop files here or click to browse'}
           </p>
@@ -212,7 +213,7 @@ export default function UploadModal({
                     <p className="truncate transition-colors" style={{ ...tokens.typography.body, fontWeight: 500, color: 'var(--text-1)' }}>{f.name}</p>
                     <p style={{ ...tokens.typography.caption, color: 'var(--text-2)' }}>{f.sizeHuman} &middot; {formatDate(f.date)}</p>
                   </div>
-                  <Download className="h-3.5 w-3.5 text-[var(--text-3)] group-hover:text-[var(--text-2)] shrink-0 transition-colors" />
+                  <AnimatedIcon icon={Download} className="h-3.5 w-3.5 text-[var(--text-3)] group-hover:text-[var(--text-2)] transition-colors" />
                 </a>
               ))}
             </div>
@@ -225,7 +226,7 @@ export default function UploadModal({
                 disabled={page <= 1}
                 className="text-[12px] text-[var(--text-3)] hover:text-[var(--text-2)] disabled:text-white/10 disabled:cursor-default flex items-center gap-1 transition-colors"
               >
-                <ChevronLeft className="h-3 w-3" /> Prev
+                <AnimatedIcon icon={ChevronLeft} className="h-3 w-3" /> Prev
               </button>
               <span style={{ ...tokens.typography.caption, color: 'var(--text-2)' }}>{page} / {totalPages}</span>
               <button
@@ -233,7 +234,7 @@ export default function UploadModal({
                 disabled={page >= totalPages}
                 className="text-[12px] text-[var(--text-3)] hover:text-[var(--text-2)] disabled:text-white/10 disabled:cursor-default flex items-center gap-1 transition-colors"
               >
-                Next <ChevronRight className="h-3 w-3" />
+                Next <AnimatedIcon icon={ChevronRight} className="h-3 w-3" />
               </button>
             </div>
           )}
