@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'motion/react'
 import { TextMorph } from 'torph/react'
-import { lifeApi, type LifeData, type Birthday, type Reminder, type CronJob, type CalendarEvent, type Activities, type Idea, type WeekendWeather, type LocalEvent, type Trip, type HomeSettings, type UpcomingTrip, type TravelWorkout, type EquipmentType, type DayPlan, type DayPlanStep, type Contact, type TripQuestion, type TripPreferencesResponse, type PackingList } from '../services/lifeApi'
+import { lifeApi, type LifeData, type Birthday, type Reminder, type CronJob, type CalendarEvent, type Activities, type Idea, type WeekendWeather, type LocalEvent, type Trip, type HomeSettings, type UpcomingTrip, type TravelWorkout, type EquipmentType, type DayPlan, type DayPlanStep, type Contact, type TripQuestion, type TripPreferencesResponse, type PackingList, type Briefing } from '../services/lifeApi'
 import ReactMarkdown from 'react-markdown'
 import { tokens, styles } from '../designTokens'
 
@@ -224,7 +225,7 @@ function WorkoutModal({ workout, open, onClose, toast, equipment, onEquipmentCha
  <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto p-0 gap-0" showCloseButton={true}>
  {/* Equipment toggle pills */}
  <div className="px-6 pt-6 pb-3">
- <div className="inline-flex rounded-xl p-[3px]" style={{ background: 'rgba(255,255,255,0.04)' }}>
+ <div className="inline-flex rounded-xl p-[3px]" style={{ background: tokens.colors.surfaceHover }}>
  {EQUIPMENT_OPTIONS.map(opt => (
  <button
  key={opt.id}
@@ -271,7 +272,7 @@ function WorkoutModal({ workout, open, onClose, toast, equipment, onEquipmentCha
  {/* Exercises */}
  <div className="px-6 pb-4 space-y-3">
  {workout.exercises.map((ex, i) => (
- <div key={i} className="rounded-xl bg-[rgba(255,255,255,0.04)] border border-[var(--border)] p-4">
+ <div key={i} className="rounded-xl border border-[var(--border)] p-4" style={{ background: tokens.colors.surfaceHover }}>
  <div className="flex items-start gap-3">
  <span className="text-[20px] mt-0.5 shrink-0">{getExerciseEmoji(ex.name)}</span>
  <div className="flex-1 min-w-0">
@@ -592,21 +593,21 @@ function TripHelper({ trip, toast }: { trip: UpcomingTrip; toast: (msg: string) 
  return (
  <div>
  <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.1 }}>
- <Card className="bg-[#141415] border-[rgba(255,255,255,0.08)] rounded-lg py-0">
+ <Card className="rounded-lg py-0" style={{ background: tokens.colors.surface, borderColor: tokens.colors.border }}>
  <CardHeader className="pb-0 pt-6">
   <div className="flex items-center gap-2 mb-1">
-  <LucidePlane size={16} className="text-[rgba(255,255,255,0.35)]" />
-  <CardTitle className="text-[20px] font-semibold leading-7 text-[rgba(255,255,255,0.92)]">{trip.destination}</CardTitle>
+  <LucidePlane size={16} style={{ color: tokens.colors.textTertiary }} />
+  <CardTitle className="text-[20px] font-semibold leading-7" style={{ color: tokens.colors.textPrimary }}>{trip.destination}</CardTitle>
   </div>
   <div className="flex items-center gap-2">
-  <span className="text-[12px] font-medium leading-4 text-[rgba(255,255,255,0.35)]">{trip.dateRange}</span>
-  <Badge variant="secondary" className="bg-[rgba(129,140,248,0.10)] text-[#818CF8] border-transparent">{daysLabel}</Badge>
+  <span className="text-[12px] font-medium leading-4" style={{ color: tokens.colors.textTertiary }}>{trip.dateRange}</span>
+  <Badge variant="secondary" className="border-transparent" style={{ background: tokens.colors.accentSubtle, color: tokens.colors.accent }}>{daysLabel}</Badge>
   </div>
  </CardHeader>
  <CardContent className="pt-3 pb-6">
   {/* Context line */}
   {contextParts.length > 0 && (
-  <p className="text-[12px] font-medium leading-4 text-[rgba(255,255,255,0.35)] mb-4">
+  <p className="text-[12px] font-medium leading-4 mb-4" style={{ color: tokens.colors.textTertiary }}>
    {contextParts.join(' · ')}
   </p>
   )}
@@ -626,11 +627,11 @@ function TripHelper({ trip, toast }: { trip: UpcomingTrip; toast: (msg: string) 
     ].filter(Boolean).join(' · ')
     return (
      <TimelineItem key={i} step={item.step}>
-     <TimelineIndicator className="!size-[6px] !border-0 bg-[#818CF8]" />
-     <TimelineSeparator className="bg-[rgba(255,255,255,0.05)]" />
+     <TimelineIndicator className="!size-[6px] !border-0" style={{ background: tokens.colors.accent }} />
+     <TimelineSeparator style={{ background: tokens.colors.borderSubtle }} />
      <TimelineHeader>
-      <TimelineTitle className="text-[13px] text-[rgba(255,255,255,0.92)]">{fl.from} → {fl.to}</TimelineTitle>
-      <TimelineDate className="text-[12px] text-[rgba(255,255,255,0.35)]">{timeParts}</TimelineDate>
+      <TimelineTitle className="text-[13px]" style={{ color: tokens.colors.textPrimary }}>{fl.from} → {fl.to}</TimelineTitle>
+      <TimelineDate className="text-[12px]" style={{ color: tokens.colors.textTertiary }}>{timeParts}</TimelineDate>
      </TimelineHeader>
      </TimelineItem>
     )
@@ -638,8 +639,8 @@ function TripHelper({ trip, toast }: { trip: UpcomingTrip; toast: (msg: string) 
     return (
     <TimelineItem key={i} step={item.step}>
      <TimelineIndicator className="!size-[6px] bg-transparent !border !border-dashed !border-[rgba(255,255,255,0.15)]" />
-     <TimelineSeparator className="bg-[rgba(255,255,255,0.05)]" />
-     <TimelineContent className="text-[10px] font-medium text-[rgba(255,255,255,0.35)]">
+     <TimelineSeparator style={{ background: tokens.colors.borderSubtle }} />
+     <TimelineContent className="text-[10px] font-medium" style={{ color: tokens.colors.textTertiary }}>
      {item.layoverAirport} Layover {item.layoverDuration}
      </TimelineContent>
     </TimelineItem>
@@ -648,30 +649,30 @@ function TripHelper({ trip, toast }: { trip: UpcomingTrip; toast: (msg: string) 
    </Timeline>
   </div>
   ) : (
-  <p className="text-[13px] text-[rgba(255,255,255,0.35)] mb-5">{trip.route}</p>
+  <p className="text-[13px] mb-5" style={{ color: tokens.colors.textTertiary }}>{trip.route}</p>
   )}
 
   {/* Accommodation */}
   {trip.hotel && (
   <div className="mb-5">
-   <p className="text-[11px] font-medium uppercase tracking-[0.05em] text-[rgba(255,255,255,0.35)] mb-1.5">Accommodation</p>
-   <p className="text-[13px] text-[rgba(255,255,255,0.92)]">{trip.hotel.name}</p>
+   <p className="text-[11px] font-medium uppercase tracking-[0.05em] mb-1.5" style={{ color: tokens.colors.textTertiary }}>Accommodation</p>
+   <p className="text-[13px]" style={{ color: tokens.colors.textPrimary }}>{trip.hotel.name}</p>
    {trip.hotel.confirmationNumber && (
-   <p className="text-[12px] text-[rgba(255,255,255,0.35)] mt-0.5">{trip.hotel.confirmationNumber}</p>
+   <p className="text-[12px] mt-0.5" style={{ color: tokens.colors.textTertiary }}>{trip.hotel.confirmationNumber}</p>
    )}
   </div>
   )}
 
   {/* Action chips — horizontal scroll on mobile, no wrap */}
   <div className="flex items-center gap-2 flex-nowrap overflow-x-auto md:flex-wrap mt-4">
-  <Button variant="ghost" size="sm" className="rounded-full border border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.55)] text-[12px] hover:bg-[rgba(255,255,255,0.04)]" onClick={() => setPackingModalOpen(true)}>
+  <Button variant="ghost" size="sm" className="rounded-full text-[12px] hover:bg-[rgba(255,255,255,0.04)]" style={{ border: `1px solid ${tokens.colors.border}`, color: tokens.colors.textSecondary }} onClick={() => setPackingModalOpen(true)}>
    Packing list
   </Button>
-  <Button variant="ghost" size="sm" className="rounded-full border border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.55)] text-[12px] hover:bg-[rgba(255,255,255,0.04)]" onClick={openWorkout} disabled={loadingWorkout}>
+  <Button variant="ghost" size="sm" className="rounded-full text-[12px] hover:bg-[rgba(255,255,255,0.04)]" style={{ border: `1px solid ${tokens.colors.border}`, color: tokens.colors.textSecondary }} onClick={openWorkout} disabled={loadingWorkout}>
    {loadingWorkout && <Loader2 className="h-3 w-3 animate-spin" />}
    Workout
   </Button>
-  <Button variant="ghost" size="sm" className="rounded-full border border-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.55)] text-[12px] hover:bg-[rgba(255,255,255,0.04)]" onClick={handleNotify} disabled={notifying}>
+  <Button variant="ghost" size="sm" className="rounded-full text-[12px] hover:bg-[rgba(255,255,255,0.04)]" style={{ border: `1px solid ${tokens.colors.border}`, color: tokens.colors.textSecondary }} onClick={handleNotify} disabled={notifying}>
    {notifying && <Loader2 className="h-3 w-3 animate-spin" />}
    Notify Anne
   </Button>
@@ -679,9 +680,9 @@ function TripHelper({ trip, toast }: { trip: UpcomingTrip; toast: (msg: string) 
 
   {/* Trip questions */}
   {unansweredQuestions.length > 0 && (
-  <div className="mt-4 pt-4 border-t border-[rgba(255,255,255,0.05)]">
-   <p className="flex items-center gap-1.5 text-[12px] font-medium text-[rgba(255,255,255,0.55)] mb-3">
-   <Sparkles className="h-3 w-3 text-[rgba(255,255,255,0.35)]" />
+  <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${tokens.colors.borderSubtle}` }}>
+   <p className="flex items-center gap-1.5 text-[12px] font-medium mb-3" style={{ color: tokens.colors.textSecondary }}>
+   <Sparkles className="h-3 w-3" style={{ color: tokens.colors.textTertiary }} />
    Help River plan better
    </p>
    <div className="flex flex-col gap-2">
@@ -692,9 +693,10 @@ function TripHelper({ trip, toast }: { trip: UpcomingTrip; toast: (msg: string) 
      value={questionAnswers[q.id] || ''}
      onChange={e => setQuestionAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
      onKeyDown={e => e.key === 'Enter' && handleAnswerSubmit(q.id)}
-     className="h-8 text-[12px] bg-[rgba(255,255,255,0.04)] border-[var(--border)] placeholder:text-white/30 flex-1"
+     className="h-8 text-[12px] border-[var(--border)] placeholder:text-white/30 flex-1"
+     style={{ background: tokens.colors.surfaceHover }}
     />
-    <Button variant="ghost" size="icon" className="h-8 w-8 text-[#818CF8] border border-[rgba(129,140,248,0.20)] bg-[rgba(129,140,248,0.10)]" onClick={() => handleAnswerSubmit(q.id)} disabled={!questionAnswers[q.id]?.trim() || savingQuestion === q.id}>
+    <Button variant="ghost" size="icon" className="h-8 w-8" style={{ color: tokens.colors.accent, border: `1px solid ${tokens.colors.accentSubtle}`, background: tokens.colors.accentSubtle }} onClick={() => handleAnswerSubmit(q.id)} disabled={!questionAnswers[q.id]?.trim() || savingQuestion === q.id}>
      {savingQuestion === q.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
     </Button>
     </div>
@@ -736,12 +738,12 @@ function TripHelper({ trip, toast }: { trip: UpcomingTrip; toast: (msg: string) 
 function CalendarSection({ events }: { events: CalendarEvent[] }) {
  if (events.length === 0) {
  return (
- <Card className="h-full bg-[#141415] border-[rgba(255,255,255,0.08)] rounded-lg">
+ <Card className="h-full rounded-lg" style={{ background: tokens.colors.surface, borderColor: tokens.colors.border }}>
  <CardHeader>
-  <CardTitle className="text-[11px] font-medium uppercase tracking-[0.05em] text-[rgba(255,255,255,0.35)]">This Week</CardTitle>
+  <CardTitle className="text-[11px] font-medium uppercase tracking-[0.05em]" style={{ color: tokens.colors.textTertiary }}>This Week</CardTitle>
  </CardHeader>
  <CardContent>
-  <p className="text-[13px] text-[rgba(255,255,255,0.35)] text-center py-8">Nothing scheduled</p>
+  <p className="text-[13px] text-center py-8" style={{ color: tokens.colors.textTertiary }}>Nothing scheduled</p>
  </CardContent>
  </Card>
  )
@@ -772,14 +774,14 @@ function CalendarSection({ events }: { events: CalendarEvent[] }) {
  const staggerChild = { hidden: { opacity: 0, x: -8 }, show: { opacity: 1, x: 0 } }
 
  return (
- <Card className="h-full bg-[#141415] border-[rgba(255,255,255,0.08)] rounded-lg">
+ <Card className="h-full rounded-lg" style={{ background: tokens.colors.surface, borderColor: tokens.colors.border }}>
  <CardHeader>
-  <CardTitle className="text-[11px] font-medium uppercase tracking-[0.05em] text-[rgba(255,255,255,0.35)]">This Week</CardTitle>
+  <CardTitle className="text-[11px] font-medium uppercase tracking-[0.05em]" style={{ color: tokens.colors.textTertiary }}>This Week</CardTitle>
  </CardHeader>
  <CardContent>
   {Object.entries(eventsByDay).map(([dayLabel, dayEvents], dayIdx) => (
-  <div key={dayLabel} className={dayIdx > 0 ? 'border-t border-[rgba(255,255,255,0.05)] mt-6 pt-4' : ''}>
-   <p className="text-[15px] font-medium leading-5 text-[rgba(255,255,255,0.92)] mb-2 sticky top-0 z-10 bg-[#141415] py-1">{dayLabel}</p>
+  <div key={dayLabel} className={dayIdx > 0 ? 'mt-6 pt-4' : ''} style={dayIdx > 0 ? { borderTop: `1px solid ${tokens.colors.borderSubtle}` } : undefined}>
+   <p className="text-[15px] font-medium leading-5 mb-4 sticky top-0 z-10 py-1" style={{ color: tokens.colors.textPrimary, background: tokens.colors.surface }}>{dayLabel}</p>
    <motion.div variants={staggerParent} initial="hidden" animate="show">
    {dayEvents.map((event, idx) => {
     const past = isEventPast(event)
@@ -796,7 +798,7 @@ function CalendarSection({ events }: { events: CalendarEvent[] }) {
      <span className="flex-1 min-w-0 text-[13px] leading-5 truncate" style={{ color: past ? tokens.colors.textTertiary : tokens.colors.textPrimary }}>{event.title}</span>
      <span className="shrink-0 text-[12px] font-medium leading-4" style={{ color: past ? tokens.colors.textQuaternary : tokens.colors.textSecondary }}>{formatEventTime(event)}</span>
      {event.location && (
-     <span className="hidden md:inline shrink-0 text-[12px] font-medium leading-4 text-[rgba(255,255,255,0.35)] max-w-[160px] truncate">{event.location}</span>
+     <span className="hidden md:inline shrink-0 text-[12px] font-medium leading-4 max-w-[160px] truncate" style={{ color: tokens.colors.textTertiary }}>{event.location}</span>
      )}
     </motion.div>
     )
@@ -1064,25 +1066,25 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
  }
 
  return (
- <Card className="bg-[#141415] border-[rgba(255,255,255,0.08)] rounded-lg">
+ <Card className="rounded-lg" style={{ background: tokens.colors.surface, borderColor: tokens.colors.border }}>
  {/* Header: label + count + Add */}
  <div className="flex items-center justify-between px-6 pt-6 pb-0">
  <div className="flex items-center gap-2">
- <span className="text-[11px] font-medium uppercase tracking-[0.05em] text-[rgba(255,255,255,0.35)]">Birthdays</span>
+ <span className="text-[11px] font-medium uppercase tracking-[0.05em]" style={{ color: tokens.colors.textTertiary }}>Birthdays</span>
  {living.length > 0 && (
-  <Badge variant="secondary" className="text-[rgba(255,255,255,0.55)] border-transparent">{living.length}</Badge>
+  <Badge variant="secondary" className="border-transparent" style={{ color: tokens.colors.textSecondary }}>{living.length}</Badge>
  )}
  </div>
  <Dialog open={open} onOpenChange={setOpen}>
  <DialogTrigger asChild>
-  <button className="text-[12px] font-medium text-[#818CF8] bg-transparent border-none cursor-pointer">Add</button>
+  <button className="text-[12px] font-medium bg-transparent border-none cursor-pointer" style={{ color: tokens.colors.accent }}>Add</button>
  </DialogTrigger>
  <DialogContent className="">
   <DialogHeader><DialogTitle className="text-[var(--text-1)]">Add Birthday</DialogTitle></DialogHeader>
   <div className="space-y-3">
-  <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" />
-  <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" />
-  <Input placeholder="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" />
+  <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} className="border-[var(--border)] text-[var(--text-1)]" style={{ background: tokens.colors.surfaceHover }} />
+  <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="border-[var(--border)] text-[var(--text-1)]" style={{ background: tokens.colors.surfaceHover }} />
+  <Input placeholder="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} className="border-[var(--border)] text-[var(--text-1)]" style={{ background: tokens.colors.surfaceHover }} />
   </div>
   <DialogFooter>
   <Button onClick={addBirthday} disabled={!name.trim() || !date} className="bg-[var(--accent-subtle)] border border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent-subtle)]">Add</Button>
@@ -1092,11 +1094,11 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
  </div>
  <CardContent>
  {living.length === 0 && deceased.length === 0 && hidden.length === 0 ? (
- <p className="text-[13px] text-[rgba(255,255,255,0.35)] text-center py-8">No birthdays added</p>
+ <p className="text-[13px] text-center py-8" style={{ color: tokens.colors.textTertiary }}>No birthdays added</p>
  ) : displayedLiving.length === 0 && deceased.length === 0 ? (
  <div className="text-center py-8">
-  <p className="text-[13px] text-[rgba(255,255,255,0.35)] mb-2">No birthdays in the next 30 days</p>
-  <button onClick={() => setShowAll(true)} className="text-[12px] font-medium text-[#818CF8] bg-transparent border-none cursor-pointer">Show all {living.length} birthdays</button>
+  <p className="text-[13px] mb-2" style={{ color: tokens.colors.textTertiary }}>No birthdays in the next 30 days</p>
+  <button onClick={() => setShowAll(true)} className="text-[12px] font-medium bg-transparent border-none cursor-pointer" style={{ color: tokens.colors.accent }}>Show all {living.length} birthdays</button>
  </div>
  ) : (
  <>
@@ -1111,17 +1113,17 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
    key={b.id}
    className="group flex items-center gap-3 rounded-lg px-1 py-1.5"
    variants={{ hidden: { opacity: 0, x: -8 }, show: { opacity: 1, x: 0 } }}
-   whileHover={{ backgroundColor: 'rgba(255,255,255,0.04)' }}
+   whileHover={{ backgroundColor: tokens.colors.surfaceHover }}
    transition={{ duration: 0.15 }}
    >
    <Avatar className="h-7 w-7">
-    <AvatarFallback className="bg-[#1E1E20] text-[rgba(255,255,255,0.55)] text-[10px]">{getInitials(b.name)}</AvatarFallback>
+    <AvatarFallback className="bg-[#1E1E20] text-[10px]" style={{ color: tokens.colors.textSecondary }}>{getInitials(b.name)}</AvatarFallback>
    </Avatar>
    <div className="flex-1 min-w-0">
-    <span className="text-[13px] leading-5 block" style={{ color: isToday ? '#FBBF24' : 'rgba(255,255,255,0.92)' }}>{b.name}</span>
-    <span className="text-[12px] font-medium leading-4 text-[rgba(255,255,255,0.35)]">
-    <TextMorph as="span" className="inline-flex text-[12px] font-medium leading-4 text-[rgba(255,255,255,0.35)]">{countdown}</TextMorph>
-    {age ? <> · <TextMorph as="span" className="inline-flex text-[12px] font-medium leading-4 text-[rgba(255,255,255,0.35)]">{age}</TextMorph></> : ''}
+    <span className="text-[13px] leading-5 block" style={{ color: isToday ? '#FBBF24' : tokens.colors.textPrimary }}>{b.name}</span>
+    <span className="text-[12px] font-medium leading-4" style={{ color: tokens.colors.textTertiary }}>
+    <TextMorph as="span" className="inline-flex text-[12px] font-medium leading-4" style={{ color: tokens.colors.textTertiary }}>{countdown}</TextMorph>
+    {age ? <> · <TextMorph as="span" className="inline-flex text-[12px] font-medium leading-4" style={{ color: tokens.colors.textTertiary }}>{age}</TextMorph></> : ''}
     </span>
    </div>
    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
@@ -1138,28 +1140,28 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
     <X className="h-3 w-3" />
     </button>
    </div>
-   <span className="text-[12px] font-medium leading-4 text-[rgba(255,255,255,0.35)] shrink-0">{formatBirthdayDate(b.date)}</span>
+   <span className="text-[12px] font-medium leading-4 shrink-0" style={{ color: tokens.colors.textTertiary }}>{formatBirthdayDate(b.date)}</span>
    </motion.div>
   )
   })}
  </motion.div>
  {/* Deceased entries */}
  {(showAll || displayedLiving.length > 0) && deceased.length > 0 && (
-  <div className="pt-3 mt-3 border-t border-[rgba(255,255,255,0.05)]">
+  <div className="pt-3 mt-3" style={{ borderTop: `1px solid ${tokens.colors.borderSubtle}` }}>
   {deceased.map((b) => (
    <div key={b.id} className="p-1.5">
-   <span className="text-[13px] text-[rgba(255,255,255,0.35)]">&#x1F54A;&#xFE0F; {b.name}</span>
+   <span className="text-[13px]" style={{ color: tokens.colors.textTertiary }}>&#x1F54A;&#xFE0F; {b.name}</span>
    </div>
   ))}
   </div>
  )}
  {!showAll && sortedLiving.length > upcoming.length && (
-  <button onClick={() => setShowAll(true)} className="text-[12px] font-medium text-[#818CF8] bg-transparent border-none cursor-pointer mt-3 w-full text-center block">
+  <button onClick={() => setShowAll(true)} className="text-[12px] font-medium bg-transparent border-none cursor-pointer mt-3 w-full text-center block" style={{ color: tokens.colors.accent }}>
   Show all {sortedLiving.length} birthdays
   </button>
  )}
  {showAll && (
-  <button onClick={() => setShowAll(false)} className="text-[12px] font-medium text-[rgba(255,255,255,0.35)] bg-transparent border-none cursor-pointer mt-3 w-full text-center block">
+  <button onClick={() => setShowAll(false)} className="text-[12px] font-medium bg-transparent border-none cursor-pointer mt-3 w-full text-center block" style={{ color: tokens.colors.textTertiary }}>
   Show upcoming only
   </button>
  )}
@@ -1167,8 +1169,8 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
  )}
  {/* Hidden entries toggle */}
  {hidden.length > 0 && (
- <div className="pt-3 mt-3 border-t border-[rgba(255,255,255,0.05)]">
-  <button onClick={() => setShowHidden(!showHidden)} className="flex items-center gap-1.5 text-[12px] font-medium text-[rgba(255,255,255,0.35)] bg-transparent border-none cursor-pointer">
+ <div className="pt-3 mt-3" style={{ borderTop: `1px solid ${tokens.colors.borderSubtle}` }}>
+  <button onClick={() => setShowHidden(!showHidden)} className="flex items-center gap-1.5 text-[12px] font-medium bg-transparent border-none cursor-pointer" style={{ color: tokens.colors.textTertiary }}>
   {showHidden ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
   {showHidden ? 'Hide' : 'Show'} hidden ({hidden.length})
   </button>
@@ -1178,8 +1180,8 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
    {hidden.map((b) => (
    <div key={b.id} className="group flex items-center justify-between p-1.5">
     <div className="flex items-center gap-3">
-    <span className="text-[13px] text-[rgba(255,255,255,0.35)]">{b.name}</span>
-    <span className="text-[12px] text-[rgba(255,255,255,0.18)]">{formatBirthdayDate(b.date)}</span>
+    <span className="text-[13px]" style={{ color: tokens.colors.textTertiary }}>{b.name}</span>
+    <span className="text-[12px]" style={{ color: tokens.colors.textQuaternary }}>{formatBirthdayDate(b.date)}</span>
     </div>
     <Button variant="ghost" size="icon" className="text-[var(--text-3)] hover:text-[var(--text-2)] h-7 w-7" onClick={() => unhideBirthday(b.id)} title="Unhide">
     <Eye className="h-3.5 w-3.5" />
@@ -1201,7 +1203,7 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
  </DialogHeader>
  {messageModal && (
   <div className="space-y-4">
-  <p className="text-[13px] text-[var(--text-2)] bg-[rgba(255,255,255,0.04)] rounded-xl p-4 leading-relaxed">
+  <p className="text-[13px] text-[var(--text-2)] rounded-xl p-4 leading-relaxed" style={{ background: tokens.colors.surfaceHover }}>
    {generateBirthdayMessage(messageModal)}
   </p>
   <Button onClick={() => copyToClipboard(generateBirthdayMessage(messageModal))} className="w-full bg-[var(--accent-subtle)] border border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent-subtle)]">
@@ -1227,7 +1229,7 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
  ) : (
   <div className="space-y-2">
   {giftIdeas.map((idea, i) => (
-   <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-[rgba(255,255,255,0.04)]">
+   <div key={i} className="flex items-center justify-between p-3 rounded-xl" style={{ background: tokens.colors.surfaceHover }}>
    <span className="text-[13px] text-[var(--text-2)]">{idea}</span>
    <a href={`https://www.google.com/search?q=${encodeURIComponent(idea.replace(/^\S+\s/, '') + ' cadeau Toulouse')}`} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:text-[var(--accent-text)] shrink-0 ml-2" title="Chercher près de Toulouse">
     <ExternalLink className="h-3.5 w-3.5" />
@@ -1327,18 +1329,18 @@ function RemindersSection({ reminders, onUpdate, onRefresh }: {
  }
 
  return (
- <Card className="bg-[#141415] border-[rgba(255,255,255,0.08)] rounded-lg">
+ <Card className="rounded-lg" style={{ background: tokens.colors.surface, borderColor: tokens.colors.border }}>
  <div className="flex items-center justify-between px-6 pt-6 pb-0">
-  <span className="text-[11px] font-medium uppercase tracking-[0.05em] text-[rgba(255,255,255,0.35)]">Reminders</span>
+  <span className="text-[11px] font-medium uppercase tracking-[0.05em]" style={{ color: tokens.colors.textTertiary }}>Reminders</span>
   <Dialog open={open} onOpenChange={setOpen}>
   <DialogTrigger asChild>
-   <button className="text-[12px] font-medium text-[#818CF8] bg-transparent border-none cursor-pointer">Add</button>
+   <button className="text-[12px] font-medium bg-transparent border-none cursor-pointer" style={{ color: tokens.colors.accent }}>Add</button>
   </DialogTrigger>
   <DialogContent className="">
    <DialogHeader><DialogTitle className="text-[var(--text-1)]">Add Reminder</DialogTitle></DialogHeader>
    <div className="space-y-3">
-    <Input placeholder="Reminder title" value={title} onChange={(e) => setTitle(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" />
-    <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" />
+    <Input placeholder="Reminder title" value={title} onChange={(e) => setTitle(e.target.value)} className="border-[var(--border)] text-[var(--text-1)]" style={{ background: tokens.colors.surfaceHover }} />
+    <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="border-[var(--border)] text-[var(--text-1)]" style={{ background: tokens.colors.surfaceHover }} />
    </div>
    <DialogFooter>
     <Button onClick={addReminder} disabled={!title.trim()} className="bg-[var(--accent-subtle)] border border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent-subtle)]">Add</Button>
@@ -1348,9 +1350,9 @@ function RemindersSection({ reminders, onUpdate, onRefresh }: {
  </div>
  <CardContent>
  {active.length === 0 && done.length === 0 ? (
- <p className="text-[13px] text-[rgba(255,255,255,0.35)] text-center py-8">No reminders</p>
+ <p className="text-[13px] text-center py-8" style={{ color: tokens.colors.textTertiary }}>No reminders</p>
  ) : (
- <div className="flex flex-col gap-2 md:gap-3">
+ <div className="flex flex-col gap-3 md:gap-4">
   {active.map((r) => {
   const overdue = isOverdue(r.due)
   return (
@@ -1360,7 +1362,7 @@ function RemindersSection({ reminders, onUpdate, onRefresh }: {
     onCheckedChange={() => toggleDone(r.id)}
     className={overdue ? 'border-[#F87171]' : 'border-[rgba(255,255,255,0.15)]'}
    />
-   <span className="flex-1 min-w-0 text-[13px] leading-5" style={{ color: overdue ? '#F87171' : 'rgba(255,255,255,0.55)' }}>{r.title}</span>
+   <span className="flex-1 min-w-0 text-[13px] leading-5" style={{ color: overdue ? tokens.colors.red : tokens.colors.textSecondary }}>{r.title}</span>
    <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity text-[var(--text-3)] hover:text-[var(--accent)] h-7 w-7" onClick={() => openEdit(r)}>
     <Pencil className="h-3.5 w-3.5" />
    </Button>
@@ -1373,7 +1375,7 @@ function RemindersSection({ reminders, onUpdate, onRefresh }: {
    checked={true}
    onCheckedChange={() => toggleDone(r.id)}
    />
-   <span className="flex-1 min-w-0 text-[13px] leading-5 text-[rgba(255,255,255,0.35)] line-through">{r.title}</span>
+   <span className="flex-1 min-w-0 text-[13px] leading-5 line-through" style={{ color: tokens.colors.textTertiary }}>{r.title}</span>
    <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity text-[var(--text-3)] hover:text-[var(--accent)] h-7 w-7" onClick={() => openEdit(r)}>
    <Pencil className="h-3.5 w-3.5" />
    </Button>
@@ -1390,11 +1392,11 @@ function RemindersSection({ reminders, onUpdate, onRefresh }: {
  <div className="space-y-3">
   <div>
   <label className="text-[12px] text-[var(--text-2)] mb-1 block">Title</label>
-  <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" />
+  <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="border-[var(--border)] text-[var(--text-1)]" style={{ background: tokens.colors.surfaceHover }} />
   </div>
   <div>
   <label className="text-[12px] text-[var(--text-2)] mb-1 block">Due date</label>
-  <Input type="date" value={editDue} onChange={(e) => setEditDue(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[var(--border)] text-[var(--text-1)]" />
+  <Input type="date" value={editDue} onChange={(e) => setEditDue(e.target.value)} className="border-[var(--border)] text-[var(--text-1)]" style={{ background: tokens.colors.surfaceHover }} />
   </div>
   <div>
   <Label className="text-[12px] text-[var(--text-2)] mb-1 block">Recurring</Label>
@@ -1489,7 +1491,7 @@ function DayPlannerModal({ plan, open, onClose, toast }: { plan: DayPlan; open: 
 
  return (
  <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
- <DialogContent className="max-w-[640px] bg-[#1E1E20] border-[rgba(255,255,255,0.08)] max-h-[85vh] overflow-y-auto p-0">
+ <DialogContent className="max-w-[640px] max-h-[85vh] overflow-y-auto p-0" style={{ background: '#1E1E20', borderColor: tokens.colors.border }}>
  <DialogHeader className="p-6 pb-4">
  <DialogTitle className="flex items-center gap-3 text-[var(--text-1)]" style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }}>
   <LucideCalendar className="h-5 w-5 text-[var(--accent)]" />
@@ -1511,7 +1513,7 @@ function DayPlannerModal({ plan, open, onClose, toast }: { plan: DayPlan; open: 
    <span className="text-[12px] font-mono text-[var(--accent)] mt-0.5">{step.time}</span>
    </div>
    <div className="flex items-start shrink-0 -ml-1 mt-0.5">
-   <span className="text-[13px] relative z-10 bg-[rgba(255,255,255,0.04)] px-0.5">{stepTypeIcon(step.type)}</span>
+   <span className="text-[13px] relative z-10 px-0.5" style={{ background: tokens.colors.surfaceHover }}>{stepTypeIcon(step.type)}</span>
    </div>
    <div className="flex-1 min-w-0">
    <p className="text-[13px] text-[var(--text-1)]">{step.action}</p>
@@ -1624,7 +1626,7 @@ function IdeaCard({ idea, type, toast, onDidThis, weather, onOpenPlan }: { idea:
  <>
  <div
  className="group cursor-pointer transition-colors duration-150 hover:bg-[rgba(255,255,255,0.03)]"
- style={{ borderRadius: tokens.radii.sm, padding: `${tokens.spacing.sm}px ${tokens.spacing.xs}px` }}
+ style={{ borderRadius: tokens.radii.sm, padding: `${tokens.spacing.md}px ${tokens.spacing.sm}px` }}
  onClick={() => setExpanded(!expanded)}
  >
  {/* Compact row — wraps on mobile */}
@@ -1753,18 +1755,17 @@ function WeatherIcon({ code, className }: { code: number; className?: string }) 
  return <Wind className={className} />
 }
 
-// --- Weekend Top Card (weather + local events in one glass card) ---
-function WeekendTopCard({ weather, events }: { weather: WeekendWeather | null; events: LocalEvent[] }) {
- const homeCity = weather?.homeCity
+// --- Weekend Weather Card ---
+function WeekendWeatherCard({ weather }: { weather: WeekendWeather | null }) {
+ if (!weather) return null
+ const homeCity = weather.homeCity
 
  return (
- <div style={styles.card} className="!p-4 md:!p-6">
- {/* Header row: title left, weather right — stacks on mobile */}
- <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2 md:gap-0" style={{ marginBottom: events.length > 0 ? tokens.spacing.lg : 0 }}>
+ <div className="rounded-xl p-5" style={{ background: tokens.colors.surface, border: `1px solid ${tokens.colors.borderSubtle}` }}>
+ <div className="flex items-center justify-between">
  <span style={{ ...tokens.typography.label, color: tokens.colors.textTertiary }}>
  This weekend{homeCity ? ` — ${homeCity}` : ''}
  </span>
- {weather && (
  <div className="flex items-center gap-3 md:gap-4 flex-shrink-0 flex-wrap">
  <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.sm }}>
  <WeatherIcon code={weather.saturday.weatherCode} className="h-4 w-4 text-amber-400/80" />
@@ -1786,41 +1787,47 @@ function WeekendTopCard({ weather, events }: { weather: WeekendWeather | null; e
  )}
  </div>
  </div>
- )}
  </div>
+ </div>
+ )
+}
 
- {/* Local Events — wrapping chips */}
- {events.length > 0 && (
- <div>
- <p style={{ ...tokens.typography.label, color: tokens.colors.textTertiary, marginBottom: tokens.spacing.sm }}>Local Events</p>
- <div style={{ display: 'flex', flexWrap: 'wrap', gap: tokens.spacing.sm }}>
+// --- Local Events Section ---
+function LocalEventsSection({ events }: { events: LocalEvent[] }) {
+ if (events.length === 0) return null
+
+ return (
+ <div className="rounded-xl p-5" style={{ background: tokens.colors.surface, border: `1px solid ${tokens.colors.borderSubtle}` }}>
+ <div className="flex items-center justify-between mb-4">
+ <span style={{ ...tokens.typography.title, color: tokens.colors.textPrimary }}>This Weekend</span>
+ </div>
+ <div className="flex flex-col gap-4">
  {events.map((event, i) => (
  <a
  key={i}
  href={`https://www.google.com/search?q=${encodeURIComponent(event.title + ' ' + (event.location || 'Toulouse'))}`}
  target="_blank"
  rel="noopener noreferrer"
- className="hover:bg-[var(--bg-surface)] transition-colors group min-w-0"
- style={{
- display: 'inline-flex',
- alignItems: 'center',
- gap: tokens.spacing.sm,
- padding: `${tokens.spacing.sm}px ${tokens.spacing.md}px`,
- borderRadius: tokens.radii.sm,
- border: `1px solid ${tokens.colors.border}`,
- }}
+ className="group cursor-pointer transition-colors duration-150 hover:bg-[rgba(255,255,255,0.03)]"
+ style={{ borderRadius: tokens.radii.sm, padding: `${tokens.spacing.md}px ${tokens.spacing.sm}px` }}
  >
- <span style={{ fontSize: tokens.typography.body.fontSize }} className="shrink-0">🎭</span>
- <span style={{ ...tokens.typography.body, color: tokens.colors.textSecondary }} className="group-hover:text-[var(--text-1)] truncate">{event.title}</span>
- {(event.location || event.driveTime) && (
- <span className="hidden md:inline shrink-0" style={{ ...tokens.typography.caption, color: tokens.colors.textTertiary, whiteSpace: 'nowrap' }}>{event.location}{event.driveTime ? ` · ${event.driveTime}` : ''}</span>
+ <div className="flex items-center gap-2 md:gap-3">
+ <span className="text-[16px] leading-none shrink-0">🎭</span>
+ <p className="truncate text-[13px] font-medium text-[var(--text-1)] min-w-0 flex-1">{event.title}</p>
+ {event.location && (
+ <span className="hidden md:inline text-[13px] text-[var(--text-2)] truncate max-w-[200px]">{event.location}</span>
  )}
- <ExternalLink style={{ width: 12, height: 12, color: tokens.colors.textTertiary, flexShrink: 0 }} className="group-hover:text-[var(--text-2)] shrink-0" />
+ {event.driveTime && (
+ <Badge variant="secondary" className="gap-1 shrink-0">
+ <Car className="h-2.5 w-2.5" />
+ {event.driveTime}
+ </Badge>
+ )}
+ <ExternalLink style={{ width: 14, height: 14, color: tokens.colors.textTertiary, flexShrink: 0 }} className="group-hover:text-[var(--text-2)] shrink-0" />
+ </div>
  </a>
  ))}
  </div>
- </div>
- )}
  </div>
  )
 }
@@ -1851,7 +1858,7 @@ function TripHistorySection({ trips, expanded, onToggle }: { trips: Trip[]; expa
  {(expanded || trips.length > 0) && (
  <motion.div className="space-y-1" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}>
  {displayTrips.map((trip) => (
- <div key={trip.id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-[rgba(255,255,255,0.04)] transition-colors">
+ <div key={trip.id} className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-[rgba(255,255,255,0.04)] transition-colors">
  <span className="text-[12px] font-medium text-[var(--text-3)] font-mono w-20 shrink-0">
  {new Date(trip.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
  </span>
@@ -1930,19 +1937,19 @@ function IdeasSection({ type, ideas, content, lastUpdated, refreshing, refreshDi
  const hasIdeas = parsedIdeas.length > 0
 
  return (
- <Card className="bg-transparent border-[rgba(255,255,255,0.08)] min-h-[200px] flex flex-col">
- <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-  <CardTitle className="text-[15px] font-medium text-[var(--text-1)]">{label}</CardTitle>
+ <div className="rounded-xl p-5 min-h-[200px] flex flex-col" style={{ background: tokens.colors.surface, border: `1px solid ${tokens.colors.borderSubtle}` }}>
+ <div className="flex items-center justify-between mb-4">
+  <span style={{ ...tokens.typography.title, color: tokens.colors.textPrimary }}>{label}</span>
   <Button variant="ghost" size="sm" onClick={onRefresh} disabled={refreshDisabled} className="text-[var(--text-3)] hover:text-[var(--text-2)] h-7 gap-1.5">
   {refreshing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
   <span className="hidden sm:inline">Refresh</span>
   </Button>
- </CardHeader>
- <CardContent className="flex-1">
+ </div>
+ <div className="flex-1">
   {refreshing ? (
   <p className="text-[13px] text-[var(--text-3)] text-center py-8">Generating suggestions...</p>
   ) : hasIdeas ? (
-  <motion.div variants={ideaStaggerContainer} initial="hidden" animate="show" className="flex flex-col gap-3">
+  <motion.div variants={ideaStaggerContainer} initial="hidden" animate="show" className="flex flex-col gap-4">
    {parsedIdeas.map((idea, i) => (
    <motion.div key={i} variants={ideaStaggerItem} transition={{ duration: 0.25 }}>
     <IdeaCard idea={idea} type={type} toast={toast} onDidThis={onDidThis} weather={weather} onOpenPlan={onOpenPlan} />
@@ -1959,7 +1966,7 @@ function IdeasSection({ type, ideas, content, lastUpdated, refreshing, refreshDi
   </div>
   ) : content.trim() ? (
   <div className="prose prose-invert prose-sm max-w-none
-   prose-headings:text-[var(--text-1)] prose-headings:text-[13px] prose-headings:mb-2 prose-headings:mt-0
+   prose-headings:text-[var(--text-1)] prose-headings:text-[13px] prose-headings:mb-4 prose-headings:mt-0
    prose-p:text-[var(--text-2)] prose-p:text-[13px] prose-p:leading-relaxed prose-p:my-1
    prose-li:text-[var(--text-2)] prose-li:text-[13px] prose-li:my-0
    prose-strong:text-[var(--text-2)] prose-ul:my-1 prose-ol:my-1">
@@ -1968,8 +1975,8 @@ function IdeasSection({ type, ideas, content, lastUpdated, refreshing, refreshDi
   ) : (
   <p className="text-[13px] text-[var(--text-3)] text-center py-8">{fallbackMsg}</p>
   )}
- </CardContent>
- </Card>
+ </div>
+ </div>
  )
 }
 
@@ -2114,7 +2121,8 @@ function EmailNotificationsSection({ toast }: { toast: (msg: string) => void }) 
  if (e.key === 'Escape') setAddingFor(null)
  }}
  onBlur={() => { if (!(newEmails[id] || '').trim()) setAddingFor(null) }}
- className="h-5 w-32 text-[10px] bg-[rgba(255,255,255,0.04)] border border-[var(--border)] rounded px-1.5 text-[var(--text-2)] placeholder:text-[var(--text-3)] outline-none focus:border-[var(--accent)]"
+ className="h-5 w-32 text-[10px] border border-[var(--border)] rounded px-1.5 text-[var(--text-2)] placeholder:text-[var(--text-3)] outline-none focus:border-[var(--accent)]"
+style={{ background: tokens.colors.surfaceHover }}
  />
  <button onClick={() => addRecipient(id)} className="text-[var(--text-3)] hover:text-[var(--accent)]">
  <Check className="h-3 w-3" />
@@ -2249,7 +2257,7 @@ function ContactDetail({ contact, onSave, onDelete, saving, toast }: {
  return (
   <div className="h-full flex flex-col">
    {/* Header */}
-   <SheetHeader className="border-b border-[rgba(255,255,255,0.08)] p-5">
+   <SheetHeader className="p-5" style={{ borderBottom: `1px solid ${tokens.colors.border}` }}>
     <div className="flex items-center gap-3">
      <Avatar size="lg">
       <AvatarFallback className="bg-[var(--surface)] text-[var(--text-2)]">{contactInitials(contact)}</AvatarFallback>
@@ -2284,29 +2292,29 @@ function ContactDetail({ contact, onSave, onDelete, saving, toast }: {
       <div className="grid grid-cols-2 gap-3">
        <div className="space-y-1.5">
         <Label className="text-[var(--text-3)]">First Name</Label>
-        <Input value={editFirstName} onChange={e => setEditFirstName(e.target.value)} className="bg-[#1E1E20] border-[rgba(255,255,255,0.08)]" />
+        <Input value={editFirstName} onChange={e => setEditFirstName(e.target.value)} className="bg-[#1E1E20]" style={{ borderColor: tokens.colors.border }} />
        </div>
        <div className="space-y-1.5">
         <Label className="text-[var(--text-3)]">Last Name</Label>
-        <Input value={editLastName} onChange={e => setEditLastName(e.target.value)} className="bg-[#1E1E20] border-[rgba(255,255,255,0.08)]" />
+        <Input value={editLastName} onChange={e => setEditLastName(e.target.value)} className="bg-[#1E1E20]" style={{ borderColor: tokens.colors.border }} />
        </div>
       </div>
       <div className="space-y-1.5">
        <Label className="text-[var(--text-3)]">Phone</Label>
-       <Input value={editPhone} onChange={e => setEditPhone(e.target.value)} placeholder="+33 6..." className="bg-[#1E1E20] border-[rgba(255,255,255,0.08)]" />
+       <Input value={editPhone} onChange={e => setEditPhone(e.target.value)} placeholder="+33 6..." className="bg-[#1E1E20]" style={{ borderColor: tokens.colors.border }} />
       </div>
       <div className="space-y-1.5">
        <Label className="text-[var(--text-3)]">Email</Label>
-       <Input value={editEmail} onChange={e => setEditEmail(e.target.value)} placeholder="email@..." className="bg-[#1E1E20] border-[rgba(255,255,255,0.08)]" />
+       <Input value={editEmail} onChange={e => setEditEmail(e.target.value)} placeholder="email@..." className="bg-[#1E1E20]" style={{ borderColor: tokens.colors.border }} />
       </div>
       <div className="space-y-1.5">
        <Label className="text-[var(--text-3)]">Birthday</Label>
-       <Input type="date" value={editBirthday} onChange={e => setEditBirthday(e.target.value)} className="bg-[#1E1E20] border-[rgba(255,255,255,0.08)]" />
+       <Input type="date" value={editBirthday} onChange={e => setEditBirthday(e.target.value)} className="bg-[#1E1E20]" style={{ borderColor: tokens.colors.border }} />
       </div>
       <div className="space-y-1.5">
        <Label className="text-[var(--text-3)]">Relationship</Label>
        <Select value={editRelationship} onValueChange={setEditRelationship}>
-        <SelectTrigger className="bg-[#1E1E20] border-[rgba(255,255,255,0.08)] text-[var(--text-2)]">
+        <SelectTrigger className="bg-[#1E1E20] text-[var(--text-2)]" style={{ borderColor: tokens.colors.border }}>
          <SelectValue placeholder="Select..." />
         </SelectTrigger>
         <SelectContent>
@@ -2320,7 +2328,8 @@ function ContactDetail({ contact, onSave, onDelete, saving, toast }: {
         value={editNotes}
         onChange={e => setEditNotes(e.target.value)}
         rows={4}
-        className="bg-[#1E1E20] border-[rgba(255,255,255,0.08)] resize-none"
+        className="bg-[#1E1E20] resize-none"
+        style={{ borderColor: tokens.colors.border }}
        />
       </div>
       <div className="space-y-2">
@@ -2390,7 +2399,7 @@ function ContactDetail({ contact, onSave, onDelete, saving, toast }: {
    </div>
 
    {/* Footer actions */}
-   <SheetFooter className="border-t border-[rgba(255,255,255,0.08)] p-4 flex-row gap-2 flex-wrap">
+   <SheetFooter className="p-4 flex-row gap-2 flex-wrap" style={{ borderTop: `1px solid ${tokens.colors.border}` }}>
     {editing ? (
      <>
       <Button variant="outline" size="sm" onClick={saveEdit} disabled={saving === contact.id || !editFirstName.trim()} className="bg-[var(--accent-subtle)] border-[var(--accent-border)] text-[var(--accent)]">
@@ -2407,7 +2416,7 @@ function ContactDetail({ contact, onSave, onDelete, saving, toast }: {
          <Trash2 className="h-3.5 w-3.5" /> Delete
         </Button>
        </DialogTrigger>
-       <DialogContent className="bg-[#1E1E20] border-[rgba(255,255,255,0.08)]">
+       <DialogContent style={{ background: '#1E1E20', borderColor: tokens.colors.border }}>
         <DialogHeader>
          <DialogTitle className="text-[var(--text-1)]">Delete contact</DialogTitle>
          <DialogDescription className="text-[var(--text-2)]">
@@ -2675,9 +2684,10 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
        placeholder="Search contacts by name, phone, email..."
        showClear
        size="default"
-       className="bg-[#1E1E20] border-[rgba(255,255,255,0.08)] text-[var(--text-1)] placeholder:text-[var(--text-3)]"
+       className="text-[var(--text-1)] placeholder:text-[var(--text-3)]"
+       style={{ background: '#1E1E20', borderColor: tokens.colors.border }}
       />
-      <AutocompleteContent className="bg-[#1E1E20] border-[rgba(255,255,255,0.08)]">
+      <AutocompleteContent style={{ background: '#1E1E20', borderColor: tokens.colors.border }}>
        <AutocompleteList>
         {searchSuggestions.map(c => (
          <AutocompleteItem key={c.id} value={`${c.firstName} ${c.lastName}`} className="text-[var(--text-2)]">
@@ -2714,15 +2724,16 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
      <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-[var(--text-3)]" /></div>
     ) : filtered.length === 0 ? (
      <div className="flex flex-col items-center justify-center py-12 text-center">
-      <Users className="h-6 w-6 mb-3 text-[rgba(255,255,255,0.08)]" />
+      <Users className="h-6 w-6 mb-3" style={{ color: tokens.colors.border }} />
       <p className="text-[13px] text-[var(--text-3)]">{search ? 'No contacts matching your search' : 'No contacts yet'}</p>
      </div>
     ) : (
      filtered.map(c => (
       <motion.div
        key={c.id}
-       whileHover={{ backgroundColor: 'rgba(255,255,255,0.04)' }}
-       className="flex items-center gap-3 px-4 py-3 border-b border-[rgba(255,255,255,0.05)]"
+       whileHover={{ backgroundColor: tokens.colors.surfaceHover }}
+       className="flex items-center gap-3 px-4 py-3"
+       style={{ borderBottom: `1px solid ${tokens.colors.borderSubtle}` }}
        onClick={() => openContactSheet(c.id)}
       >
        <Avatar className="h-10 w-10 shrink-0">
@@ -2730,9 +2741,9 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
        </Avatar>
        <div className="flex-1 min-w-0">
         <div className="text-[13px] truncate">{c.firstName} {c.lastName}</div>
-        <div className="text-[12px] text-[rgba(255,255,255,0.35)]">{c.relationship || c.phone || ''}</div>
+        <div className="text-[12px]" style={{ color: tokens.colors.textTertiary }}>{c.relationship || c.phone || ''}</div>
        </div>
-       <ChevronRight className="h-4 w-4 text-[rgba(255,255,255,0.18)] flex-shrink-0" />
+       <ChevronRight className="h-4 w-4 flex-shrink-0" style={{ color: tokens.colors.textQuaternary }} />
       </motion.div>
      ))
     )}
@@ -2748,7 +2759,7 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
     onRowClick={(row) => openContactSheet(row.id)}
     emptyMessage={
      <div className="flex flex-col items-center justify-center py-12 text-center">
-      <Users className="h-6 w-6 mb-3 text-[rgba(255,255,255,0.08)]" />
+      <Users className="h-6 w-6 mb-3" style={{ color: tokens.colors.border }} />
       <p className="text-[13px] text-[var(--text-3)]">{search ? 'No contacts matching your search' : 'No contacts yet'}</p>
      </div>
     }
@@ -2756,16 +2767,17 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
     tableClassNames={{
      base: 'text-[13px]',
      bodyRow: 'group/row cursor-pointer hover:bg-[rgba(255,255,255,0.03)] transition-colors',
-     headerRow: 'border-b border-[rgba(255,255,255,0.08)]',
+     headerRow: 'border-b border-white/[0.08]',
     }}
    >
-    <DataGridContainer className="border-[rgba(255,255,255,0.08)] bg-transparent rounded-lg">
+    <DataGridContainer className="bg-transparent rounded-lg" style={{ borderColor: tokens.colors.border }}>
      <DataGridTable />
      {filtered.length > 20 && (
       <DataGridPagination
        sizes={[20, 50, 100]}
        info="{from} - {to} of {count}"
-       className="border-t border-[rgba(255,255,255,0.08)] text-[var(--text-3)]"
+       className="text-[var(--text-3)]"
+       style={{ borderTop: `1px solid ${tokens.colors.border}` }}
       />
      )}
     </DataGridContainer>
@@ -2775,7 +2787,7 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
    {/* Contact Detail Sheet — bottom on mobile, right on desktop */}
    {/* Mobile: bottom sheet */}
    <Sheet open={sheetOpen && isMobile} onOpenChange={setSheetOpen}>
-    <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl overflow-y-auto bg-[#1E1E20] border-t border-[rgba(255,255,255,0.08)] p-0" showCloseButton={false}>
+    <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl overflow-y-auto p-0" style={{ background: '#1E1E20', borderTop: `1px solid ${tokens.colors.border}` }} showCloseButton={false}>
      {selectedContact ? (
       <ContactDetail
        contact={selectedContact}
@@ -2787,7 +2799,7 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
      ) : (
       <div className="flex-1 flex items-center justify-center h-full">
        <div className="text-center">
-        <Users className="h-8 w-8 mx-auto mb-3 text-[rgba(255,255,255,0.08)]" />
+        <Users className="h-8 w-8 mx-auto mb-3" style={{ color: tokens.colors.border }} />
         <p className="text-[13px] text-[var(--text-3)]">Select a contact</p>
        </div>
       </div>
@@ -2796,7 +2808,7 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
    </Sheet>
    {/* Desktop: right sheet */}
    <Sheet open={sheetOpen && !isMobile} onOpenChange={setSheetOpen}>
-    <SheetContent side="right" className="w-[400px] bg-[#1E1E20] border-l border-[rgba(255,255,255,0.08)] p-0" showCloseButton={false}>
+    <SheetContent side="right" className="w-[400px] p-0" style={{ background: '#1E1E20', borderLeft: `1px solid ${tokens.colors.border}` }} showCloseButton={false}>
      {selectedContact ? (
       <ContactDetail
        contact={selectedContact}
@@ -2808,7 +2820,7 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
      ) : (
       <div className="flex-1 flex items-center justify-center h-full">
        <div className="text-center">
-        <Users className="h-8 w-8 mx-auto mb-3 text-[rgba(255,255,255,0.08)]" />
+        <Users className="h-8 w-8 mx-auto mb-3" style={{ color: tokens.colors.border }} />
         <p className="text-[13px] text-[var(--text-3)]">Select a contact</p>
        </div>
       </div>
@@ -2818,7 +2830,7 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
 
    {/* Add Contact Dialog */}
    <Dialog open={addOpen} onOpenChange={setAddOpen}>
-    <DialogContent className="max-w-[640px] bg-[#1E1E20] border-[rgba(255,255,255,0.08)] max-h-[85vh] overflow-y-auto">
+    <DialogContent className="max-w-[640px] max-h-[85vh] overflow-y-auto" style={{ background: '#1E1E20', borderColor: tokens.colors.border }}>
      <DialogHeader>
       <DialogTitle className="text-[var(--text-1)]">New Contact</DialogTitle>
      </DialogHeader>
@@ -2827,31 +2839,31 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
       <div className="grid grid-cols-2 gap-3">
        <div className="space-y-1.5">
         <Label className="text-[var(--text-3)]">First name *</Label>
-        <Input value={newFirstName} onChange={e => setNewFirstName(e.target.value)} placeholder="Jean" className="bg-[rgba(255,255,255,0.04)] border-[rgba(255,255,255,0.08)]" />
+        <Input value={newFirstName} onChange={e => setNewFirstName(e.target.value)} placeholder="Jean" style={{ background: tokens.colors.surfaceHover, borderColor: tokens.colors.border }} />
        </div>
        <div className="space-y-1.5">
         <Label className="text-[var(--text-3)]">Last name</Label>
-        <Input value={newLastName} onChange={e => setNewLastName(e.target.value)} placeholder="Dupont" className="bg-[rgba(255,255,255,0.04)] border-[rgba(255,255,255,0.08)]" />
+        <Input value={newLastName} onChange={e => setNewLastName(e.target.value)} placeholder="Dupont" style={{ background: tokens.colors.surfaceHover, borderColor: tokens.colors.border }} />
        </div>
       </div>
       <div className="space-y-1.5">
        <Label className="text-[var(--text-3)]">Birthday</Label>
-       <Input type="date" value={newBirthday} onChange={e => setNewBirthday(e.target.value)} className="bg-[rgba(255,255,255,0.04)] border-[rgba(255,255,255,0.08)]" />
+       <Input type="date" value={newBirthday} onChange={e => setNewBirthday(e.target.value)} style={{ background: tokens.colors.surfaceHover, borderColor: tokens.colors.border }} />
       </div>
       <div className="grid grid-cols-2 gap-3">
        <div className="space-y-1.5">
         <Label className="text-[var(--text-3)]">Phone</Label>
-        <Input value={newPhone} onChange={e => setNewPhone(e.target.value)} placeholder="+33 6..." className="bg-[rgba(255,255,255,0.04)] border-[rgba(255,255,255,0.08)]" />
+        <Input value={newPhone} onChange={e => setNewPhone(e.target.value)} placeholder="+33 6..." style={{ background: tokens.colors.surfaceHover, borderColor: tokens.colors.border }} />
        </div>
        <div className="space-y-1.5">
         <Label className="text-[var(--text-3)]">Email</Label>
-        <Input value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="email@..." className="bg-[rgba(255,255,255,0.04)] border-[rgba(255,255,255,0.08)]" />
+        <Input value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="email@..." style={{ background: tokens.colors.surfaceHover, borderColor: tokens.colors.border }} />
        </div>
       </div>
       <div className="space-y-1.5">
        <Label className="text-[var(--text-3)]">Relationship</Label>
        <Select value={newRelationship} onValueChange={setNewRelationship}>
-        <SelectTrigger className="bg-[rgba(255,255,255,0.04)] border-[rgba(255,255,255,0.08)] text-[var(--text-2)]">
+        <SelectTrigger className="text-[var(--text-2)]" style={{ background: tokens.colors.surfaceHover, borderColor: tokens.colors.border }}>
          <SelectValue placeholder="Select..." />
         </SelectTrigger>
         <SelectContent>
@@ -2884,7 +2896,8 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
         onChange={e => setNewNotes(e.target.value)}
         rows={3}
         placeholder="Additional notes..."
-        className="bg-[rgba(255,255,255,0.04)] border-[rgba(255,255,255,0.08)] resize-none"
+        className="resize-none"
+        style={{ background: tokens.colors.surfaceHover, borderColor: tokens.colors.border }}
        />
       </div>
      </div>
@@ -2903,6 +2916,7 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
 
 // --- Main Life Page ---
 export default function LifePage() {
+ const navigate = useNavigate()
  const [data, setData] = useState<LifeData | null>(null)
  const [calendar, setCalendar] = useState<CalendarEvent[]>([])
  const [activities, setActivities] = useState<Activities>({ weekend: { content: '', ideas: [], lastUpdated: null }, date: { content: '', ideas: [], lastUpdated: null } })
@@ -2918,10 +2932,12 @@ export default function LifePage() {
  const [globalDayPlan, setGlobalDayPlan] = useState<DayPlan | null>(null)
  const [globalPlanModalOpen, setGlobalPlanModalOpen] = useState(false)
  const [resendConfirmBirthday, setResendConfirmBirthday] = useState<Birthday | null>(null)
+ const [briefing, setBriefing] = useState<Briefing | null>(null)
+ const [regeneratingBriefing, setRegeneratingBriefing] = useState(false)
 
  const loadData = useCallback(async () => {
  try {
- const [lifeData, calendarData, remindersData, activitiesData, weatherData, eventsData, tripsData, upcomingTripData] = await Promise.all([
+ const [lifeData, calendarData, remindersData, activitiesData, weatherData, eventsData, tripsData, upcomingTripData, briefingData] = await Promise.all([
  lifeApi.getData(),
  lifeApi.getCalendar(7),
  lifeApi.getReminders(),
@@ -2929,7 +2945,8 @@ export default function LifePage() {
  lifeApi.getWeekendWeather(),
  lifeApi.getLocalEvents(),
  lifeApi.getTrips(),
- lifeApi.getUpcomingTrip()
+ lifeApi.getUpcomingTrip(),
+ lifeApi.getBriefing()
  ])
  setData({ ...lifeData, reminders: remindersData.length > 0 ? remindersData : lifeData.reminders })
  setCalendar(calendarData)
@@ -2938,6 +2955,7 @@ export default function LifePage() {
  setLocalEvents(eventsData)
  setTrips(tripsData)
  setUpcomingTrip(upcomingTripData)
+ setBriefing(briefingData)
  } catch (e) {
  console.error('LifePage: Error loading data:', e)
  } finally {
@@ -3071,10 +3089,13 @@ export default function LifePage() {
 
  return (
  <>
- <div className="min-h-full">
+ <div className="min-h-full max-w-7xl mx-auto px-4 md:px-8 pt-6">
  {/* Sub-nav bar — left-aligned, horizontal scroll on mobile */}
  <div className="border-b border-border px-4 md:px-6 pt-2 pb-0 overflow-x-auto">
- <Tabs value={activeTab} onValueChange={v => setActiveTab(v as TabId)}>
+ <Tabs value={activeTab} onValueChange={v => {
+  if (v === 'contacts') { navigate('/contacts'); return }
+  setActiveTab(v as TabId)
+ }}>
   <TabsList variant="line" className="justify-start gap-5 md:gap-6">
    <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
    <TabsTrigger value="ideas">Ideas</TabsTrigger>
@@ -3090,8 +3111,91 @@ export default function LifePage() {
  initial={{ opacity: 0, y: 8 }}
  animate={{ opacity: 1, y: 0 }}
  transition={{ duration: 0.15 }}
- className="p-4 md:p-6"
+ className="p-5 md:p-6"
  >
+ {/* Morning Briefing card */}
+ {briefing && briefing.text ? (
+ <div
+  style={{
+   background: tokens.colors.surface,
+   border: `1px solid ${tokens.colors.borderSubtle}`,
+   borderLeft: `2px solid ${tokens.colors.accent}`,
+   borderRadius: 12,
+   padding: 20,
+   marginBottom: tokens.spacing.xxl,
+  }}
+ >
+  <div className="flex items-start justify-between gap-4">
+   <div className="flex-1 min-w-0">
+    <p style={{ fontSize: 15, fontWeight: 500, color: tokens.colors.textPrimary, margin: 0, marginBottom: 8 }}>
+     👋 Good morning, Jean-Marc
+    </p>
+    <p
+     style={{
+      fontSize: 13,
+      fontWeight: 400,
+      color: tokens.colors.textSecondary,
+      lineHeight: 1.6,
+      margin: 0,
+     }}
+    >
+     {briefing.text}
+    </p>
+    {briefing.generatedAt && (
+     <p style={{ fontSize: 11, color: tokens.colors.textQuaternary, margin: 0, marginTop: 8 }}>
+      Today at {new Date(briefing.generatedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+     </p>
+    )}
+   </div>
+   <button
+    onClick={async () => {
+     setRegeneratingBriefing(true)
+     try {
+      const result = await lifeApi.regenerateBriefing()
+      setBriefing(result)
+      toast.success('Briefing regenerated')
+     } catch {
+      toast.error('Failed to regenerate briefing')
+     } finally {
+      setRegeneratingBriefing(false)
+     }
+    }}
+    disabled={regeneratingBriefing}
+    className="shrink-0 flex items-center justify-center rounded-md transition-colors"
+    style={{
+     width: 28,
+     height: 28,
+     background: 'transparent',
+     border: 'none',
+     color: tokens.colors.textQuaternary,
+     cursor: regeneratingBriefing ? 'not-allowed' : 'pointer',
+     opacity: regeneratingBriefing ? 0.5 : 1,
+    }}
+    onMouseEnter={(e) => { e.currentTarget.style.color = tokens.colors.textSecondary }}
+    onMouseLeave={(e) => { e.currentTarget.style.color = tokens.colors.textQuaternary }}
+    title="Regenerate briefing"
+   >
+    <RefreshCw size={14} className={regeneratingBriefing ? 'animate-spin' : ''} />
+   </button>
+  </div>
+ </div>
+ ) : !briefing ? (
+ <div
+  style={{
+   background: tokens.colors.surface,
+   border: `1px solid ${tokens.colors.borderSubtle}`,
+   borderLeft: `2px solid ${tokens.colors.accent}`,
+   borderRadius: 12,
+   padding: 20,
+   marginBottom: tokens.spacing.xxl,
+  }}
+ >
+  <Skeleton className="h-4 w-48 rounded mb-3" />
+  <Skeleton className="h-3 w-full rounded mb-1.5" />
+  <Skeleton className="h-3 w-3/4 rounded" />
+ </div>
+ ) : null}
+
  {/* Trip hero card (full width) */}
  {upcomingTrip && <TripHelper trip={upcomingTrip} toast={toast} />}
 
@@ -3115,10 +3219,13 @@ export default function LifePage() {
  initial={{ opacity: 0, y: 8 }}
  animate={{ opacity: 1, y: 0 }}
  transition={{ duration: 0.15 }}
- className="p-4 md:p-6 flex flex-col gap-4 md:gap-5"
+ className="p-5 md:p-6 flex flex-col gap-4 md:gap-5"
  >
- {/* Top card: weather + local events */}
- <WeekendTopCard weather={weather} events={localEvents} />
+ {/* Weather bar */}
+ <WeekendWeatherCard weather={weather} />
+
+ {/* Local events */}
+ <LocalEventsSection events={localEvents} />
 
  {/* Idea cards — equal height, 16px gap */}
  <div className="grid grid-cols-1 md:grid-cols-2 items-stretch" style={{ gap: tokens.spacing.lg }}>
@@ -3131,18 +3238,7 @@ export default function LifePage() {
  </motion.div>
  )}
 
- {/* TAB 3 — Contacts */}
- {activeTab === 'contacts' && (
- <motion.div
- key="contacts"
- initial={{ opacity: 0, y: 8 }}
- animate={{ opacity: 1, y: 0 }}
- transition={{ duration: 0.15 }}
- className=""
- >
- <ContactsSection toast={toast} />
- </motion.div>
- )}
+ {/* TAB 3 — Contacts (navigates to /contacts) */}
 
  </div>
  {globalDayPlan && (

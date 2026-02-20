@@ -1,14 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { motion, AnimatePresence } from 'motion/react'
+import { motion } from 'motion/react'
 import { opsApi, type InboxItem, type IntegrationProposal } from '../services/opsApi'
-import {
-  Autocomplete,
-  AutocompleteInput,
-  AutocompleteContent,
-  AutocompleteList,
-  AutocompleteItem,
-  AutocompleteEmpty,
-} from '@/components/reui/autocomplete'
 import { Alert, AlertTitle, AlertDescription } from '@/components/reui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -16,7 +8,6 @@ import { ButtonGroup } from '@/components/ui/button-group'
 import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
-import { Skeleton } from '@/components/ui/skeleton'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,13 +22,13 @@ import { toast } from 'sonner'
 import {
   Newspaper, FlaskConical, Wrench, BookOpen, Youtube,
   Share2, Briefcase, Package, ExternalLink, RefreshCw, Loader2,
-  Play, Copy, Check, Bookmark, X, ChevronLeft, Trash2, Info,
+  Play, Copy, Check, Bookmark, X, Trash2, Info,
   Instagram,
   type LucideIcon,
 } from 'lucide-react'
 import { tokens } from '../designTokens'
 import { TwoPanelLayout } from '../components/TwoPanelLayout'
-import { DetailEmptyState } from '../components/DetailEmptyState'
+import { PanelToolbar, ToolbarAction } from '../components/PanelToolbar'
 
 /* ── Types ─────────────────────────────────────────────── */
 
@@ -155,7 +146,7 @@ const itemVariants = {
 
 /* ── Detail View (Right Panel) ─────────────────────────── */
 
-function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, executedId, onCopy, copiedId, onDismiss, onSave, onDelete }: {
+function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, executedId, onCopy, copiedId, onDismiss, onSave, onDelete, onBack }: {
   item: InboxItem
   onRecheck: (id: string) => void
   recheckingId: string | null
@@ -167,6 +158,7 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
   onDismiss: (id: string) => void
   onSave: (id: string) => void
   onDelete: (id: string) => void
+  onBack?: () => void
 }) {
   const a = item.analysis
   const proposal = a?.integrationProposal as IntegrationProposal | null
@@ -204,8 +196,22 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
 
   return (
     <div className="h-full flex flex-col">
+      {/* Toolbar */}
+      <PanelToolbar
+        title={title}
+        onBack={onBack}
+        actions={
+          <>
+            <ToolbarAction icon={Bookmark} label="Save" onClick={() => onSave(item.id)} />
+            <ToolbarAction icon={Play} label="Execute" disabled={executingId === item.id || executedId === item.id} onClick={() => onExecute(item.id)} />
+            <ToolbarAction icon={X} label="Dismiss" onClick={() => onDismiss(item.id)} />
+            <ToolbarAction icon={Trash2} label="Delete" destructive onClick={() => onDelete(item.id)} />
+          </>
+        }
+      />
+
       {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
+      <div className="flex-1 overflow-y-auto px-6 py-5">
         {/* Source + date + category badge */}
         <div className="flex items-center gap-2 mb-3 flex-wrap">
           <span style={{ ...tokens.typography.caption, color: tokens.colors.accent }}>{source}</span>
@@ -291,7 +297,7 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
 
         {/* Integration Proposal — Card with accent left border + Alert info */}
         {proposal && (
-          <Card className="border-l-[3px] border-l-[#818CF8] mb-6 py-0 gap-0 overflow-hidden">
+          <Card className="mb-6 py-0 gap-0 overflow-hidden" style={{ borderLeft: `3px solid ${tokens.colors.accent}` }}>
             <CardContent className="p-0">
               <Alert variant="info" className="rounded-none border-0">
                 <Info className="size-4" />
@@ -330,7 +336,7 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
             <p style={{ ...tokens.typography.label, color: tokens.colors.textQuaternary, marginBottom: 8 }}>Command</p>
             <pre
               className="text-[12px] font-mono px-3 py-2.5 rounded-md whitespace-pre-wrap break-all mb-2.5"
-              style={{ color: tokens.colors.textSecondary, background: 'rgba(255,255,255,0.03)', border: '1px solid ' + tokens.colors.border }}
+              style={{ color: tokens.colors.textSecondary, background: tokens.colors.surfaceHover, border: '1px solid ' + tokens.colors.border }}
             >
               {rrCmd}
             </pre>
@@ -405,48 +411,19 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
         )}
       </div>
 
-      {/* Sticky action bar */}
-      <div className="shrink-0 px-6 py-3 flex items-center" style={{ borderTop: '1px solid ' + tokens.colors.border }}>
-        <ButtonGroup>
-          <Button variant="ghost" size="sm" onClick={() => onSave(item.id)}>
-            <Bookmark className="h-3.5 w-3.5" />
-            Save
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => onDismiss(item.id)}>
-            <X className="h-3.5 w-3.5" />
-            Dismiss
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onExecute(item.id)}
-            disabled={executingId === item.id || executedId === item.id}
-          >
-            <Play className="h-3.5 w-3.5" />
-            {executedId === item.id ? 'Executed' : 'Execute'}
-          </Button>
-        </ButtonGroup>
-        <div className="flex-1" />
-        <ButtonGroup>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => onRecheck(item.id)}
-            disabled={recheckingId === item.id}
-          >
-            {recheckingId === item.id
-              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              : <RefreshCw className="h-3.5 w-3.5" />}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="hover:text-rose-400"
-            onClick={() => onDelete(item.id)}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </ButtonGroup>
+      {/* Recheck button (secondary, at bottom of scroll area) */}
+      <div className="shrink-0 px-6 py-3">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onRecheck(item.id)}
+          disabled={recheckingId === item.id}
+        >
+          {recheckingId === item.id
+            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            : <RefreshCw className="h-3.5 w-3.5" />}
+          <span className="ml-1">Recheck</span>
+        </Button>
       </div>
     </div>
   )
@@ -465,6 +442,11 @@ export default function KnowledgePage() {
   const [executedId, setExecutedId] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  // Pagination
+  const ITEMS_PAGE_SIZE = 30
+  const [visibleCount, setVisibleCount] = useState(ITEMS_PAGE_SIZE)
 
   useEffect(() => {
     opsApi.getInboxRecent(100)
@@ -502,6 +484,12 @@ export default function KnowledgePage() {
 
     return result
   }, [nonJunk, filter, search])
+
+  // Reset visible count on filter/search change
+  useEffect(() => { setVisibleCount(ITEMS_PAGE_SIZE) }, [filter, search])
+
+  const visibleItems = useMemo(() => filteredItems.slice(0, visibleCount), [filteredItems, visibleCount])
+  const hasMoreItems = filteredItems.length > visibleCount
 
   const counts = useMemo(() => ({
     all: nonJunk.length,
@@ -608,6 +596,7 @@ export default function KnowledgePage() {
     }
     setDeleteConfirmId(null)
   }, [filteredItems])
+  const handleMobileClose = useCallback(() => { setMobileOpen(false); setSelectedId(null) }, [])
 
   const filters: { key: FilterTab; label: string }[] = [
     { key: 'all', label: 'All' },
@@ -622,23 +611,33 @@ export default function KnowledgePage() {
   if (loading) {
     return (
       <div
-        className="flex"
-        style={{ height: 'calc(100vh - 48px)', background: tokens.colors.bg }}
+        className="h-[calc(100vh-48px)] md:h-[calc(100vh-64px)]"
+        style={{ background: tokens.colors.bg }}
       >
-        {/* Left skeleton */}
-        <div className="w-[40%] max-w-[480px] shrink-0 p-5 space-y-3" style={{ borderRight: '1px solid ' + tokens.colors.borderSubtle }}>
-          <Skeleton className="h-9 w-full rounded-lg" />
-          <Skeleton className="h-6 w-64 rounded-lg" />
-          {[...Array(8)].map((_, i) => (
-            <Skeleton key={i} className="h-12 w-full rounded-lg" />
-          ))}
-        </div>
-        {/* Right skeleton */}
-        <div className="flex-1 p-6 space-y-4">
-          <Skeleton className="h-4 w-48 rounded" />
-          <Skeleton className="h-7 w-96 rounded" />
-          <Skeleton className="h-4 w-full rounded" />
-          <Skeleton className="h-4 w-3/4 rounded" />
+        <div className="h-full flex max-w-7xl mx-auto w-full md:px-6">
+          {/* Left skeleton */}
+          <div className="w-full md:w-[35%] md:max-w-[420px] shrink-0 flex flex-col" style={{ background: tokens.colors.surface, borderRight: '1px solid ' + tokens.colors.borderSubtle }}>
+            {/* Search bar placeholder */}
+            <div style={{ height: 44, borderBottom: '1px solid ' + tokens.colors.borderSubtle }} />
+            {/* Filter bar placeholder */}
+            <div style={{ height: 36 }} />
+            {/* Skeleton rows */}
+            {[...Array(5)].map((_, i) => (
+              <div key={i}>
+                <div className="flex items-center gap-3 px-4 py-2" style={{ height: 72 }}>
+                  <div className="shrink-0 rounded-full animate-pulse" style={{ width: 12, height: 12, background: 'rgba(255,255,255,0.1)' }} />
+                  <div className="flex-1 min-w-0 flex flex-col gap-2">
+                    <div className="h-[12px] rounded animate-pulse" style={{ width: '60%', background: 'rgba(255,255,255,0.1)' }} />
+                    <div className="h-[10px] rounded animate-pulse" style={{ width: '30%', background: 'rgba(255,255,255,0.1)' }} />
+                  </div>
+                  <div className="shrink-0 h-[10px] rounded animate-pulse" style={{ width: 36, background: 'rgba(255,255,255,0.1)' }} />
+                </div>
+                <div style={{ marginLeft: 44, height: 1, background: tokens.colors.borderSubtle }} />
+              </div>
+            ))}
+          </div>
+          {/* Right skeleton — empty */}
+          <div className="hidden md:flex flex-1" />
         </div>
       </div>
     )
@@ -648,57 +647,38 @@ export default function KnowledgePage() {
 
   const leftPanel = (
     <>
-      {/* Search — ReUI Autocomplete */}
-      <div className="shrink-0 px-4 pt-3 pb-2">
-        <Autocomplete
-          onValueChange={(val) => {
-            if (val != null) {
-              setSelectedId(String(val))
-              setSearch('')
-            }
+      {/* Search — border-bottom input */}
+      <div className="shrink-0 relative" style={{ borderBottom: '1px solid ' + tokens.colors.borderSubtle }}>
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search articles..."
+          className="w-full text-[13px] px-4"
+          style={{
+            height: 44,
+            background: 'transparent',
+            color: tokens.colors.textPrimary,
+            border: 'none',
+            outline: 'none',
           }}
-        >
-          <AutocompleteInput
-            placeholder="Search articles..."
-            showClear
-            size="default"
-            className="pl-3"
-            onInput={(e: React.FormEvent<HTMLInputElement>) => {
-              setSearch((e.target as HTMLInputElement).value)
-            }}
-          />
-          <AutocompleteContent sideOffset={4}>
-            <AutocompleteList>
-              <AutocompleteEmpty>No articles found</AutocompleteEmpty>
-              {nonJunk.slice(0, 50).map(item => (
-                <AutocompleteItem key={item.id} value={item.id}>
-                  <CategoryIcon category={item.analysis?.category} className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{cleanTitle(item)}</span>
-                </AutocompleteItem>
-              ))}
-            </AutocompleteList>
-          </AutocompleteContent>
-        </Autocomplete>
+        />
       </div>
 
       {/* Filter tabs */}
-      <div className="shrink-0 px-4 pb-2.5 flex flex-wrap gap-1.5">
+      <div className="shrink-0 px-4 flex items-center gap-4 overflow-x-auto whitespace-nowrap scrollbar-hide" style={{ height: 36 }}>
         {filters.map(f => (
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full transition-all duration-200"
-            style={filter === f.key
-              ? { ...tokens.typography.caption, background: tokens.colors.border, color: tokens.colors.textPrimary }
-              : { ...tokens.typography.caption, color: tokens.colors.textQuaternary }
-            }
+            className="whitespace-nowrap transition-colors duration-150"
+            style={{
+              fontSize: 13,
+              fontWeight: 400,
+              color: filter === f.key ? tokens.colors.textPrimary : tokens.colors.textTertiary,
+            }}
           >
-            {f.label}
-            {counts[f.key] > 0 && (
-              <Badge variant="secondary" className="text-[9px] px-1 py-0 h-[16px] min-w-[16px] justify-center">
-                {counts[f.key]}
-              </Badge>
-            )}
+            {f.label}{counts[f.key] > 0 ? ` ${counts[f.key]}` : ''}
           </button>
         ))}
       </div>
@@ -719,128 +699,117 @@ export default function KnowledgePage() {
             initial="hidden"
             animate="show"
           >
-            {filteredItems.map(item => {
+            {visibleItems.map(item => {
               const isActive = selectedId === item.id
               const itemTitle = cleanTitle(item)
               const date = relativeDate(item.date)
+              const source = sourceName(item)
 
               return (
                 <motion.div
                   key={item.id}
                   variants={itemVariants}
-                  whileHover={{ backgroundColor: 'rgba(255,255,255,0.04)' }}
+                  whileTap={{ scale: 0.99 }}
                   transition={{ duration: 0.1 }}
-                  onClick={() => setSelectedId(item.id)}
-                  className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
-                    isActive ? 'bg-[#252527] border-l-[3px] border-l-[#818CF8]' : 'border-l-[3px] border-l-transparent'
+                  onClick={() => {
+                    setSelectedId(item.id)
+                    if (window.innerWidth < 768) setMobileOpen(true)
+                  }}
+                  className={`group cursor-pointer transition-colors duration-150 ${
+                    isActive ? '' : 'hover:bg-[rgba(255,255,255,0.04)]'
                   }`}
-                  style={{ borderBottom: '1px solid ' + tokens.colors.borderSubtle }}
                 >
-                  <CategoryIcon category={item.analysis?.category} />
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className="truncate"
-                      style={{ ...tokens.typography.body, fontWeight: 500, color: isActive ? tokens.colors.textPrimary : 'rgba(255,255,255,0.85)' }}
-                    >
-                      {itemTitle}
-                    </p>
-                  </div>
-                  <span
-                    className="shrink-0"
-                    style={{ ...tokens.typography.micro, color: tokens.colors.textQuaternary }}
+                  <div
+                    className="flex items-center gap-3 px-4 py-2"
+                    style={{
+                      height: 72,
+                      borderLeft: `3px solid ${isActive ? tokens.colors.accent : 'transparent'}`,
+                      background: isActive ? tokens.colors.accentSubtle : undefined,
+                    }}
                   >
-                    {date}
-                  </span>
+                    <CategoryIcon category={item.analysis?.category} />
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className="truncate"
+                        style={{ fontSize: 13, fontWeight: 500, lineHeight: '18px', color: tokens.colors.textPrimary }}
+                      >
+                        {itemTitle}
+                      </p>
+                      <p
+                        className="truncate"
+                        style={{ fontSize: 12, lineHeight: '16px', color: tokens.colors.textTertiary, marginTop: 1 }}
+                      >
+                        {source}
+                      </p>
+                    </div>
+                    <span
+                      className="shrink-0 text-[11px] tabular-nums"
+                      style={{ color: tokens.colors.textQuaternary }}
+                    >
+                      {date}
+                    </span>
+                  </div>
+                  {/* Indented divider */}
+                  <div style={{ marginLeft: 44, height: 1, background: tokens.colors.borderSubtle }} />
                 </motion.div>
               )
             })}
+
+            {/* Load more */}
+            {hasMoreItems && (
+              <div className="flex justify-center py-4">
+                <button
+                  onClick={() => setVisibleCount(prev => prev + ITEMS_PAGE_SIZE)}
+                  className="px-4 py-2 rounded-lg text-[12px] font-medium transition-colors"
+                  style={{
+                    background: tokens.colors.surface,
+                    color: tokens.colors.textTertiary,
+                    border: '1px solid ' + tokens.colors.borderSubtle,
+                  }}
+                >
+                  Load more ({filteredItems.length - visibleCount} remaining)
+                </button>
+              </div>
+            )}
           </motion.div>
         )}
       </div>
     </>
   )
 
-  const rightPanel = (
-    <AnimatePresence mode="wait">
-      {selectedItem ? (
-        <motion.div
-          key={selectedItem.id}
-          initial={{ opacity: 0, x: 12 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -12 }}
-          transition={{ duration: 0.15 }}
-          className="h-full"
-        >
-          <DetailView
-            item={selectedItem}
-            onRecheck={handleRecheck}
-            recheckingId={recheckingId}
-            onExecute={handleExecute}
-            executingId={executingId}
-            executedId={executedId}
-            onCopy={handleCopy}
-            copiedId={copiedId}
-            onDismiss={handleDismiss}
-            onSave={handleSave}
-            onDelete={confirmDelete}
-          />
-        </motion.div>
-      ) : (
-        <DetailEmptyState
-          icon={<BookOpen className="h-12 w-12" />}
-          text="Select an article"
-        />
-      )}
-    </AnimatePresence>
-  )
+
+  const rightPanel = selectedItem ? (
+    <DetailView
+      item={selectedItem}
+      onRecheck={handleRecheck}
+      recheckingId={recheckingId}
+      onExecute={handleExecute}
+      executingId={executingId}
+      executedId={executedId}
+      onCopy={handleCopy}
+      copiedId={copiedId}
+      onDismiss={handleDismiss}
+      onSave={handleSave}
+      onDelete={confirmDelete}
+      onBack={handleMobileClose}
+    />
+  ) : null
 
   return (
     <>
-      <TwoPanelLayout
-        left={leftPanel}
-        right={rightPanel}
-        hideLeftOnMobile={!!selectedItem}
-      />
-
-      {/* Mobile Detail Overlay (< 768px) */}
-      <AnimatePresence>
-        {selectedItem && (
-          <motion.div
-            className="md:hidden fixed inset-0 z-40 flex flex-col"
-            style={{ background: tokens.colors.bg, top: 52 }}
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          >
-            <div className="shrink-0 flex items-center gap-2 px-4 py-3" style={{ borderBottom: '1px solid ' + tokens.colors.border }}>
-              <button
-                onClick={() => setSelectedId(null)}
-                className="flex items-center gap-1 text-[13px]"
-                style={{ color: tokens.colors.accent }}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Back
-              </button>
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <DetailView
-                item={selectedItem}
-                onRecheck={handleRecheck}
-                recheckingId={recheckingId}
-                onExecute={handleExecute}
-                executingId={executingId}
-                executedId={executedId}
-                onCopy={handleCopy}
-                copiedId={copiedId}
-                onDismiss={handleDismiss}
-                onSave={handleSave}
-                onDelete={confirmDelete}
-              />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <div className="h-[calc(100vh-48px)] md:h-[calc(100vh-64px)]" style={{ background: tokens.colors.bg }}>
+        <div className="h-full flex flex-col max-w-7xl mx-auto w-full md:px-6">
+        <TwoPanelLayout
+          leftPanel={leftPanel}
+          rightPanel={rightPanel}
+          emptyState={{ icon: <BookOpen className="h-12 w-12" />, text: 'Select an article' }}
+          selectedKey={selectedItem?.id}
+          mobileOpen={mobileOpen}
+          onMobileClose={handleMobileClose}
+          mobileTitle={selectedItem ? cleanTitle(selectedItem) : 'Article'}
+        />
+        </div>
+      </div>
 
       {/* Delete Article Confirm */}
       <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null) }}>

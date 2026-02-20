@@ -1055,7 +1055,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-full">
+    <div className="min-h-full max-w-7xl mx-auto px-4 md:px-8 pt-6">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="border-b border-border px-5 md:px-6 pt-2 pb-0">
           <div className="overflow-x-auto scrollbar-hide -mx-5 px-5 md:-mx-6 md:px-6">

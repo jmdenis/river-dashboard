@@ -86,7 +86,7 @@ export default function TaskLogPanel({ task, open, onOpenChange }: TaskLogPanelP
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex-1 overflow-auto p-4" style={{ background: 'rgba(0, 0, 0, 0.15)' }}>
+        <div className="flex-1 overflow-auto p-4" style={{ background: tokens.colors.bg }}>
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--text-3)' }} />
@@ -96,7 +96,7 @@ export default function TaskLogPanel({ task, open, onOpenChange }: TaskLogPanelP
               <p style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-2)' }}>No log file found for this task.</p>
             </div>
           ) : (
-            <pre className="font-mono whitespace-pre-wrap break-words leading-relaxed" style={{ fontSize: 12, color: 'rgba(34, 197, 94, 0.8)' }}>
+            <pre className="font-mono whitespace-pre-wrap break-words leading-relaxed" style={{ fontSize: 12, color: tokens.colors.green }}>
               {logContent}
               <div ref={bottomRef} />
             </pre>

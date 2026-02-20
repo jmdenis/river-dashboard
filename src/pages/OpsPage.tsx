@@ -1,26 +1,12 @@
-import { useEffect, useState, useMemo, useRef } from 'react'
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { TextMorph } from 'torph/react'
 import { toast } from 'sonner'
 import { opsApi, type Task, type SystemInfo } from '../services/opsApi'
-import { Loader2, Trash2, Check, X, ArrowDownToLine, Sparkles, Send, Copy, ChevronDown, ChevronRight } from 'lucide-react'
+import { Loader2, Trash2, Check, X, Send, Copy, ChevronDown, ChevronRight, SquarePen, CheckCircle2, Circle, XCircle, ChevronsUpDown, Sparkles, Pencil } from 'lucide-react'
 import { TerminalIcon } from '../components/ui/terminal-icon'
 import { tokens } from '../designTokens'
-import { Skeleton } from '../components/ui/skeleton'
-import { Card } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
-import { Textarea } from '../components/ui/textarea'
-import { Switch } from '../components/ui/switch'
-import { Label } from '../components/ui/label'
-import { ScrollArea } from '../components/ui/scroll-area'
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from '../components/ui/sheet'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,9 +18,8 @@ import {
   AlertDialogTitle,
 } from '../components/ui/alert-dialog'
 import { TwoPanelLayout } from '../components/TwoPanelLayout'
-import { DetailEmptyState } from '../components/DetailEmptyState'
+import { PanelToolbar, ToolbarAction } from '../components/PanelToolbar'
 import { LogViewer } from '../components/LogViewer'
-import { AreaChart, Area, ResponsiveContainer } from 'recharts'
 
 // --- Helpers ---
 
@@ -55,17 +40,11 @@ function formatDuration(task: Task): string | null {
   return `${Math.floor(m / 60)}h ${m % 60}m`
 }
 
-function getStatColor(value: number) {
-  if (value < 60) return { stroke: tokens.colors.green, fill: 'rgba(52,211,153,0.10)' }
-  if (value < 80) return { stroke: tokens.colors.orange, fill: 'rgba(251,191,36,0.10)' }
-  return { stroke: tokens.colors.red, fill: 'rgba(248,113,113,0.10)' }
-}
-
 const statusDotColor: Record<string, string> = {
-  running: tokens.colors.accent,
+  running: tokens.colors.blue,
   done: tokens.colors.green,
   failed: tokens.colors.red,
-  queued: tokens.colors.textQuaternary,
+  queued: tokens.colors.orange,
   cancelled: tokens.colors.textQuaternary,
 }
 
@@ -98,6 +77,23 @@ interface DayGroup {
   hasRunning: boolean
 }
 
+// Reverse sub-groups that share the same `created` timestamp within an already-sorted list.
+function reverseTimestampBatches(tasks: Task[]): Task[] {
+  const result: Task[] = []
+  let i = 0
+  while (i < tasks.length) {
+    let j = i + 1
+    while (j < tasks.length && tasks[j].created === tasks[i].created) j++
+    if (j - i > 1) {
+      for (let k = j - 1; k >= i; k--) result.push(tasks[k])
+    } else {
+      result.push(tasks[i])
+    }
+    i = j
+  }
+  return result
+}
+
 function groupTasksByDay(tasks: Task[]): DayGroup[] {
   const map = new Map<string, Task[]>()
   for (const t of tasks) {
@@ -114,14 +110,13 @@ function groupTasksByDay(tasks: Task[]): DayGroup[] {
     groups.push({
       key,
       label: getDayLabel(key),
-      tasks: dayTasks,
+      tasks: reverseTimestampBatches(dayTasks),
       doneCount,
       failedCount,
       runningCount,
       hasRunning: runningCount > 0,
     })
   }
-  // Sort newest day first
   groups.sort((a, b) => b.key.localeCompare(a.key))
   return groups
 }
@@ -133,85 +128,180 @@ function getTodayKey(): string {
 
 type FilterTab = 'all' | 'running' | 'done' | 'failed'
 
-// --- Animated Counter ---
+// --- Task Row (iOS Mail style) ---
 
-function AnimatedNumber({ value, prefix = '', decimals = 0 }: { value: number; prefix?: string; decimals?: number }) {
-  const [display, setDisplay] = useState(0)
-  const prev = useRef(0)
-
-  useEffect(() => {
-    const start = prev.current
-    const diff = value - start
-    if (diff === 0) return
-    const duration = 250
-    const t0 = performance.now()
-    const step = (now: number) => {
-      const p = Math.min((now - t0) / duration, 1)
-      setDisplay(start + diff * (1 - Math.pow(1 - p, 3)))
-      if (p < 1) requestAnimationFrame(step)
-    }
-    requestAnimationFrame(step)
-    prev.current = value
-  }, [value])
-
-  return <>{prefix}{decimals > 0 ? display.toFixed(decimals) : Math.round(display)}</>
-}
-
-// --- Stagger Variants ---
-
-const listVariants = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.02 } },
-}
-
-const itemVariants = {
-  hidden: { opacity: 0, x: -6 },
-  show: { opacity: 1, x: 0 },
-}
-
-// --- Compact Stat Card ---
-
-function CompactStatCard({
-  label,
-  value,
-  history,
+function TaskRow({
+  task,
+  isActive,
+  editMode,
+  isSelected,
+  onSelect,
+  onToggleSelect,
+  onDelete,
+  onKill,
 }: {
-  label: string
-  value: number
-  history: { value: number }[]
+  task: Task
+  isActive: boolean
+  editMode: boolean
+  isSelected: boolean
+  onSelect: (id: string) => void
+  onToggleSelect: (id: string) => void
+  onDelete: (id: string) => void
+  onKill: (id: string) => void
 }) {
-  const colors = getStatColor(value)
+  const dotColor = statusDotColor[task.status] || statusDotColor.queued
+  const isRunning = task.status === 'running'
+  const isQueued = task.status === 'queued'
+  const isKillable = isRunning || isQueued
+  const duration = formatDuration(task)
+  const modelNames = task.model
+    ? task.model.split(',').map(m => m.trim()).filter(Boolean).map(m => m.split('/').pop() || m)
+    : []
+
+  const handleClick = () => {
+    if (editMode) {
+      onToggleSelect(task.id)
+    } else {
+      onSelect(task.id)
+    }
+  }
 
   return (
-    <Card className="p-3 gap-0" style={{ height: 72 }}>
-      <div className="flex items-center justify-between">
-        <span style={tokens.typography.label} className="text-muted-foreground">{label}</span>
-        <span className="tabular-nums text-[15px] font-medium" style={{ color: colors.stroke }}>
-          <AnimatedNumber value={value} />%
+    <motion.div
+      onClick={handleClick}
+      whileTap={{ scale: 0.99 }}
+      className="group relative overflow-hidden"
+    >
+      <div
+        className="flex items-center gap-3 px-4 py-2 cursor-pointer transition-colors duration-150"
+        style={{
+          height: 72,
+          borderLeft: `3px solid ${isActive && !editMode ? tokens.colors.accent : 'transparent'}`,
+          background: isActive && !editMode
+            ? tokens.colors.accentSubtle
+            : isSelected && editMode
+              ? tokens.colors.accentFaint
+              : undefined,
+        }}
+      >
+        {/* Edit mode checkbox */}
+        {editMode && (
+          <div className="shrink-0 flex items-center justify-center" style={{ width: 24 }}>
+            {isSelected ? (
+              <CheckCircle2 className="h-5 w-5" style={{ color: tokens.colors.accent }} />
+            ) : (
+              <Circle className="h-5 w-5" style={{ color: tokens.colors.textQuaternary }} />
+            )}
+          </div>
+        )}
+
+        {/* Status dot */}
+        {!editMode && (
+          <div className="shrink-0">
+            {isRunning ? (
+              <motion.div
+                className="rounded-full"
+                style={{ width: 8, height: 8, background: dotColor }}
+                animate={{ opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              />
+            ) : (
+              <div className="rounded-full" style={{ width: 8, height: 8, background: dotColor }} />
+            )}
+          </div>
+        )}
+
+        {/* Content block */}
+        <div className="flex-1 min-w-0">
+          <p
+            className="truncate"
+            style={{ fontSize: 13, fontWeight: 500, lineHeight: '18px', color: tokens.colors.textPrimary }}
+          >
+            {task.title}
+          </p>
+          <p
+            className="truncate"
+            style={{ fontSize: 12, lineHeight: '16px', color: tokens.colors.textTertiary, marginTop: 1 }}
+          >
+            {task.summary || modelNames.map(n => n === 'jm-direct' ? 'manual' : n).join(', ') || task.status}
+          </p>
+        </div>
+
+        {/* Timestamp (right) */}
+        <span className="shrink-0 text-[11px] tabular-nums" style={{ color: tokens.colors.textQuaternary }}>
+          {formatTime(task.created)}
         </span>
       </div>
-      {history.length > 1 && (
-        <div className="mt-auto">
-          <ResponsiveContainer width="100%" height={28}>
-            <AreaChart data={history}>
-              <Area
-                type="monotone"
-                dataKey="value"
-                stroke={colors.stroke}
-                fill={colors.fill}
-                strokeWidth={1.5}
-                dot={false}
-                isAnimationActive={false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-    </Card>
+
+      {/* Indented divider */}
+      <div style={{ marginLeft: 44, height: 1, background: tokens.colors.borderSubtle }} />
+    </motion.div>
   )
 }
 
 // --- Task Detail (Right Panel) ---
+
+function CommandBlock({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(text.length <= 200)
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast.error('Failed to copy')
+    }
+  }
+
+  return (
+    <div className="rounded-md overflow-hidden" style={{ background: tokens.colors.bg, border: '1px solid ' + tokens.colors.borderSubtle, borderRadius: 6 }}>
+      <div className="flex items-center justify-between px-3 py-2" style={{ borderBottom: '1px solid ' + tokens.colors.borderSubtle, background: tokens.colors.surface }}>
+        <span className="text-[11px] uppercase tracking-wider" style={{ color: tokens.colors.textTertiary }}>Command</span>
+        <div className="flex items-center gap-1">
+          {text.length > 200 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2"
+              style={{ color: tokens.colors.textTertiary }}
+              onClick={() => setExpanded(!expanded)}
+            >
+              <ChevronsUpDown className="h-3.5 w-3.5" />
+              <span className="ml-1 text-[11px]">{expanded ? 'Collapse' : 'Expand'}</span>
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2"
+            style={{ color: tokens.colors.textTertiary }}
+            onClick={handleCopy}
+          >
+            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+            <span className="ml-1 text-[11px]">{copied ? 'Copied' : 'Copy'}</span>
+          </Button>
+        </div>
+      </div>
+      <div style={{ maxHeight: expanded ? 200 : 48, overflow: expanded ? 'auto' : 'hidden', position: 'relative' }}>
+        <pre
+          className="whitespace-pre-wrap break-words"
+          style={{ ...tokens.typography.mono, fontSize: 12, color: tokens.colors.textSecondary, padding: 12 }}
+        >
+          {text}
+        </pre>
+        {!expanded && (
+          <div
+            className="absolute inset-x-0 bottom-0 h-8 cursor-pointer"
+            style={{ background: `linear-gradient(transparent, ${tokens.colors.bg})` }}
+            onClick={() => setExpanded(true)}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
 
 function TaskDetail({
   task,
@@ -220,6 +310,7 @@ function TaskDetail({
   logNotFound,
   onKill,
   onDelete,
+  onBack,
 }: {
   task: Task
   logContent: string | null
@@ -227,30 +318,63 @@ function TaskDetail({
   logNotFound: boolean
   onKill: (id: string) => void
   onDelete: (id: string) => void
+  onBack?: () => void
 }) {
   const isRunning = task.status === 'running'
+  const isKillable = isRunning || task.status === 'queued'
   const duration = formatDuration(task)
   const costVal = parseFloat(task.cost || '0')
   const modelNames = task.model
     ? task.model.split(',').map(m => m.trim()).filter(Boolean).map(m => m.split('/').pop() || m)
     : []
+  const fullPrompt = task.prompt || task.title
+
+  const handleCopyLog = async () => {
+    if (!logContent) return
+    try {
+      await navigator.clipboard.writeText(logContent)
+      toast.success('Log copied')
+    } catch {
+      toast.error('Failed to copy')
+    }
+  }
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="shrink-0 px-6 py-5" style={{ borderBottom: '1px solid ' + tokens.colors.borderSubtle }}>
-        <h2 className="leading-tight mb-2" style={{ ...tokens.typography.title, color: tokens.colors.textPrimary }}>
-          {task.title}
-        </h2>
+      {/* 1. Toolbar */}
+      <PanelToolbar
+        title={task.title}
+        onBack={onBack}
+        actions={
+          <>
+            {isKillable && (
+              <ToolbarAction icon={XCircle} label="Kill" destructive onClick={() => onKill(task.id)} />
+            )}
+            {logContent && (
+              <ToolbarAction icon={Copy} label="Copy log" onClick={handleCopyLog} />
+            )}
+            <ToolbarAction icon={Trash2} label="Delete" destructive onClick={() => onDelete(task.id)} />
+          </>
+        }
+      />
+
+      {/* 2. Status row + 3. Tags */}
+      <div className="shrink-0 px-6 py-4" style={{ borderBottom: '1px solid ' + tokens.colors.borderSubtle }}>
         <div className="flex items-center gap-2 flex-wrap">
           {isRunning && (
-            <Badge variant="default" className="bg-info/10 text-info border-info/20 text-[11px]">running</Badge>
+            <Badge variant="default" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[11px]">running</Badge>
           )}
           {task.status === 'done' && (
             <Badge variant="default" className="bg-success/10 text-success border-success/20 text-[11px]">done</Badge>
           )}
-          {(task.status === 'failed' || task.status === 'cancelled') && (
-            <Badge variant="default" className="bg-destructive/10 text-destructive border-destructive/20 text-[11px]">{task.status}</Badge>
+          {task.status === 'queued' && (
+            <Badge variant="default" className="bg-orange-500/10 text-orange-400 border-orange-500/20 text-[11px]">queued</Badge>
+          )}
+          {task.status === 'failed' && (
+            <Badge variant="default" className="bg-destructive/10 text-destructive border-destructive/20 text-[11px]">failed</Badge>
+          )}
+          {task.status === 'cancelled' && (
+            <Badge variant="default" className="text-[11px]" style={{ background: 'rgba(255,255,255,0.06)', color: tokens.colors.textTertiary, borderColor: 'rgba(255,255,255,0.08)' }}>cancelled</Badge>
           )}
           <span className="text-[11px] tabular-nums" style={{ color: tokens.colors.textTertiary }}>
             {formatTime(task.created)}
@@ -273,43 +397,26 @@ function TaskDetail({
         )}
       </div>
 
-      {/* Log output */}
-      <div className="flex-1 overflow-y-auto px-6 py-5">
+      {/* Scrollable content area: 4. Command + 5. Output + 6. Exit code */}
+      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+        {/* 4. Command block */}
+        <CommandBlock text={fullPrompt} />
+
+        {/* 5. Output block */}
         <LogViewer
           content={logContent}
           loading={logLoading}
           notFound={logNotFound}
           autoScroll={isRunning}
-          maxHeight="calc(100vh - 280px)"
+          maxHeight="calc(100vh - 440px)"
         />
+
+        {/* 6. Exit code / result */}
         {task.result && (
-          <p className="text-[11px] mt-3 truncate" style={{ color: tokens.colors.textTertiary }}>
+          <p className="text-[11px] truncate" style={{ color: tokens.colors.textTertiary }}>
             {task.result}
           </p>
         )}
-      </div>
-
-      {/* Action bar */}
-      <div className="shrink-0 px-6 py-3 flex items-center gap-2" style={{ borderTop: '1px solid ' + tokens.colors.borderSubtle }}>
-        {isRunning && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
-            onClick={() => onKill(task.id)}
-          >
-            <X className="h-3.5 w-3.5 mr-1" /> Kill
-          </Button>
-        )}
-        <div className="flex-1" />
-        <Button
-          variant="ghost"
-          size="sm"
-          className="hover:text-rose-400"
-          onClick={() => onDelete(task.id)}
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
       </div>
     </div>
   )
@@ -324,25 +431,43 @@ export default function OpsPage() {
   const [filter, setFilter] = useState<FilterTab>('all')
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
 
-  // Stat history (rolling 20 points)
-  const [cpuHistory, setCpuHistory] = useState<{ value: number }[]>([])
-  const [memHistory, setMemHistory] = useState<{ value: number }[]>([])
-
-  // Git & version
-  const [gitStatus, setGitStatus] = useState<{ changedFiles: number; clean: boolean } | null>(null)
-  const [commitState, setCommitState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  // Version
   const [oclawVersion, setOclawVersion] = useState<{ current: string; latest: string; upToDate: boolean } | null>(null)
-  const [oclawUpdateState, setOclawUpdateState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
 
   // Quick task
   const [quickTaskText, setQuickTaskText] = useState('')
-  const [batchMode, setBatchMode] = useState(false)
   const [quickTaskState, setQuickTaskState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const lastSubmitRef = useRef<{ text: string; time: number } | null>(null)
+  const textareaRef = useRef<HTMLInputElement>(null)
+  const [inputFocused, setInputFocused] = useState(false)
 
-  // Cleanup
-  const [cleanupState, setCleanupState] = useState<'idle' | 'loading'>('idle')
-  const [cleanupCount, setCleanupCount] = useState<number | null>(null)
+  // Smart task
+  const [smartCommand, setSmartCommand] = useState<string | null>(null)
+  const [enhancing, setEnhancing] = useState(false)
+  const smartTextareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Cycling placeholder
+  const placeholderExamples = useMemo(() => [
+    'fix the spacing on home page...',
+    'add dark mode toggle to settings...',
+    'optimize the knowledge page loading...',
+    'update the profile page layout...',
+    'add a search bar to the files page...',
+  ], [])
+  const [placeholderIdx, setPlaceholderIdx] = useState(0)
+  const [placeholderVisible, setPlaceholderVisible] = useState(true)
+
+  useEffect(() => {
+    if (inputFocused || quickTaskText) return
+    const interval = setInterval(() => {
+      setPlaceholderVisible(false)
+      setTimeout(() => {
+        setPlaceholderIdx(prev => (prev + 1) % placeholderExamples.length)
+        setPlaceholderVisible(true)
+      }, 300)
+    }, 4000)
+    return () => clearInterval(interval)
+  }, [inputFocused, quickTaskText, placeholderExamples.length])
 
   // Confirm dialogs
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
@@ -360,12 +485,19 @@ export default function OpsPage() {
   // Day group expand/collapse
   const [expandedDays, setExpandedDays] = useState<Set<string>>(() => new Set([getTodayKey()]))
 
+  // Edit mode (multi-select)
+  const [editMode, setEditMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  // Bulk action states
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [bulkKilling, setBulkKilling] = useState(false)
+
   const loadData = () => {
-    Promise.all([opsApi.getTasks(), opsApi.getSystemInfo(), opsApi.getGitStatus()])
-      .then(([tasksData, sysData, gitData]) => {
+    Promise.all([opsApi.getTasks(), opsApi.getSystemInfo()])
+      .then(([tasksData, sysData]) => {
         setTasks(tasksData)
         setSystemInfo(sysData)
-        setGitStatus(gitData)
       })
       .catch((error) => console.error('Failed to load data:', error))
       .finally(() => setLoading(false))
@@ -380,13 +512,6 @@ export default function OpsPage() {
     const interval = setInterval(loadData, 5000)
     return () => clearInterval(interval)
   }, [])
-
-  // Update stat history when systemInfo changes
-  useEffect(() => {
-    if (!systemInfo) return
-    setCpuHistory(prev => [...prev.slice(-19), { value: systemInfo.cpu }])
-    setMemHistory(prev => [...prev.slice(-19), { value: systemInfo.mem }])
-  }, [systemInfo])
 
   // Log fetching for selected task
   const fetchLog = async (taskId: string) => {
@@ -425,6 +550,13 @@ export default function OpsPage() {
     }
   }, [selectedTaskId, tasks])
 
+  // Pagination
+  const TASKS_PAGE_SIZE = 50
+  const [visibleCount, setVisibleCount] = useState(TASKS_PAGE_SIZE)
+
+  // Reset visible count when filter changes
+  useEffect(() => { setVisibleCount(TASKS_PAGE_SIZE) }, [filter])
+
   // Filtered tasks
   const filteredTasks = useMemo(() => {
     let result = [...tasks]
@@ -434,8 +566,12 @@ export default function OpsPage() {
     return result.sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime())
   }, [tasks, filter])
 
-  // Grouped by day
-  const dayGroups = useMemo(() => groupTasksByDay(filteredTasks), [filteredTasks])
+  // Paginated visible tasks
+  const visibleTasks = useMemo(() => filteredTasks.slice(0, visibleCount), [filteredTasks, visibleCount])
+  const hasMoreTasks = filteredTasks.length > visibleCount
+
+  // Grouped by day (only visible tasks)
+  const dayGroups = useMemo(() => groupTasksByDay(visibleTasks), [visibleTasks])
 
   // Counts
   const doneCount = tasks.filter(t => t.status === 'done').length
@@ -446,6 +582,37 @@ export default function OpsPage() {
     () => tasks.find(t => t.id === selectedTaskId) || null,
     [tasks, selectedTaskId]
   )
+
+  // Edit mode helpers
+  const toggleEditMode = useCallback(() => {
+    setEditMode(prev => {
+      if (prev) {
+        setSelectedIds(new Set())
+      }
+      return !prev
+    })
+  }, [])
+
+  const toggleSelectTask = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+
+  const toggleSelectAll = useCallback(() => {
+    const allFilteredIds = filteredTasks.map(t => t.id)
+    setSelectedIds(prev => {
+      if (prev.size === allFilteredIds.length) return new Set()
+      return new Set(allFilteredIds)
+    })
+  }, [filteredTasks])
+
+  const selectedHasKillable = useMemo(() => {
+    return tasks.some(t => selectedIds.has(t.id) && (t.status === 'running' || t.status === 'queued'))
+  }, [tasks, selectedIds])
 
   // --- Handlers ---
 
@@ -473,47 +640,45 @@ export default function OpsPage() {
     setKillConfirmId(null)
   }
 
-  const handleGitCommit = async () => {
-    setCommitState('loading')
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    setBulkDeleting(true)
     try {
-      const result = await opsApi.gitCommit()
-      setCommitState(result.ok ? 'success' : 'error')
-      if (result.ok) loadData()
+      const result = await opsApi.bulkDeleteTasks(Array.from(selectedIds))
+      if (result.ok) {
+        toast.success(`Deleted ${result.deleted} task${result.deleted !== 1 ? 's' : ''}`)
+        setTasks(result.tasks)
+        if (selectedTaskId && selectedIds.has(selectedTaskId)) setSelectedTaskId(null)
+        setSelectedIds(new Set())
+      } else {
+        toast.error('Failed to delete tasks')
+      }
     } catch {
-      setCommitState('error')
+      toast.error('Failed to delete tasks')
     }
-    setTimeout(() => setCommitState('idle'), 3000)
+    setBulkDeleting(false)
   }
 
-  const handleOclawUpdate = async () => {
-    setOclawUpdateState('loading')
-    try {
-      const result = await opsApi.updateOpenClaw()
-      setOclawUpdateState(result.ok ? 'success' : 'error')
-      if (result.ok) opsApi.getOpenClawVersion().then(setOclawVersion)
-    } catch {
-      setOclawUpdateState('error')
+  const handleBulkKill = async () => {
+    const killableIds = tasks.filter(t => selectedIds.has(t.id) && (t.status === 'running' || t.status === 'queued')).map(t => t.id)
+    if (killableIds.length === 0) return
+    setBulkKilling(true)
+    let killed = 0
+    for (const id of killableIds) {
+      try {
+        const result = await opsApi.killTask(id)
+        if (result.ok) killed++
+      } catch { /* continue */ }
     }
-    setTimeout(() => setOclawUpdateState('idle'), 3000)
+    if (killed > 0) {
+      toast.success(`Killed ${killed} task${killed !== 1 ? 's' : ''}`)
+      loadData()
+    }
+    setBulkKilling(false)
   }
 
-  const handleTaskCleanup = async () => {
-    setCleanupState('loading')
-    try {
-      const result = await opsApi.cleanupTasks()
-      setCleanupCount(result.cleaned)
-      if (result.ok) loadData()
-    } catch {
-      setCleanupCount(0)
-    }
-    setCleanupState('idle')
-    setTimeout(() => setCleanupCount(null), 3000)
-  }
 
-  const handleQuickTask = async () => {
-    const text = quickTaskText.trim()
-    if (!text || quickTaskState === 'loading') return
-
+  const queueDirectly = async (text: string) => {
     const now = Date.now()
     if (lastSubmitRef.current && lastSubmitRef.current.text === text && now - lastSubmitRef.current.time < 10000) {
       toast.error('Duplicate — same task was just queued')
@@ -528,8 +693,9 @@ export default function OpsPage() {
     }, 3000)
 
     try {
-      if (batchMode) {
-        const prompts = text.split(/\n---\n/).map(s => s.trim()).filter(Boolean)
+      const isBatch = text.includes('\n---\n') || text.includes(' --- ')
+      if (isBatch) {
+        const prompts = text.split(/\n---\n| --- /).map(s => s.trim()).filter(Boolean)
         const result = await opsApi.batchTasks(prompts)
         if (result.ok) {
           toast.success(`${result.count} task${result.count !== 1 ? 's' : ''} queued`)
@@ -558,12 +724,56 @@ export default function OpsPage() {
     setTimeout(() => setQuickTaskState('idle'), 2000)
   }
 
-  const batchCount = batchMode ? quickTaskText.trim().split(/\n---\n/).map(s => s.trim()).filter(Boolean).length : 0
+  const handleQuickTask = async () => {
+    const text = quickTaskText.trim()
+    if (!text || quickTaskState === 'loading' || enhancing) return
+
+    // If starts with 'rr ' — skip smart rewrite, queue directly
+    if (text.toLowerCase().startsWith('rr ')) {
+      await queueDirectly(text)
+      return
+    }
+
+    // Natural language — call smart endpoint
+    setEnhancing(true)
+    try {
+      const result = await opsApi.smartTask(text)
+      if (result.ok && result.command) {
+        setSmartCommand(result.command)
+        requestAnimationFrame(() => smartTextareaRef.current?.focus())
+      } else {
+        toast.error(result.error || 'Failed to generate command')
+      }
+    } catch {
+      toast.error('Failed to generate command')
+    }
+    setEnhancing(false)
+  }
+
+  const handleQueueSmart = async () => {
+    if (!smartCommand) return
+    const cmd = smartCommand
+    setSmartCommand(null)
+    await queueDirectly(cmd)
+  }
+
+  const handleEditSmart = () => {
+    smartTextareaRef.current?.focus()
+    smartTextareaRef.current?.select()
+  }
 
   const selectTask = (taskId: string) => {
     setSelectedTaskId(taskId)
-    // Open sheet on mobile
-    setMobileSheetOpen(true)
+    if (window.innerWidth < 768) {
+      setMobileSheetOpen(true)
+    }
+  }
+
+  // --- Uptime formatter ---
+  const formatUptime = (seconds: number) => {
+    const d = Math.floor(seconds / 86400)
+    const h = Math.floor((seconds % 86400) / 3600)
+    return { short: d > 0 ? `${d}d` : `${h}h`, long: `${d}d ${h}h` }
   }
 
   // --- Loading State ---
@@ -571,133 +781,263 @@ export default function OpsPage() {
   if (loading) {
     return (
       <div
-        className="flex"
-        style={{ height: 'calc(100vh - 48px)', background: tokens.colors.bg }}
+        className="h-[calc(100vh-48px)] md:h-[calc(100vh-64px)]"
+        style={{ background: tokens.colors.bg }}
       >
-        <div className="w-[40%] max-w-[480px] shrink-0 p-4 space-y-3" style={{ borderRight: '1px solid ' + tokens.colors.borderSubtle }}>
-          <div className="grid grid-cols-2 gap-3">
-            <Skeleton className="h-[72px] rounded-xl" />
-            <Skeleton className="h-[72px] rounded-xl" />
+        <div className="h-full flex flex-col max-w-7xl mx-auto w-full md:px-6">
+          <div className="flex-1 flex min-h-0">
+            <div className="w-full md:w-[35%] md:max-w-[420px] shrink-0 flex flex-col" style={{ background: tokens.colors.surface, borderRight: '1px solid ' + tokens.colors.borderSubtle }}>
+              {/* Input bar placeholder */}
+              <div style={{ height: 44, borderBottom: '1px solid ' + tokens.colors.borderSubtle }} />
+              {/* Filter bar placeholder */}
+              <div style={{ height: 36 }} />
+              {/* Skeleton rows */}
+              {[...Array(5)].map((_, i) => (
+                <div key={i}>
+                  <div className="flex items-center gap-3 px-4 py-2" style={{ height: 72 }}>
+                    <div className="shrink-0 rounded-full animate-pulse" style={{ width: 12, height: 12, background: 'rgba(255,255,255,0.1)' }} />
+                    <div className="flex-1 min-w-0 flex flex-col gap-2">
+                      <div className="h-[12px] rounded animate-pulse" style={{ width: '60%', background: 'rgba(255,255,255,0.1)' }} />
+                      <div className="h-[10px] rounded animate-pulse" style={{ width: '30%', background: 'rgba(255,255,255,0.1)' }} />
+                    </div>
+                    <div className="shrink-0 h-[10px] rounded animate-pulse" style={{ width: 36, background: 'rgba(255,255,255,0.1)' }} />
+                  </div>
+                  <div style={{ marginLeft: 44, height: 1, background: tokens.colors.borderSubtle }} />
+                </div>
+              ))}
+            </div>
+            <div className="hidden md:flex flex-1" />
           </div>
-          <Skeleton className="h-10 w-full rounded-lg" />
-          <Skeleton className="h-8 w-64 rounded-lg" />
-          {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-[52px] w-full rounded-lg" />)}
-        </div>
-        <div className="flex-1 p-6 space-y-4">
-          <Skeleton className="h-5 w-48 rounded" />
-          <Skeleton className="h-4 w-64 rounded" />
-          <Skeleton className="h-[300px] w-full rounded-md" />
         </div>
       </div>
     )
   }
 
-  // --- Left Panel ---
+  // --- Task List Panel (left side of two-panel area) ---
 
-  const leftPanel = (
+  const taskListPanel = (
     <>
-      {/* Stat widgets — compact row */}
-      {systemInfo && (
-        <div className="shrink-0 px-4 pt-3 pb-2">
-          <div className="grid grid-cols-2 gap-3">
-            <CompactStatCard label="CPU" value={systemInfo.cpu} history={cpuHistory} />
-            <CompactStatCard label="Memory" value={systemInfo.mem} history={memHistory} />
+      {/* Task input */}
+      <div className="shrink-0 relative" style={{ borderBottom: '1px solid ' + tokens.colors.borderSubtle }}>
+        <input
+          type="text"
+          ref={textareaRef}
+          value={quickTaskText}
+          onChange={e => setQuickTaskText(e.target.value)}
+          onFocus={() => setInputFocused(true)}
+          onBlur={() => setInputFocused(false)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              handleQuickTask()
+            }
+          }}
+          placeholder=" "
+          className="w-full text-[13px] font-mono px-4 peer"
+          style={{
+            height: 44,
+            paddingRight: 44,
+            background: 'transparent',
+            color: tokens.colors.textPrimary,
+            border: 'none',
+            outline: 'none',
+          }}
+        />
+        {!quickTaskText && !inputFocused && (
+          <div
+            className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-[13px] font-mono transition-opacity duration-300"
+            style={{
+              color: tokens.colors.textQuaternary,
+              opacity: placeholderVisible ? 1 : 0,
+            }}
+          >
+            {placeholderExamples[placeholderIdx]}
           </div>
-        </div>
-      )}
-
-      {/* Task input — sticky */}
-      <div className="shrink-0 px-4 py-2">
-        <div className="space-y-2">
-          <div className="flex gap-2">
-            <Textarea
-              value={quickTaskText}
-              onChange={e => setQuickTaskText(e.target.value)}
-              onKeyDown={e => {
-                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                  e.preventDefault()
-                  handleQuickTask()
-                }
-              }}
-              rows={batchMode ? 4 : 1}
-              placeholder="Enter a task..."
-              className="text-[13px] font-mono resize-none flex-1"
-            />
-            <Button
-              onClick={handleQuickTask}
-              disabled={!quickTaskText.trim() || quickTaskState === 'loading'}
-              className="shrink-0 self-end"
-              size="sm"
-            >
-              {quickTaskState === 'loading' ? <Loader2 className="h-4 w-4 animate-spin" /> :
-               quickTaskState === 'success' ? <Check className="h-4 w-4" /> :
-               <Send className="h-4 w-4" />}
-              {batchMode && batchCount > 1 ? `Queue ${batchCount}` : 'Queue'}
-            </Button>
+        )}
+        {!quickTaskText && inputFocused && (
+          <div
+            className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-[13px] font-mono"
+            style={{ color: tokens.colors.textQuaternary }}
+          >
+            Enter a task or rr command...
           </div>
-          <div className="flex items-center gap-2">
-            <Switch
-              size="sm"
-              checked={batchMode}
-              onCheckedChange={setBatchMode}
-              id="batch-mode"
-            />
-            <Label htmlFor="batch-mode" className="text-[10px] text-muted-foreground cursor-pointer" style={batchMode ? { color: tokens.colors.accent } : undefined}>Batch</Label>
-            {batchMode && <span className="text-[10px] text-muted-foreground">Separate with ---</span>}
-          </div>
-        </div>
-      </div>
-
-      {/* Filter tabs — sticky below input */}
-      <div className="shrink-0 px-4 pb-2 flex items-center justify-between">
-        <div className="flex flex-wrap gap-1.5">
-          {([
-            { key: 'all' as const, label: 'All', count: tasks.length },
-            { key: 'running' as const, label: 'Running', count: runningCount },
-            { key: 'done' as const, label: 'Done', count: doneCount },
-            { key: 'failed' as const, label: 'Failed', count: failedCount },
-          ]).map(f => (
-            <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-full transition-all duration-200"
-              style={filter === f.key
-                ? { ...tokens.typography.caption, background: tokens.colors.border, color: tokens.colors.textPrimary }
-                : { ...tokens.typography.caption, color: tokens.colors.textQuaternary }
-              }
-            >
-              {f.label}
-              {f.count > 0 && (
-                <Badge variant="secondary" className="text-[9px] px-1 py-0 h-[16px] min-w-[16px] justify-center">
-                  {f.count}
-                </Badge>
-              )}
-            </button>
-          ))}
-        </div>
-
+        )}
         <button
-          onClick={handleTaskCleanup}
-          disabled={cleanupState === 'loading'}
-          title="Clean up stale tasks"
-          className="relative text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+          onClick={handleQuickTask}
+          disabled={!quickTaskText.trim() || quickTaskState === 'loading' || enhancing}
+          className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-md transition-all duration-150 disabled:opacity-30"
+          style={{
+            width: 28,
+            height: 28,
+            color: quickTaskText.trim() ? tokens.colors.accent : tokens.colors.textQuaternary,
+          }}
         >
-          {cleanupState === 'loading' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-          {cleanupCount !== null && cleanupCount > 0 && (
-            <motion.span
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="absolute -top-1 -right-1 text-[8px] rounded-full h-3 min-w-[12px] flex items-center justify-center px-0.5 text-white"
-              style={{ background: tokens.colors.accent }}
-            >
-              {cleanupCount}
-            </motion.span>
-          )}
+          {enhancing ? <Loader2 className="h-4 w-4 animate-spin" /> :
+           quickTaskState === 'loading' ? <Loader2 className="h-4 w-4 animate-spin" /> :
+           quickTaskState === 'success' ? <Check className="h-4 w-4" /> :
+           quickTaskText.trim() && !quickTaskText.trim().toLowerCase().startsWith('rr ') ? <Sparkles className="h-4 w-4" /> :
+           <Send className="h-4 w-4" />}
         </button>
       </div>
 
+      {/* Smart command confirmation */}
+      <AnimatePresence>
+        {smartCommand !== null && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.15 }}
+            className="overflow-hidden"
+          >
+            <div
+              className="mx-3 mt-2 mb-2 rounded-lg overflow-hidden"
+              style={{
+                background: tokens.colors.surface,
+                border: `1px solid ${tokens.colors.accent}40`,
+              }}
+            >
+              <div
+                className="flex items-center gap-1.5 px-3 py-1.5"
+                style={{ borderBottom: `1px solid ${tokens.colors.borderSubtle}`, background: `${tokens.colors.accent}08` }}
+              >
+                <Sparkles className="h-3 w-3" style={{ color: tokens.colors.accent }} />
+                <span style={{ ...tokens.typography.caption, color: tokens.colors.accent }}>Generated command</span>
+              </div>
+              <textarea
+                ref={smartTextareaRef}
+                value={smartCommand}
+                onChange={e => setSmartCommand(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                    e.preventDefault()
+                    handleQueueSmart()
+                  }
+                }}
+                className="w-full resize-none"
+                style={{
+                  ...tokens.typography.mono,
+                  fontSize: 12,
+                  color: tokens.colors.textSecondary,
+                  padding: '10px 12px',
+                  minHeight: 60,
+                  maxHeight: 160,
+                  background: 'transparent',
+                  border: 'none',
+                  outline: 'none',
+                }}
+                rows={3}
+              />
+              <div
+                className="flex items-center gap-2 px-3 py-2"
+                style={{ borderTop: `1px solid ${tokens.colors.borderSubtle}` }}
+              >
+                <Button
+                  size="sm"
+                  className="h-7 px-3 text-[12px]"
+                  style={{ background: tokens.colors.accent, color: '#fff' }}
+                  onClick={handleQueueSmart}
+                >
+                  <Send className="h-3 w-3 mr-1.5" />
+                  Queue
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-3 text-[12px]"
+                  style={{ color: tokens.colors.textTertiary }}
+                  onClick={handleEditSmart}
+                >
+                  <Pencil className="h-3 w-3 mr-1.5" />
+                  Edit
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-[12px]"
+                  style={{ color: tokens.colors.textQuaternary }}
+                  onClick={() => setSmartCommand(null)}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+                <span className="ml-auto text-[10px]" style={{ color: tokens.colors.textQuaternary }}>
+                  {'\u2318'}+Enter to queue
+                </span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Filter tabs + status pills */}
+      <div className="shrink-0 px-4 flex items-center gap-4" style={{ height: 36 }}>
+        {([
+          { key: 'all' as const, label: 'All', count: tasks.length },
+          { key: 'running' as const, label: 'Running', count: runningCount },
+          { key: 'done' as const, label: 'Done', count: doneCount },
+          { key: 'failed' as const, label: 'Failed', count: failedCount },
+        ]).map(f => (
+          <button
+            key={f.key}
+            onClick={() => setFilter(f.key)}
+            className="whitespace-nowrap transition-colors duration-150"
+            style={{
+              fontSize: 13,
+              fontWeight: 400,
+              color: filter === f.key ? tokens.colors.textPrimary : tokens.colors.textTertiary,
+            }}
+          >
+            {f.label}{f.count > 0 ? ` ${f.count}` : ''}
+          </button>
+        ))}
+        <button
+          onClick={toggleEditMode}
+          className="whitespace-nowrap transition-colors duration-150"
+          style={{
+            fontSize: 13,
+            fontWeight: 400,
+            color: editMode ? tokens.colors.accent : tokens.colors.textTertiary,
+          }}
+        >
+          {editMode ? 'Done' : 'Edit'}
+        </button>
+        {systemInfo && (
+          <span className="ml-auto shrink-0 flex items-center gap-3" style={{ fontSize: 11, color: tokens.colors.textQuaternary }}>
+            <span>CPU {Math.round(systemInfo.cpu)}%</span>
+            <span>MEM {Math.round(systemInfo.mem)}%</span>
+            <span>Up {formatUptime(systemInfo.uptime).short}</span>
+            {oclawVersion && <span>v{oclawVersion.current}</span>}
+          </span>
+        )}
+      </div>
+
+      {/* Select All bar (edit mode) */}
+      {editMode && filteredTasks.length > 0 && (
+        <div
+          className="shrink-0 px-4 py-1.5 flex items-center justify-between"
+          style={{ borderBottom: '1px solid ' + tokens.colors.borderSubtle }}
+        >
+          <button
+            onClick={toggleSelectAll}
+            className="flex items-center gap-1.5 transition-colors"
+            style={{ ...tokens.typography.caption, color: tokens.colors.accent }}
+          >
+            {selectedIds.size === filteredTasks.length ? (
+              <><CheckCircle2 className="h-3.5 w-3.5" /> Deselect All</>
+            ) : (
+              <><Circle className="h-3.5 w-3.5" /> Select All</>
+            )}
+          </button>
+          {selectedIds.size > 0 && (
+            <span style={{ ...tokens.typography.caption, color: tokens.colors.textTertiary }}>
+              {selectedIds.size} selected
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Task list — scrollable, grouped by day */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" style={editMode && selectedIds.size > 0 ? { paddingBottom: 64 } : undefined}>
         {filteredTasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-5">
             <TerminalIcon size={32} className="mb-3" style={{ color: tokens.colors.textQuaternary, opacity: 0.4 }} isAnimated={false} />
@@ -707,7 +1047,7 @@ export default function OpsPage() {
           </div>
         ) : (
           <div key={filter}>
-            {dayGroups.map(group => {
+            {dayGroups.map((group, groupIdx) => {
               const isExpanded = expandedDays.has(group.key) || group.hasRunning
 
               const toggleDay = () => {
@@ -737,9 +1077,9 @@ export default function OpsPage() {
                   {/* Day header — sticky */}
                   <div
                     onClick={toggleDay}
-                    className="sticky top-0 z-10 flex items-center gap-2 px-3 py-2 cursor-pointer select-none"
+                    className="sticky top-0 z-10 flex items-center gap-2 px-4 py-2 cursor-pointer select-none"
                     style={{
-                      background: tokens.colors.bg,
+                      background: tokens.colors.surface,
                       borderBottom: '1px solid ' + tokens.colors.borderSubtle,
                     }}
                   >
@@ -780,235 +1120,125 @@ export default function OpsPage() {
                         transition={{ duration: 0.15 }}
                         style={{ overflow: 'hidden' }}
                       >
-                        {group.tasks.map(task => {
-                          const isActive = selectedTaskId === task.id
-                          const dotColor = statusDotColor[task.status] || statusDotColor.queued
-                          const isRunning = task.status === 'running'
-                          const duration = formatDuration(task)
-                          const modelNames = task.model
-                            ? task.model.split(',').map(m => m.trim()).filter(Boolean).map(m => m.split('/').pop() || m)
-                            : []
-
-                          return (
-                            <div
-                              key={task.id}
-                              onClick={() => selectTask(task.id)}
-                              className={`flex items-start gap-3 px-4 cursor-pointer transition-colors hover:bg-[#1C1C1E] ${
-                                isActive ? 'border-l-[3px] border-l-[#818CF8]' : 'border-l-[3px] border-l-transparent'
-                              }`}
-                              style={{
-                                borderBottom: '1px solid ' + tokens.colors.borderSubtle,
-                                background: isActive ? tokens.colors.overlay : undefined,
-                                minHeight: 52,
-                                paddingTop: 10,
-                                paddingBottom: 10,
-                              }}
-                            >
-                              {/* Status dot */}
-                              <div className="shrink-0 mt-[7px]">
-                                {isRunning ? (
-                                  <motion.div
-                                    className="rounded-full"
-                                    style={{ width: 8, height: 8, background: dotColor }}
-                                    animate={{ opacity: [0.5, 1, 0.5] }}
-                                    transition={{ duration: 2, repeat: Infinity }}
-                                  />
-                                ) : (
-                                  <div className="rounded-full" style={{ width: 8, height: 8, background: dotColor }} />
-                                )}
-                              </div>
-
-                              {/* Content */}
-                              <div className="flex-1 min-w-0">
-                                <p
-                                  className="truncate"
-                                  style={{ ...tokens.typography.body, color: isActive ? tokens.colors.textPrimary : 'rgba(255,255,255,0.85)' }}
-                                >
-                                  {task.title}
-                                </p>
-                                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                  {modelNames.map(name => (
-                                    <Badge key={name} variant="secondary" className="text-[10px] px-1 py-0">
-                                      {name === 'jm-direct' ? 'manual' : name}
-                                    </Badge>
-                                  ))}
-                                  {isRunning && (
-                                    <Badge variant="default" className="bg-info/10 text-info border-info/20 text-[10px] px-1 py-0">running</Badge>
-                                  )}
-                                  {task.status === 'done' && (
-                                    <Badge variant="default" className="bg-success/10 text-success border-success/20 text-[10px] px-1 py-0">done</Badge>
-                                  )}
-                                  {(task.status === 'failed' || task.status === 'cancelled') && (
-                                    <Badge variant="default" className="bg-destructive/10 text-destructive border-destructive/20 text-[10px] px-1 py-0">{task.status}</Badge>
-                                  )}
-                                  <span className="text-[11px] tabular-nums" style={{ color: tokens.colors.textQuaternary }}>
-                                    {formatTime(task.created)}
-                                  </span>
-                                  {duration && (
-                                    <span className="text-[11px] tabular-nums" style={{ color: tokens.colors.textQuaternary }}>{duration}</span>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Kill button for running tasks */}
-                              {isRunning && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="shrink-0 h-6 px-2 text-red-400 hover:text-red-300 hover:bg-red-400/10 self-center"
-                                  onClick={(e) => { e.stopPropagation(); setKillConfirmId(task.id) }}
-                                >
-                                  <X className="h-3 w-3 mr-0.5" /> Kill
-                                </Button>
-                              )}
-                            </div>
-                          )
-                        })}
+                        {group.tasks.map(task => (
+                          <TaskRow
+                            key={task.id}
+                            task={task}
+                            isActive={selectedTaskId === task.id}
+                            editMode={editMode}
+                            isSelected={selectedIds.has(task.id)}
+                            onSelect={selectTask}
+                            onToggleSelect={toggleSelectTask}
+                            onDelete={(id) => setDeleteConfirmId(id)}
+                            onKill={(id) => setKillConfirmId(id)}
+                          />
+                        ))}
                       </motion.div>
                     )}
                   </AnimatePresence>
                 </div>
               )
             })}
+
+            {/* Load more */}
+            {hasMoreTasks && (
+              <div className="flex justify-center py-4">
+                <button
+                  onClick={() => setVisibleCount(prev => prev + TASKS_PAGE_SIZE)}
+                  className="px-4 py-2 rounded-lg text-[12px] font-medium transition-colors"
+                  style={{
+                    background: tokens.colors.surface,
+                    color: tokens.colors.textTertiary,
+                    border: '1px solid ' + tokens.colors.borderSubtle,
+                  }}
+                >
+                  Load more ({filteredTasks.length - visibleCount} remaining)
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* Footer bar */}
-      <div
-        className="shrink-0 px-4 py-2.5 flex items-center gap-3 flex-wrap"
-        style={{ ...tokens.typography.caption, borderTop: '1px solid ' + tokens.colors.borderSubtle }}
-      >
-        {gitStatus && (
-          <div className="flex items-center gap-1.5">
-            {gitStatus.clean ? (
-              <span className="text-emerald-400">Clean</span>
-            ) : (
-              <>
-                <span className="text-amber-400">{gitStatus.changedFiles} file{gitStatus.changedFiles !== 1 ? 's' : ''}</span>
-                <span className="text-muted-foreground">&middot;</span>
-                <button
-                  onClick={handleGitCommit}
-                  disabled={commitState === 'loading'}
-                  className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-                >
-                  {commitState === 'loading' ? <Loader2 className="h-3 w-3 animate-spin inline" /> :
-                   commitState === 'success' ? <span className="text-emerald-400">Committed</span> :
-                   commitState === 'error' ? <span className="text-rose-400">Failed</span> :
-                   <span>Commit</span>}
-                </button>
-              </>
+      {/* Edit mode bottom toolbar */}
+      <AnimatePresence>
+        {editMode && selectedIds.size > 0 && (
+          <motion.div
+            initial={{ y: 56, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 56, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="shrink-0 flex items-center gap-2 px-4"
+            style={{
+              height: 56,
+              background: tokens.colors.surface,
+              borderTop: '1px solid ' + tokens.colors.borderSubtle,
+              paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+            }}
+          >
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={bulkDeleting}
+              onClick={handleBulkDelete}
+              className="flex-1"
+            >
+              {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Trash2 className="h-3.5 w-3.5 mr-1" />}
+              Delete {selectedIds.size}
+            </Button>
+            {selectedHasKillable && (
+              <Button
+                variant="default"
+                size="sm"
+                disabled={bulkKilling}
+                onClick={handleBulkKill}
+                className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
+              >
+                {bulkKilling ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <XCircle className="h-3.5 w-3.5 mr-1" />}
+                Kill Active
+              </Button>
             )}
-          </div>
+          </motion.div>
         )}
-        {oclawVersion && (
-          <>
-            <span className="text-muted-foreground">&middot;</span>
-            <div className="flex items-center gap-1.5">
-              <span
-                className={`h-1.5 w-1.5 rounded-full${oclawVersion.upToDate ? '' : ' animate-pulse'}`}
-                style={{ background: oclawVersion.upToDate ? tokens.colors.green : tokens.colors.textQuaternary }}
-              />
-              <span className="text-muted-foreground">v{oclawVersion.current.replace(/^v/, '')}</span>
-              {!oclawVersion.upToDate && (
-                <button
-                  onClick={handleOclawUpdate}
-                  disabled={oclawUpdateState === 'loading'}
-                  title={`Update to ${oclawVersion.latest}`}
-                  className="text-amber-400 hover:text-amber-300 transition-colors disabled:opacity-50"
-                >
-                  {oclawUpdateState === 'loading' ? <Loader2 className="h-3 w-3 animate-spin" /> :
-                   oclawUpdateState === 'success' ? <Check className="h-3 w-3 text-emerald-400" /> :
-                   oclawUpdateState === 'error' ? <X className="h-3 w-3 text-rose-400" /> :
-                   <ArrowDownToLine className="h-3 w-3" />}
-                </button>
-              )}
-            </div>
-          </>
-        )}
-        {systemInfo && (
-          <>
-            <span className="text-muted-foreground">&middot;</span>
-            <span className="text-muted-foreground tabular-nums">
-              Up <TextMorph as="span" className="inline-flex text-muted-foreground tabular-nums">
-                {(() => {
-                  const d = Math.floor(systemInfo.uptime / 86400)
-                  const h = Math.floor((systemInfo.uptime % 86400) / 3600)
-                  const m = Math.floor((systemInfo.uptime % 3600) / 60)
-                  return d > 0 ? `${d}d ${h}h` : `${h}h ${m}m`
-                })()}
-              </TextMorph>
-            </span>
-          </>
-        )}
-      </div>
+      </AnimatePresence>
     </>
   )
 
   // --- Right Panel ---
 
-  const rightPanel = (
-    <AnimatePresence mode="wait">
-      {selectedTask ? (
-        <motion.div
-          key={selectedTask.id}
-          initial={{ opacity: 0, x: 12 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -12 }}
-          transition={{ duration: 0.15 }}
-          className="h-full"
-        >
-          <TaskDetail
-            task={selectedTask}
-            logContent={logContent}
-            logLoading={logLoading}
-            logNotFound={logNotFound}
-            onKill={(id) => setKillConfirmId(id)}
-            onDelete={(id) => setDeleteConfirmId(id)}
-          />
-        </motion.div>
-      ) : (
-        <DetailEmptyState
-          icon={<TerminalIcon size={48} isAnimated={false} />}
-          text="Select a task"
-        />
-      )}
-    </AnimatePresence>
-  )
+  const handleMobileClose = () => {
+    setMobileSheetOpen(false)
+    setSelectedTaskId(null)
+  }
+
+  const rightPanel = selectedTask ? (
+    <TaskDetail
+      task={selectedTask}
+      logContent={logContent}
+      logLoading={logLoading}
+      logNotFound={logNotFound}
+      onKill={(id) => setKillConfirmId(id)}
+      onDelete={(id) => setDeleteConfirmId(id)}
+      onBack={handleMobileClose}
+    />
+  ) : null
 
   return (
     <>
-      <TwoPanelLayout left={leftPanel} right={rightPanel} />
-
-      {/* Mobile bottom Sheet */}
-      <Sheet open={mobileSheetOpen && !!selectedTask} onOpenChange={(open) => {
-        setMobileSheetOpen(open)
-        if (!open) setSelectedTaskId(null)
-      }}>
-        <SheetContent
-          side="bottom"
-          showCloseButton
-          className="md:hidden h-[85vh] rounded-t-2xl p-0 flex flex-col"
-          style={{ background: tokens.colors.bg }}
-        >
-          {selectedTask && (
-            <>
-              <SheetHeader className="sr-only">
-                <SheetTitle>{selectedTask.title}</SheetTitle>
-                <SheetDescription>Task detail</SheetDescription>
-              </SheetHeader>
-              <TaskDetail
-                task={selectedTask}
-                logContent={logContent}
-                logLoading={logLoading}
-                logNotFound={logNotFound}
-                onKill={(id) => setKillConfirmId(id)}
-                onDelete={(id) => setDeleteConfirmId(id)}
-              />
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+      <div className="h-[calc(100vh-48px)] md:h-[calc(100vh-64px)]" style={{ background: tokens.colors.bg }}>
+        <div className="h-full flex flex-col max-w-7xl mx-auto w-full md:px-6">
+        {/* Two-panel area — task list left, detail right */}
+        <TwoPanelLayout
+          leftPanel={taskListPanel}
+          rightPanel={rightPanel}
+          emptyState={{ icon: <TerminalIcon size={48} isAnimated={false} />, text: 'Select a task' }}
+          selectedKey={selectedTask?.id}
+          mobileOpen={mobileSheetOpen}
+          onMobileClose={handleMobileClose}
+          mobileTitle={selectedTask?.title || 'Task'}
+        />
+        </div>
+      </div>
 
       {/* Delete Task Confirm */}
       <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null) }}>

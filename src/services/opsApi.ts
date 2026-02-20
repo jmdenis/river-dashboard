@@ -4,6 +4,7 @@ const API_BASE = `${API_BASE_URL}/api`
 export interface Task {
   id: string
   title: string
+  prompt?: string
   service?: string
   model?: string
   status: 'queued' | 'running' | 'done' | 'failed' | 'cancelled'
@@ -14,6 +15,7 @@ export interface Task {
   cost?: string
   tokensIn?: number
   tokensOut?: number
+  summary?: string
 }
 
 export interface SystemInfo {
@@ -87,6 +89,15 @@ export const opsApi = {
     return res.json()
   },
 
+  async bulkDeleteTasks(ids: string[]): Promise<{ ok: boolean; deleted: number; tasks: Task[] }> {
+    const res = await fetch(`${API_BASE}/tasks/bulk-delete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    })
+    return res.json()
+  },
+
   async resetCosts(): Promise<Task[]> {
     const res = await fetch(`${API_BASE}/tasks/reset-costs`, {
       method: 'POST',
@@ -146,6 +157,24 @@ export const opsApi = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompts }),
+    })
+    return res.json()
+  },
+
+  async enhanceTask(prompt: string): Promise<{ ok: boolean; enhanced?: string; error?: string }> {
+    const res = await fetch(`${API_BASE}/tasks/enhance`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    })
+    return res.json()
+  },
+
+  async smartTask(input: string): Promise<{ ok: boolean; command?: string; error?: string }> {
+    const res = await fetch(`${API_BASE}/tasks/smart`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ input }),
     })
     return res.json()
   },

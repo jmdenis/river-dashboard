@@ -47,8 +47,8 @@ export function LogViewer({ content, loading, notFound, autoScroll, maxHeight = 
   }
 
   return (
-    <div className="rounded-md overflow-hidden" style={{ background: '#0A0A0B', border: '1px solid ' + tokens.colors.borderSubtle, borderRadius: 6 }}>
-      <div className="flex items-center justify-between px-3 py-2" style={{ borderBottom: '1px solid ' + tokens.colors.borderSubtle }}>
+    <div className="rounded-md overflow-hidden" style={{ background: tokens.colors.bg, border: '1px solid ' + tokens.colors.borderSubtle, borderRadius: 6 }}>
+      <div className="flex items-center justify-between px-3 py-2 rounded-t-md" style={{ borderBottom: '1px solid ' + tokens.colors.borderSubtle, background: tokens.colors.surface }}>
         <span className="text-[11px] uppercase tracking-wider" style={{ color: tokens.colors.textTertiary }}>Output</span>
         {content && (
           <Button
@@ -65,7 +65,7 @@ export function LogViewer({ content, loading, notFound, autoScroll, maxHeight = 
       </div>
       <ScrollArea style={{ maxHeight }}>
         <pre
-          className="p-3 whitespace-pre-wrap break-words leading-relaxed"
+          className="px-3 pt-0 pb-3 whitespace-pre-wrap break-words leading-relaxed"
           style={{ ...tokens.typography.mono, color: 'rgba(52,211,153,0.8)' }}
         >
           {content || 'No output'}

@@ -3,8 +3,8 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence } from 'motion/react'
 import { Upload, Terminal, Home, BookOpen, Settings, type LucideIcon } from 'lucide-react'
 
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import UploadModal from './UploadModal'
+import { Popover, PopoverTrigger, PopoverContent } from './ui/popover'
 import { tokens } from '../designTokens'
 
 const NAV_ITEMS: { name: string; value: string; href: string; Icon: LucideIcon }[] = [
@@ -31,7 +31,7 @@ export default function Layout() {
       <header
         className="md:hidden sticky top-0 z-50 w-full flex items-center px-4"
         style={{
-          background: '#141415',
+          background: tokens.colors.surface,
           borderBottom: `1px solid ${tokens.colors.border}`,
           height: 48,
         }}
@@ -52,103 +52,135 @@ export default function Layout() {
 
       {/* ─── Desktop top bar ─── */}
       <nav
-        className="hidden md:block sticky top-0 z-50 w-full"
+        className="hidden md:flex sticky top-0 z-50 w-full items-center justify-between"
         style={{
-          background: '#141415',
-          borderBottom: `1px solid ${tokens.colors.border}`,
-          height: 56,
+          background: tokens.colors.surface,
+          borderBottom: `1px solid ${tokens.colors.borderSubtle}`,
+          height: 64,
         }}
       >
-        <div className="flex h-full items-center px-6">
-          {/* River wordmark — 17px/600, logo exception */}
-          <span
-            className="mr-8 select-none"
-            style={{
-              fontSize: 17,
-              fontWeight: 600,
-              lineHeight: '20px',
-              letterSpacing: '-0.02em',
-              color: tokens.colors.textPrimary,
-            }}
-          >
-            River
-          </span>
+        <div className="flex h-full items-center justify-between w-full max-w-7xl mx-auto" style={{ paddingLeft: 24, paddingRight: 24 }}>
+          {/* Left group */}
+          <div className="flex items-center h-full" style={{ gap: 32 }}>
+            {/* River wordmark — 20px/700 */}
+            <span
+              className="select-none"
+              style={{
+                fontSize: 20,
+                fontWeight: 700,
+                lineHeight: '24px',
+                letterSpacing: '-0.02em',
+                color: tokens.colors.textPrimary,
+              }}
+            >
+              River
+            </span>
 
-          {/* Desktop nav — shadcn Tabs, line variant */}
-          <Tabs
-            value={currentTab}
-            onValueChange={(value) => {
-              const item = NAV_ITEMS.find((i) => i.value === value)
-              if (item) navigate(item.href)
-            }}
-            className="flex h-full"
-          >
-            <TabsList variant="line" className="h-full gap-0 bg-transparent border-0 p-0">
-              {NAV_ITEMS.map((item) => (
-                <TabsTrigger
-                  key={item.value}
-                  value={item.value}
-                  className="relative h-full rounded-none border-0 shadow-none data-[state=active]:shadow-none data-[state=active]:bg-transparent data-[state=inactive]:bg-transparent after:hidden"
-                  style={{
-                    color: currentTab === item.value ? tokens.colors.textPrimary : tokens.colors.textSecondary,
-                    fontSize: 13,
-                    fontWeight: 500,
-                    lineHeight: '20px',
-                    gap: 6,
-                    paddingLeft: 16,
-                    paddingRight: 16,
-                  }}
-                >
-                  <item.Icon size={20} strokeWidth={1.5} className="shrink-0" />
-                  {item.name}
-                  {/* Active accent border */}
-                  {currentTab === item.value && (
-                    <span
-                      className="absolute bottom-0 left-4 right-4"
-                      style={{
-                        height: 2,
-                        background: tokens.colors.accent,
-                        borderRadius: 1,
-                      }}
-                    />
-                  )}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+            {/* Nav items */}
+            <div className="flex items-center h-full" style={{ gap: 24 }}>
+              {NAV_ITEMS.map((item) => {
+                const isActive = currentTab === item.value
+                return (
+                  <button
+                    key={item.value}
+                    onClick={() => navigate(item.href)}
+                    className="relative flex items-center h-full"
+                    style={{
+                      gap: 8,
+                      cursor: 'pointer',
+                      paddingTop: 8,
+                      paddingBottom: 8,
+                      background: 'none',
+                      border: 'none',
+                      color: isActive ? '#FFFFFF' : 'rgba(255,255,255,0.6)',
+                      opacity: isActive ? 1 : 0.6,
+                      transition: 'color 150ms, opacity 150ms, transform 150ms',
+                      transform: 'scale(1)',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.color = '#FFFFFF'
+                        e.currentTarget.style.opacity = '1'
+                        e.currentTarget.style.transform = 'scale(1.08)'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.color = 'rgba(255,255,255,0.6)'
+                        e.currentTarget.style.opacity = '0.6'
+                        e.currentTarget.style.transform = 'scale(1)'
+                      }
+                    }}
+                  >
+                    <item.Icon style={{ width: 20, height: 20 }} strokeWidth={1.5} />
+                    <span style={{ fontSize: 14, fontWeight: 500, lineHeight: '20px' }}>
+                      {item.name}
+                    </span>
+                    {/* Active indicator — bottom border aligned to navbar edge */}
+                    {isActive && (
+                      <span
+                        style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          height: 2,
+                          background: tokens.colors.accent,
+                          borderRadius: 1,
+                        }}
+                      />
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
 
-          <div className="flex-1" />
-
-          {/* Upload ghost button */}
-          <button
-            onClick={() => setUploadOpen(!uploadOpen)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md"
-            style={{
-              fontSize: 13,
-              fontWeight: 500,
-              lineHeight: '20px',
-              color: tokens.colors.textSecondary,
-              background: 'transparent',
-              border: `1px solid ${tokens.colors.border}`,
-              transition: 'color 150ms ease-out',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = tokens.colors.textPrimary
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = tokens.colors.textSecondary
-            }}
-          >
-            <Upload size={14} strokeWidth={1.5} />
-            Upload
-          </button>
+          {/* Right group */}
+          <Popover open={uploadOpen} onOpenChange={setUploadOpen}>
+            <PopoverTrigger asChild>
+              <button
+                className="flex items-center"
+                style={{
+                  gap: 6,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  lineHeight: '20px',
+                  padding: '8px 16px',
+                  borderRadius: 8,
+                  color: tokens.colors.textSecondary,
+                  background: 'transparent',
+                  border: `1px solid ${tokens.colors.borderSubtle}`,
+                  cursor: 'pointer',
+                  transition: 'color 150ms, border-color 150ms',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = tokens.colors.textPrimary
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = tokens.colors.textSecondary
+                  e.currentTarget.style.borderColor = tokens.colors.borderSubtle
+                }}
+              >
+                <Upload style={{ width: 16, height: 16 }} strokeWidth={1.5} />
+                Upload
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              sideOffset={8}
+              className="w-[400px] max-h-[calc(100vh-80px)] overflow-hidden p-0"
+              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'none' }}
+            >
+              <UploadModal open={uploadOpen} onOpenChange={setUploadOpen} />
+            </PopoverContent>
+          </Popover>
         </div>
       </nav>
 
-      <UploadModal open={uploadOpen} onOpenChange={setUploadOpen} />
-
-      {/* Page shell — max-width 1440px, 16px mobile / 32px desktop padding */}
-      <main className="flex-1 w-full mx-auto px-4 md:px-8 pb-[84px] md:pb-0" style={{ maxWidth: 1440, paddingTop: 24 }}>
+      {/* Page shell — max-w-7xl (1280px), 16px mobile / 32px desktop padding */}
+      <main className="flex-1 w-full pb-[84px] md:pb-0">
         <AnimatePresence mode="wait">
           <Outlet key={location.pathname} />
         </AnimatePresence>
@@ -158,7 +190,7 @@ export default function Layout() {
       <nav
         className="md:hidden fixed bottom-0 left-0 right-0 z-50"
         style={{
-          background: '#141415',
+          background: tokens.colors.surface,
           borderTop: `1px solid ${tokens.colors.borderSubtle}`,
         }}
       >
@@ -171,7 +203,7 @@ export default function Layout() {
         >
           {NAV_ITEMS.map((item) => {
             const isActive = currentTab === item.value
-            const color = isActive ? '#818CF8' : tokens.colors.textQuaternary
+            const color = isActive ? tokens.colors.accent : tokens.colors.textTertiary
             return (
               <button
                 key={item.value}
@@ -184,6 +216,9 @@ export default function Layout() {
                   minHeight: 50,
                   gap: 4,
                   paddingTop: 2,
+                  opacity: isActive ? 1 : 0.6,
+                  transition: 'color 150ms, opacity 150ms',
+                  cursor: 'pointer',
                 }}
               >
                 <item.Icon className="h-7 w-7 shrink-0" strokeWidth={1.5} />

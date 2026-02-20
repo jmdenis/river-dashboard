@@ -39,7 +39,6 @@ export default function UploadModal({
   const [loadingFiles, setLoadingFiles] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const processedFilesRef = useRef<File[]>([])
-  const dropdownRef = useRef<HTMLDivElement>(null)
 
   const LIMIT = 10
 
@@ -124,19 +123,6 @@ export default function UploadModal({
     }
   }, [uploads])
 
-  // Close on outside click
-  useEffect(() => {
-    if (!open) return
-    const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        onOpenChange(false)
-      }
-    }
-    // Slight delay so the click that opened it doesn't immediately close
-    const timer = setTimeout(() => document.addEventListener('mousedown', handler), 50)
-    return () => { clearTimeout(timer); document.removeEventListener('mousedown', handler) }
-  }, [open, onOpenChange])
-
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     setDragOver(false)
@@ -157,12 +143,6 @@ export default function UploadModal({
 
   return (
     <>
-      {/* Dropdown panel */}
-      <div
-        ref={dropdownRef}
-        className="fixed top-12 right-4 z-[70] w-[400px] max-h-[calc(100vh-80px)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150"
-        style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '12px', boxShadow: 'none' }}
-      >
         {/* Upload zone */}
         <div
           onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
@@ -212,7 +192,7 @@ export default function UploadModal({
         )}
 
         {/* File list */}
-        <div className="border-t border-[rgba(255,255,255,0.1)]">
+        <div style={{ borderTop: `1px solid ${tokens.colors.border}` }}>
           {loadingFiles ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-4 w-4 animate-spin text-[var(--text-3)]" />
@@ -220,7 +200,7 @@ export default function UploadModal({
           ) : files.length === 0 ? (
             <p className="text-center py-6" style={{ ...tokens.typography.body, color: 'var(--text-2)' }}>No files uploaded</p>
           ) : (
-            <div className="divide-y divide-white/[0.04]">
+            <div className="divide-y divide-white/5">
               {files.map((f) => (
                 <a
                   key={f.name}
@@ -239,11 +219,11 @@ export default function UploadModal({
           )}
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-2 border-t border-white/[0.04]">
+            <div className="flex items-center justify-between px-4 py-2 border-t border-white/5">
               <button
                 onClick={() => page > 1 && loadFiles(page - 1)}
                 disabled={page <= 1}
-                className="text-[12px] text-[var(--text-3)] hover:text-[var(--text-2)] disabled:text-[rgba(255,255,255,0.1)] disabled:cursor-default flex items-center gap-1 transition-colors"
+                className="text-[12px] text-[var(--text-3)] hover:text-[var(--text-2)] disabled:text-white/10 disabled:cursor-default flex items-center gap-1 transition-colors"
               >
                 <ChevronLeft className="h-3 w-3" /> Prev
               </button>
@@ -251,15 +231,13 @@ export default function UploadModal({
               <button
                 onClick={() => page < totalPages && loadFiles(page + 1)}
                 disabled={page >= totalPages}
-                className="text-[12px] text-[var(--text-3)] hover:text-[var(--text-2)] disabled:text-[rgba(255,255,255,0.1)] disabled:cursor-default flex items-center gap-1 transition-colors"
+                className="text-[12px] text-[var(--text-3)] hover:text-[var(--text-2)] disabled:text-white/10 disabled:cursor-default flex items-center gap-1 transition-colors"
               >
                 Next <ChevronRight className="h-3 w-3" />
               </button>
             </div>
           )}
         </div>
-      </div>
-
     </>
   )
 }

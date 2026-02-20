@@ -288,7 +288,25 @@ export interface PackingList {
   categories: PackingCategory[]
 }
 
+export interface Briefing {
+  date: string | null
+  text: string
+  generatedAt: string | null
+}
+
 export const lifeApi = {
+  async getBriefing(): Promise<Briefing> {
+    const res = await fetch(`${API_BASE_URL}/api/briefing`)
+    if (!res.ok) return { date: null, text: '', generatedAt: null }
+    return res.json()
+  },
+
+  async regenerateBriefing(): Promise<Briefing> {
+    const res = await fetch(`${API_BASE_URL}/api/briefing/regenerate`, { method: 'POST' })
+    if (!res.ok) throw new Error('Failed to regenerate briefing')
+    return res.json()
+  },
+
   async getActivities(): Promise<Activities> {
     const res = await fetch(`${API_BASE_URL}/api/activities`)
     if (!res.ok) return { weekend: { content: '', ideas: [], lastUpdated: null }, date: { content: '', ideas: [], lastUpdated: null } }
