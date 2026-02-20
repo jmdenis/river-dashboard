@@ -1042,22 +1042,31 @@ export default function OpsPage() {
       <div className="h-[calc(100vh-48px)] md:h-[calc(100vh-64px)]" style={{ background: tokens.colors.bg }}>
         <div className="h-full flex flex-col max-w-7xl mx-auto w-full md:px-6">
 
-        {/* Composer Row — full width, above the two-panel layout */}
-        <div
-          className={`shrink-0 relative${isComposerLoading ? ' composer-loading' : ''}`}
-          style={{
-            background: tokens.colors.surface,
-            borderBottom: `1px solid ${inputFocused && !isComposerLoading ? 'var(--accent-cyan)' : tokens.colors.border}`,
-            transition: 'border-color 0.2s ease',
-            padding: '12px 24px',
-          }}
-        >
-          <div className="flex items-start gap-3">
-            <TerminalIcon
-              size={16}
-              isAnimated={false}
-              style={{ color: 'rgba(255,255,255,0.3)', marginTop: 3, flexShrink: 0 }}
-            />
+        {/* Composer — premium chat-style input */}
+        <div className="shrink-0 px-4 pt-3 pb-2 md:px-6">
+          <div
+            className={`composer-container flex items-center rounded-2xl px-4 py-3${isComposerLoading ? ' composer-loading-border' : ''}`}
+            style={{
+              background: '#1a1a1a',
+              border: `1px solid ${inputFocused && !isComposerLoading ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.10)'}`,
+              boxShadow: '0 0 0 1px rgba(255,255,255,0.06), 0 4px 24px rgba(0,0,0,0.4)',
+              transition: 'border-color 0.2s ease',
+            }}
+          >
+            {/* Terminal prompt icon */}
+            <span
+              className="shrink-0 mr-3 select-none"
+              style={{
+                fontFamily: 'JetBrains Mono, SF Mono, monospace',
+                fontSize: 14,
+                color: isComposerLoading ? 'rgba(255,255,255,0.15)' : inputFocused ? 'rgba(255,255,255,0.30)' : 'rgba(255,255,255,0.20)',
+                transition: 'color 0.2s ease',
+              }}
+            >
+              {'>_'}
+            </span>
+
+            {/* Input area */}
             <div className="relative flex-1 min-w-0">
               <textarea
                 ref={textareaRef}
@@ -1074,52 +1083,56 @@ export default function OpsPage() {
                 placeholder={isComposerLoading ? '' : 'Ask River to build something...'}
                 rows={1}
                 disabled={isComposerLoading}
-                className="w-full resize-none text-[13px] placeholder:italic placeholder:text-white/30 scrollbar-hide"
+                className="w-full resize-none placeholder:italic placeholder:text-white/25 scrollbar-hide"
                 style={{
                   background: 'transparent',
                   color: isComposerLoading ? 'transparent' : tokens.colors.textPrimary,
                   border: 'none',
                   outline: 'none',
+                  fontFamily: 'Inter, system-ui, sans-serif',
+                  fontSize: 14,
                   lineHeight: '20px',
-                  maxHeight: 100,
+                  maxHeight: 80, // ~4 lines
                   overflowY: 'auto',
                   padding: 0,
                 }}
               />
               {isComposerLoading && (
                 <div className="absolute inset-0 flex items-center pointer-events-none">
-                  <span className="text-[13px] italic" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                  <span className="text-sm italic" style={{ color: 'rgba(10,132,255,0.50)' }}>
                     {status === 'expanding' ? 'Expanding prompt...' : 'Queuing task...'}
                   </span>
                 </div>
               )}
             </div>
-            <button
-              onClick={handleQuickTask}
-              disabled={isComposerLoading || !quickTaskText.trim()}
-              className="shrink-0 flex items-center justify-center gap-1.5 rounded-md transition-all duration-200"
-              style={{
-                height: 28,
-                marginTop: -2,
-                padding: isComposerLoading || quickTaskText.trim() ? '0 8px' : 0,
-                opacity: isComposerLoading || quickTaskText.trim() ? 1 : 0,
-                pointerEvents: isComposerLoading || quickTaskText.trim() ? 'auto' : 'none',
-              }}
-            >
-              {isComposerLoading ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" style={{ color: 'var(--accent-cyan)' }} />
-                  <span className="text-[11px] whitespace-nowrap" style={{ color: 'var(--accent-cyan)' }}>
-                    {status === 'expanding' ? 'Expanding...' : 'Queuing...'}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <Send className="h-3.5 w-3.5" style={{ color: 'var(--accent-cyan)' }} />
-                  <span className="text-[11px] whitespace-nowrap" style={{ color: 'var(--accent-cyan)' }}>Queue</span>
-                </>
+
+            {/* Send button — appears only when there's content */}
+            <AnimatePresence>
+              {(quickTaskText.trim() || isComposerLoading) && (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                  onClick={handleQuickTask}
+                  disabled={isComposerLoading || !quickTaskText.trim()}
+                  className="shrink-0 ml-3 flex items-center justify-center rounded-lg transition-colors duration-150"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    background: isComposerLoading ? 'transparent' : '#0A84FF',
+                  }}
+                  whileHover={!isComposerLoading ? { background: 'rgba(10,132,255,0.80)' } : undefined}
+                  whileTap={!isComposerLoading ? { scale: 0.92 } : undefined}
+                >
+                  {isComposerLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" style={{ color: '#0A84FF' }} />
+                  ) : (
+                    <Send className="h-3.5 w-3.5 text-white" />
+                  )}
+                </motion.button>
               )}
-            </button>
+            </AnimatePresence>
           </div>
         </div>
 

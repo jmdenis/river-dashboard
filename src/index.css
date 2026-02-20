@@ -310,25 +310,13 @@ html, body {
 
 /* ─── Composer Pulse Animation ─── */
 
-.composer-loading {
-  position: relative;
+.composer-loading-border {
+  animation: composer-border-pulse 1s ease-in-out infinite;
 }
 
-.composer-loading::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--accent-cyan);
-  animation: composer-pulse 1s ease-in-out infinite;
-  z-index: 1;
-}
-
-@keyframes composer-pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 1; }
+@keyframes composer-border-pulse {
+  0%, 100% { border-color: rgba(10,132,255,0.3); }
+  50% { border-color: rgba(10,132,255,0.7); }
 }
 
 .animated-icon svg path,
