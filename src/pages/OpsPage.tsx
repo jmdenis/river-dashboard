@@ -969,7 +969,17 @@ export default function OpsPage() {
         )}
       </AnimatePresence>
 
-      {/* Filter tabs + status pills */}
+      {/* System stats bar */}
+      {systemInfo && (
+        <div className="shrink-0 px-4 flex items-center gap-6" style={{ height: 24 }}>
+          <span className="text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>
+            CPU {Math.round(systemInfo.cpu)}% · MEM {Math.round(systemInfo.mem)}% · Disk {Math.round(systemInfo.disk)}% · Up {formatUptime(systemInfo.uptime).short}
+            {oclawVersion ? ` · v${oclawVersion.current}` : ''}
+          </span>
+        </div>
+      )}
+
+      {/* Filter tabs */}
       <div className="shrink-0 px-4 flex items-center gap-4 overflow-x-auto overflow-y-hidden whitespace-nowrap scrollbar-hide" style={{ height: 36, WebkitOverflowScrolling: 'touch' }}>
         {([
           { key: 'all' as const, label: 'All', count: tasks.length },
@@ -992,7 +1002,7 @@ export default function OpsPage() {
         ))}
         <button
           onClick={toggleEditMode}
-          className="whitespace-nowrap transition-colors duration-150"
+          className="ml-auto whitespace-nowrap transition-colors duration-150"
           style={{
             fontSize: 13,
             fontWeight: 400,
@@ -1001,14 +1011,6 @@ export default function OpsPage() {
         >
           {editMode ? 'Done' : 'Edit'}
         </button>
-        {systemInfo && (
-          <span className="ml-auto shrink-0 flex items-center gap-3" style={{ fontSize: 11, color: tokens.colors.textQuaternary }}>
-            <span>CPU {Math.round(systemInfo.cpu)}%</span>
-            <span>MEM {Math.round(systemInfo.mem)}%</span>
-            <span>Up {formatUptime(systemInfo.uptime).short}</span>
-            {oclawVersion && <span>v{oclawVersion.current}</span>}
-          </span>
-        )}
       </div>
 
       {/* Select All bar (edit mode) */}
