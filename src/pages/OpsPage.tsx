@@ -749,10 +749,10 @@ export default function OpsPage() {
         style={{ background: tokens.colors.bg }}
       >
         <div className="h-full flex flex-col max-w-7xl mx-auto w-full md:px-6">
+          {/* Composer placeholder — full width */}
+          <div className="shrink-0" style={{ height: 52, background: tokens.colors.surface, borderBottom: '1px solid ' + tokens.colors.border, padding: '12px 24px' }} />
           <div className="flex-1 flex min-h-0">
             <div className="w-full md:w-[35%] md:max-w-[420px] shrink-0 flex flex-col" style={{ background: tokens.colors.surface, borderRight: '1px solid ' + tokens.colors.borderSubtle }}>
-              {/* Composer placeholder */}
-              <div style={{ height: 52, borderBottom: '1px solid ' + tokens.colors.borderSubtle }} />
               {/* Filter bar placeholder */}
               <div style={{ height: 36 }} />
               {/* Skeleton rows */}
@@ -781,88 +781,6 @@ export default function OpsPage() {
 
   const taskListPanel = (
     <>
-      {/* Composer Row */}
-      <div
-        className={`shrink-0 relative${isComposerLoading ? ' composer-loading' : ''}`}
-        style={{
-          background: 'var(--glass-bg)',
-          borderBottom: `1px solid ${inputFocused && !isComposerLoading ? 'var(--accent-cyan)' : 'var(--glass-border)'}`,
-          transition: 'border-color 0.2s ease',
-          minHeight: 52,
-          padding: '12px 16px',
-        }}
-      >
-        <div className="flex items-start gap-3">
-          <TerminalIcon
-            size={16}
-            isAnimated={false}
-            style={{ color: 'rgba(255,255,255,0.3)', marginTop: 3, flexShrink: 0 }}
-          />
-          <div className="relative flex-1 min-w-0">
-            <textarea
-              ref={textareaRef}
-              value={quickTaskText}
-              onChange={e => setQuickTaskText(e.target.value)}
-              onFocus={() => setInputFocused(true)}
-              onBlur={() => setInputFocused(false)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                  e.preventDefault()
-                  handleQuickTask()
-                }
-              }}
-              placeholder={isComposerLoading ? '' : 'Ask River to build something...'}
-              rows={1}
-              disabled={isComposerLoading}
-              className="w-full resize-none text-[13px] placeholder:italic placeholder:text-white/30 scrollbar-hide"
-              style={{
-                background: 'transparent',
-                color: isComposerLoading ? 'transparent' : tokens.colors.textPrimary,
-                border: 'none',
-                outline: 'none',
-                lineHeight: '20px',
-                maxHeight: 100,
-                overflowY: 'auto',
-                padding: 0,
-              }}
-            />
-            {isComposerLoading && (
-              <div className="absolute inset-0 flex items-center pointer-events-none">
-                <span className="text-[13px] italic" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                  {status === 'expanding' ? 'Expanding prompt...' : 'Queuing task...'}
-                </span>
-              </div>
-            )}
-          </div>
-          <button
-            onClick={handleQuickTask}
-            disabled={isComposerLoading || !quickTaskText.trim()}
-            className="shrink-0 flex items-center justify-center gap-1.5 rounded-md transition-all duration-200"
-            style={{
-              height: 28,
-              marginTop: -2,
-              padding: isComposerLoading || quickTaskText.trim() ? '0 8px' : 0,
-              opacity: isComposerLoading || quickTaskText.trim() ? 1 : 0,
-              pointerEvents: isComposerLoading || quickTaskText.trim() ? 'auto' : 'none',
-            }}
-          >
-            {isComposerLoading ? (
-              <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" style={{ color: 'var(--accent-cyan)' }} />
-                <span className="text-[11px] whitespace-nowrap" style={{ color: 'var(--accent-cyan)' }}>
-                  {status === 'expanding' ? 'Expanding...' : 'Queuing...'}
-                </span>
-              </>
-            ) : (
-              <>
-                <Send className="h-3.5 w-3.5" style={{ color: 'var(--accent-cyan)' }} />
-                <span className="text-[11px] whitespace-nowrap" style={{ color: 'var(--accent-cyan)' }}>Queue</span>
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-
       {/* System stats bar */}
       {systemInfo && (
         <div className="shrink-0 px-4 flex items-center gap-6" style={{ height: 24 }}>
@@ -1123,6 +1041,88 @@ export default function OpsPage() {
     <>
       <div className="h-[calc(100vh-48px)] md:h-[calc(100vh-64px)]" style={{ background: tokens.colors.bg }}>
         <div className="h-full flex flex-col max-w-7xl mx-auto w-full md:px-6">
+
+        {/* Composer Row — full width, above the two-panel layout */}
+        <div
+          className={`shrink-0 relative${isComposerLoading ? ' composer-loading' : ''}`}
+          style={{
+            background: tokens.colors.surface,
+            borderBottom: `1px solid ${inputFocused && !isComposerLoading ? 'var(--accent-cyan)' : tokens.colors.border}`,
+            transition: 'border-color 0.2s ease',
+            padding: '12px 24px',
+          }}
+        >
+          <div className="flex items-start gap-3">
+            <TerminalIcon
+              size={16}
+              isAnimated={false}
+              style={{ color: 'rgba(255,255,255,0.3)', marginTop: 3, flexShrink: 0 }}
+            />
+            <div className="relative flex-1 min-w-0">
+              <textarea
+                ref={textareaRef}
+                value={quickTaskText}
+                onChange={e => setQuickTaskText(e.target.value)}
+                onFocus={() => setInputFocused(true)}
+                onBlur={() => setInputFocused(false)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                    e.preventDefault()
+                    handleQuickTask()
+                  }
+                }}
+                placeholder={isComposerLoading ? '' : 'Ask River to build something...'}
+                rows={1}
+                disabled={isComposerLoading}
+                className="w-full resize-none text-[13px] placeholder:italic placeholder:text-white/30 scrollbar-hide"
+                style={{
+                  background: 'transparent',
+                  color: isComposerLoading ? 'transparent' : tokens.colors.textPrimary,
+                  border: 'none',
+                  outline: 'none',
+                  lineHeight: '20px',
+                  maxHeight: 100,
+                  overflowY: 'auto',
+                  padding: 0,
+                }}
+              />
+              {isComposerLoading && (
+                <div className="absolute inset-0 flex items-center pointer-events-none">
+                  <span className="text-[13px] italic" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                    {status === 'expanding' ? 'Expanding prompt...' : 'Queuing task...'}
+                  </span>
+                </div>
+              )}
+            </div>
+            <button
+              onClick={handleQuickTask}
+              disabled={isComposerLoading || !quickTaskText.trim()}
+              className="shrink-0 flex items-center justify-center gap-1.5 rounded-md transition-all duration-200"
+              style={{
+                height: 28,
+                marginTop: -2,
+                padding: isComposerLoading || quickTaskText.trim() ? '0 8px' : 0,
+                opacity: isComposerLoading || quickTaskText.trim() ? 1 : 0,
+                pointerEvents: isComposerLoading || quickTaskText.trim() ? 'auto' : 'none',
+              }}
+            >
+              {isComposerLoading ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" style={{ color: 'var(--accent-cyan)' }} />
+                  <span className="text-[11px] whitespace-nowrap" style={{ color: 'var(--accent-cyan)' }}>
+                    {status === 'expanding' ? 'Expanding...' : 'Queuing...'}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Send className="h-3.5 w-3.5" style={{ color: 'var(--accent-cyan)' }} />
+                  <span className="text-[11px] whitespace-nowrap" style={{ color: 'var(--accent-cyan)' }}>Queue</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
         {/* Two-panel area — task list left, detail right */}
         <TwoPanelLayout
           leftPanel={taskListPanel}
