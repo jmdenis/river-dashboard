@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { toast } from 'sonner'
 import { opsApi, type Task, type SystemInfo } from '../services/opsApi'
-import { Loader2, Trash2, Check, X, Send, Copy, ChevronDown, ChevronRight, SquarePen, CheckCircle2, Circle, XCircle, ChevronsUpDown, Sparkles, Pencil } from 'lucide-react'
+import { Loader2, Trash2, Check, X, Send, Copy, ChevronDown, ChevronRight, CheckCircle2, Circle, XCircle, ChevronsUpDown } from 'lucide-react'
 import { TerminalIcon } from '../components/ui/terminal-icon'
 import { AnimatedIcon } from '../components/AnimatedIcon'
 import { tokens } from '../designTokens'
@@ -433,18 +433,13 @@ export default function OpsPage() {
 
   // Quick task
   const [quickTaskText, setQuickTaskText] = useState('')
-  const [quickTaskState, setQuickTaskState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [status, setStatus] = useState<'idle' | 'expanding' | 'queuing'>('idle')
   const lastSubmitRef = useRef<{ text: string; time: number } | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [inputFocused, setInputFocused] = useState(false)
 
-  // Smart task
-  const [smartCommand, setSmartCommand] = useState<string | null>(null)
-  const [enhancing, setEnhancing] = useState(false)
-  const smartTextareaRef = useRef<HTMLTextAreaElement>(null)
-
   // Composer helpers
-  const isComposerLoading = enhancing || quickTaskState === 'loading'
+  const isComposerLoading = status !== 'idle'
 
   const adjustComposerHeight = useCallback(() => {
     const el = textareaRef.current
@@ -670,15 +665,10 @@ export default function OpsPage() {
     const now = Date.now()
     if (lastSubmitRef.current && lastSubmitRef.current.text === text && now - lastSubmitRef.current.time < 10000) {
       toast.error('Duplicate — same task was just queued')
+      setStatus('idle')
       return
     }
-
-    setQuickTaskState('loading')
     lastSubmitRef.current = { text, time: now }
-
-    const safetyTimeout = setTimeout(() => {
-      setQuickTaskState(prev => prev === 'loading' ? 'idle' : prev)
-    }, 3000)
 
     try {
       const isBatch = text.includes('\n---\n') || text.includes(' --- ')
@@ -702,53 +692,38 @@ export default function OpsPage() {
           toast.error(result.error || 'Failed to queue')
         }
       }
-      clearTimeout(safetyTimeout)
-      setQuickTaskState('success')
     } catch {
-      clearTimeout(safetyTimeout)
-      setQuickTaskState('error')
       toast.error('Failed to queue task')
     }
-    setTimeout(() => setQuickTaskState('idle'), 2000)
+    setStatus('idle')
   }
 
   const handleQuickTask = async () => {
     const text = quickTaskText.trim()
-    if (!text || quickTaskState === 'loading' || enhancing) return
+    if (!text || status !== 'idle') return
 
     // If starts with 'rr ' — skip smart rewrite, queue directly
     if (text.toLowerCase().startsWith('rr ')) {
+      setStatus('queuing')
       await queueDirectly(text)
       return
     }
 
-    // Natural language — call smart endpoint
-    setEnhancing(true)
+    // Natural language — expand via Gemini then queue
+    setStatus('expanding')
     try {
       const result = await opsApi.smartTask(text)
       if (result.ok && result.command) {
-        setSmartCommand(result.command)
-        setQuickTaskText('')
-        requestAnimationFrame(() => smartTextareaRef.current?.focus())
+        setStatus('queuing')
+        await queueDirectly(result.command)
       } else {
-        toast.error(result.error || 'Failed to generate command')
+        toast.error(result.error || 'Failed to expand prompt')
+        setStatus('idle')
       }
     } catch {
-      toast.error('Failed to generate command')
+      toast.error('Failed to process task')
+      setStatus('idle')
     }
-    setEnhancing(false)
-  }
-
-  const handleQueueSmart = async () => {
-    if (!smartCommand) return
-    const cmd = smartCommand
-    setSmartCommand(null)
-    await queueDirectly(cmd)
-  }
-
-  const handleEditSmart = () => {
-    smartTextareaRef.current?.focus()
-    smartTextareaRef.current?.select()
   }
 
   const selectTask = (taskId: string) => {
@@ -854,7 +829,7 @@ export default function OpsPage() {
             {isComposerLoading && (
               <div className="absolute inset-0 flex items-center pointer-events-none">
                 <span className="text-[13px] italic" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                  {enhancing ? 'Expanding prompt...' : 'Queuing...'}
+                  {status === 'expanding' ? 'Expanding prompt...' : 'Queuing task...'}
                 </span>
               </div>
             )}
@@ -862,112 +837,31 @@ export default function OpsPage() {
           <button
             onClick={handleQuickTask}
             disabled={isComposerLoading || !quickTaskText.trim()}
-            className="shrink-0 flex items-center justify-center rounded-md transition-all duration-200"
+            className="shrink-0 flex items-center justify-center gap-1.5 rounded-md transition-all duration-200"
             style={{
-              width: 28,
               height: 28,
               marginTop: -2,
+              padding: isComposerLoading || quickTaskText.trim() ? '0 8px' : 0,
               opacity: isComposerLoading || quickTaskText.trim() ? 1 : 0,
               pointerEvents: isComposerLoading || quickTaskText.trim() ? 'auto' : 'none',
             }}
           >
             {isComposerLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" style={{ color: 'var(--accent-cyan)' }} />
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" style={{ color: 'var(--accent-cyan)' }} />
+                <span className="text-[11px] whitespace-nowrap" style={{ color: 'var(--accent-cyan)' }}>
+                  {status === 'expanding' ? 'Expanding...' : 'Queuing...'}
+                </span>
+              </>
             ) : (
-              <Send className="h-4 w-4" style={{ color: 'var(--accent-cyan)' }} />
+              <>
+                <Send className="h-3.5 w-3.5" style={{ color: 'var(--accent-cyan)' }} />
+                <span className="text-[11px] whitespace-nowrap" style={{ color: 'var(--accent-cyan)' }}>Queue</span>
+              </>
             )}
           </button>
         </div>
       </div>
-
-      {/* Smart command confirmation */}
-      <AnimatePresence>
-        {smartCommand !== null && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.15 }}
-            className="overflow-hidden"
-          >
-            <div
-              className="mx-3 mt-2 mb-2 rounded-lg overflow-hidden"
-              style={{
-                background: tokens.colors.surface,
-                border: `1px solid ${tokens.colors.accent}40`,
-              }}
-            >
-              <div
-                className="flex items-center gap-1.5 px-3 py-1.5"
-                style={{ borderBottom: `1px solid ${tokens.colors.borderSubtle}`, background: `${tokens.colors.accent}08` }}
-              >
-                <AnimatedIcon icon={Sparkles} className="h-3 w-3" style={{ color: tokens.colors.accent }} noStroke />
-                <span style={{ ...tokens.typography.caption, color: tokens.colors.accent }}>Generated command</span>
-              </div>
-              <textarea
-                ref={smartTextareaRef}
-                value={smartCommand}
-                onChange={e => setSmartCommand(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                    e.preventDefault()
-                    handleQueueSmart()
-                  }
-                }}
-                className="w-full resize-none"
-                style={{
-                  ...tokens.typography.mono,
-                  fontSize: 12,
-                  color: tokens.colors.textSecondary,
-                  padding: '10px 12px',
-                  minHeight: 60,
-                  maxHeight: 160,
-                  background: 'transparent',
-                  border: 'none',
-                  outline: 'none',
-                }}
-                rows={3}
-              />
-              <div
-                className="flex items-center gap-2 px-3 py-2"
-                style={{ borderTop: `1px solid ${tokens.colors.borderSubtle}` }}
-              >
-                <Button
-                  size="sm"
-                  className="h-7 px-3 text-[12px]"
-                  style={{ background: tokens.colors.accent, color: '#fff' }}
-                  onClick={handleQueueSmart}
-                >
-                  <AnimatedIcon icon={Send} className="h-3 w-3 mr-1.5" />
-                  Queue
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-3 text-[12px]"
-                  style={{ color: tokens.colors.textTertiary }}
-                  onClick={handleEditSmart}
-                >
-                  <AnimatedIcon icon={Pencil} className="h-3 w-3 mr-1.5" />
-                  Edit
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-2 text-[12px]"
-                  style={{ color: tokens.colors.textQuaternary }}
-                  onClick={() => setSmartCommand(null)}
-                >
-                  <AnimatedIcon icon={X} className="h-3 w-3" />
-                </Button>
-                <span className="ml-auto text-[10px]" style={{ color: tokens.colors.textQuaternary }}>
-                  {'\u2318'}+Enter to queue
-                </span>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* System stats bar */}
       {systemInfo && (
