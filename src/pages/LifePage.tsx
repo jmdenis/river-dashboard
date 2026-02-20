@@ -1637,7 +1637,7 @@ function IdeaCard({ idea, type, toast, onDidThis, weather, onOpenPlan }: { idea:
  <div className="hidden md:flex items-center gap-2">
  {idea.indoor !== undefined && (
  <Badge className={idea.indoor
-  ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/15'
+  ? 'bg-[var(--accent-subtle)] text-[var(--accent-text)] border-[var(--accent-border)] hover:bg-[var(--accent-subtle)]'
   : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/15'
  }>
   {idea.indoor ? 'Indoor' : 'Outdoor'}

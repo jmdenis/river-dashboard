@@ -362,7 +362,7 @@ function TaskDetail({
       <div className="shrink-0 px-6 py-4" style={{ borderBottom: '1px solid ' + tokens.colors.borderSubtle }}>
         <div className="flex items-center gap-2 flex-wrap">
           {isRunning && (
-            <Badge variant="default" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[11px]">running</Badge>
+            <Badge variant="default" className="bg-[var(--accent-subtle)] text-[var(--accent-text)] border-[var(--accent-border)] text-[11px]">running</Badge>
           )}
           {task.status === 'done' && (
             <Badge variant="default" className="bg-success/10 text-success border-success/20 text-[11px]">done</Badge>
