@@ -179,15 +179,6 @@ export const opsApi = {
     return res.json()
   },
 
-  async summarizeTask(taskId: string): Promise<{ ok: boolean; summary?: string; error?: string }> {
-    const res = await fetch(`${API_BASE}/tasks/summarize`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ taskId }),
-    })
-    return res.json()
-  },
-
   async getInboxRecent(limit = 20): Promise<InboxItem[]> {
     const res = await fetch(`${API_BASE}/inbox/recent?limit=${limit}`)
     if (!res.ok) return []
