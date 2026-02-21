@@ -451,6 +451,13 @@ function TaskDetail({
           {(() => {
             const started = task.startedAt || task.startTime
             const completed = task.completedAt || task.endTime
+            if (started && completed) {
+              return (
+                <span className="text-[11px] tabular-nums" style={{ color: tokens.colors.textTertiary }}>
+                  {formatTime(started)} → {formatTime(completed)}
+                </span>
+              )
+            }
             if (started) {
               return (
                 <span className="text-[11px] tabular-nums" style={{ color: tokens.colors.textTertiary }}>
@@ -463,17 +470,6 @@ function TaskDetail({
                 {formatTime(task.created)}
               </span>
             )
-          })()}
-          {(() => {
-            const completed = task.completedAt || task.endTime
-            if (completed) {
-              return (
-                <span className="text-[11px] tabular-nums" style={{ color: tokens.colors.textTertiary }}>
-                  done {formatTime(completed)}
-                </span>
-              )
-            }
-            return null
           })()}
           {duration && (
             <span className="text-[11px] tabular-nums" style={{ color: tokens.colors.textTertiary }}>{duration}</span>
