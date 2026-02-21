@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useCallback } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence } from 'motion/react'
 import { TerminalIcon, HomeIcon, BookIcon, GearIcon, UploadIcon, type AnimatedIconHandle } from './icons'
@@ -13,6 +13,126 @@ const NAV_ITEMS: { name: string; value: string; href: string; Icon: React.Compon
   { name: 'Knowledge', value: 'knowledge', href: '/knowledge', Icon: BookIcon },
   { name: 'Settings', value: 'settings', href: '/settings', Icon: GearIcon },
 ]
+
+function NavButton({ item, isActive, onClick }: { item: typeof NAV_ITEMS[number]; isActive: boolean; onClick: () => void }) {
+  const iconRef = useRef<AnimatedIconHandle>(null)
+  return (
+    <button
+      onClick={onClick}
+      className="relative flex items-center h-full"
+      style={{
+        gap: 8,
+        cursor: 'pointer',
+        paddingTop: 8,
+        paddingBottom: 8,
+        background: 'none',
+        border: 'none',
+        color: isActive ? '#FFFFFF' : 'rgba(255,255,255,0.6)',
+        opacity: isActive ? 1 : 0.6,
+        transition: 'color 150ms, opacity 150ms',
+      }}
+      onMouseEnter={(e) => {
+        iconRef.current?.startAnimation()
+        if (!isActive) {
+          e.currentTarget.style.color = '#FFFFFF'
+          e.currentTarget.style.opacity = '1'
+        }
+      }}
+      onMouseLeave={(e) => {
+        iconRef.current?.stopAnimation()
+        if (!isActive) {
+          e.currentTarget.style.color = 'rgba(255,255,255,0.6)'
+          e.currentTarget.style.opacity = '0.6'
+        }
+      }}
+    >
+      <item.Icon ref={iconRef} size={20} strokeWidth={1.5} />
+      <span style={{ fontSize: 14, fontWeight: 500, lineHeight: '20px' }}>
+        {item.name}
+      </span>
+      {isActive && (
+        <span
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 2,
+            background: tokens.colors.accent,
+            borderRadius: 1,
+          }}
+        />
+      )}
+    </button>
+  )
+}
+
+function MobileNavButton({ item, isActive, onClick }: { item: typeof NAV_ITEMS[number]; isActive: boolean; onClick: () => void }) {
+  const iconRef = useRef<AnimatedIconHandle>(null)
+  const color = isActive ? tokens.colors.accent : tokens.colors.textTertiary
+  return (
+    <button
+      onClick={() => { iconRef.current?.startAnimation(); onClick() }}
+      className="flex flex-col items-center justify-start flex-1"
+      style={{
+        color,
+        background: 'none',
+        border: 'none',
+        minHeight: 50,
+        gap: 4,
+        paddingTop: 2,
+        opacity: isActive ? 1 : 0.6,
+        transition: 'color 150ms, opacity 150ms',
+        cursor: 'pointer',
+      }}
+    >
+      <item.Icon ref={iconRef} size={28} strokeWidth={1.5} />
+      <span style={{ fontSize: 10, fontWeight: 500, lineHeight: '12px', color }}>
+        {item.name}
+      </span>
+    </button>
+  )
+}
+
+const UploadButton = React.forwardRef<HTMLButtonElement, React.ComponentPropsWithoutRef<'button'>>(
+  (props, ref) => {
+    const iconRef = useRef<AnimatedIconHandle>(null)
+    return (
+      <button
+        ref={ref}
+        {...props}
+        className="flex items-center"
+        style={{
+          gap: 6,
+          fontSize: 14,
+          fontWeight: 500,
+          lineHeight: '20px',
+          padding: '8px 16px',
+          borderRadius: 8,
+          color: tokens.colors.textSecondary,
+          background: 'transparent',
+          border: `1px solid ${tokens.colors.borderSubtle}`,
+          cursor: 'pointer',
+          transition: 'color 150ms, border-color 150ms',
+        }}
+        onMouseEnter={(e) => {
+          iconRef.current?.startAnimation()
+          e.currentTarget.style.color = tokens.colors.textPrimary
+          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'
+        }}
+        onMouseLeave={(e) => {
+          iconRef.current?.stopAnimation()
+          e.currentTarget.style.color = tokens.colors.textSecondary
+          e.currentTarget.style.borderColor = tokens.colors.borderSubtle
+        }}
+      >
+        <UploadIcon ref={iconRef} size={16} strokeWidth={1.5} />
+        Upload
+      </button>
+    )
+  }
+)
+UploadButton.displayName = 'UploadButton'
 
 function pathToTab(pathname: string): string {
   const match = NAV_ITEMS.find((item) => pathname.startsWith(item.href))
@@ -81,56 +201,12 @@ export default function Layout() {
               {NAV_ITEMS.map((item) => {
                 const isActive = currentTab === item.value
                 return (
-                  <button
+                  <NavButton
                     key={item.value}
+                    item={item}
+                    isActive={isActive}
                     onClick={() => navigate(item.href)}
-                    className="relative flex items-center h-full"
-                    style={{
-                      gap: 8,
-                      cursor: 'pointer',
-                      paddingTop: 8,
-                      paddingBottom: 8,
-                      background: 'none',
-                      border: 'none',
-                      color: isActive ? '#FFFFFF' : 'rgba(255,255,255,0.6)',
-                      opacity: isActive ? 1 : 0.6,
-                      transition: 'color 150ms, opacity 150ms, transform 150ms',
-                      transform: 'scale(1)',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.color = '#FFFFFF'
-                        e.currentTarget.style.opacity = '1'
-                        e.currentTarget.style.transform = 'scale(1.08)'
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.color = 'rgba(255,255,255,0.6)'
-                        e.currentTarget.style.opacity = '0.6'
-                        e.currentTarget.style.transform = 'scale(1)'
-                      }
-                    }}
-                  >
-                    <item.Icon size={20} strokeWidth={1.5} />
-                    <span style={{ fontSize: 14, fontWeight: 500, lineHeight: '20px' }}>
-                      {item.name}
-                    </span>
-                    {/* Active indicator — bottom border aligned to navbar edge */}
-                    {isActive && (
-                      <span
-                        style={{
-                          position: 'absolute',
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          height: 2,
-                          background: tokens.colors.accent,
-                          borderRadius: 1,
-                        }}
-                      />
-                    )}
-                  </button>
+                  />
                 )
               })}
             </div>
@@ -139,33 +215,7 @@ export default function Layout() {
           {/* Right group */}
           <Popover open={uploadOpen} onOpenChange={setUploadOpen}>
             <PopoverTrigger asChild>
-              <button
-                className="flex items-center"
-                style={{
-                  gap: 6,
-                  fontSize: 14,
-                  fontWeight: 500,
-                  lineHeight: '20px',
-                  padding: '8px 16px',
-                  borderRadius: 8,
-                  color: tokens.colors.textSecondary,
-                  background: 'transparent',
-                  border: `1px solid ${tokens.colors.borderSubtle}`,
-                  cursor: 'pointer',
-                  transition: 'color 150ms, border-color 150ms',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = tokens.colors.textPrimary
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = tokens.colors.textSecondary
-                  e.currentTarget.style.borderColor = tokens.colors.borderSubtle
-                }}
-              >
-                <UploadIcon size={16} strokeWidth={1.5} />
-                Upload
-              </button>
+              <UploadButton />
             </PopoverTrigger>
             <PopoverContent
               align="end"
@@ -203,29 +253,13 @@ export default function Layout() {
         >
           {NAV_ITEMS.map((item) => {
             const isActive = currentTab === item.value
-            const color = isActive ? tokens.colors.accent : tokens.colors.textTertiary
             return (
-              <button
+              <MobileNavButton
                 key={item.value}
+                item={item}
+                isActive={isActive}
                 onClick={() => navigate(item.href)}
-                className="flex flex-col items-center justify-start flex-1"
-                style={{
-                  color,
-                  background: 'none',
-                  border: 'none',
-                  minHeight: 50,
-                  gap: 4,
-                  paddingTop: 2,
-                  opacity: isActive ? 1 : 0.6,
-                  transition: 'color 150ms, opacity 150ms',
-                  cursor: 'pointer',
-                }}
-              >
-                <item.Icon size={28} strokeWidth={1.5} />
-                <span style={{ fontSize: 10, fontWeight: 500, lineHeight: '12px', color }}>
-                  {item.name}
-                </span>
-              </button>
+              />
             )
           })}
         </div>

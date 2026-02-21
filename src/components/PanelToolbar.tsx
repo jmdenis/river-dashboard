@@ -1,7 +1,7 @@
-import { ReactNode } from 'react'
+import { ReactNode, useRef } from 'react'
 import { motion, type Transition } from 'motion/react'
 import { tokens } from '../designTokens'
-import { ArrowNarrowLeftIcon } from './icons'
+import { ArrowNarrowLeftIcon, type AnimatedIconHandle } from './icons'
 
 const spring: Transition = { type: 'spring', stiffness: 400, damping: 17 }
 
@@ -53,12 +53,13 @@ export function ToolbarAction({
   destructive = false,
   disabled = false,
 }: {
-  icon: React.ComponentType<{ size?: number; strokeWidth?: number; color?: string; className?: string }>
+  icon: React.ComponentType<any>
   label: string
   onClick: () => void
   destructive?: boolean
   disabled?: boolean
 }) {
+  const iconRef = useRef<AnimatedIconHandle>(null)
   return (
     <button
       onClick={onClick}
@@ -70,8 +71,10 @@ export function ToolbarAction({
         height: 32,
         color: destructive ? tokens.colors.red : tokens.colors.textSecondary,
       }}
+      onMouseEnter={() => iconRef.current?.startAnimation()}
+      onMouseLeave={() => iconRef.current?.stopAnimation()}
     >
-      <Icon size={16} strokeWidth={1.5} />
+      <Icon ref={iconRef} size={16} strokeWidth={1.5} />
     </button>
   )
 }

@@ -6,6 +6,7 @@ import {
   TrashIcon, SimpleCheckedIcon, SendIcon, CopyIcon,
   DownChevron, RightChevron, FilledCheckedIcon,
   XIcon, ExpandIcon, RefreshIcon, TerminalIcon,
+  type AnimatedIconHandle,
 } from '../components/icons'
 import { tokens } from '../designTokens'
 import { Badge } from '../components/ui/badge'
@@ -130,6 +131,36 @@ function getTodayKey(): string {
 }
 
 type FilterTab = 'all' | 'running' | 'done' | 'failed'
+
+function SendButton({ onClick, disabled, loading }: { onClick: () => void; disabled: boolean; loading: boolean }) {
+  const iconRef = useRef<AnimatedIconHandle>(null)
+  return (
+    <motion.button
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.8 }}
+      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+      onClick={onClick}
+      disabled={disabled}
+      className="shrink-0 ml-3 flex items-center justify-center rounded-md transition-colors duration-150"
+      style={{
+        width: 28,
+        height: 28,
+        background: loading ? 'transparent' : '#0A84FF',
+      }}
+      whileHover={!loading ? { background: 'rgba(10,132,255,0.80)' } : undefined}
+      whileTap={!loading ? { scale: 0.92 } : undefined}
+      onMouseEnter={() => iconRef.current?.startAnimation()}
+      onMouseLeave={() => iconRef.current?.stopAnimation()}
+    >
+      {loading ? (
+        <RefreshIcon size={16} strokeWidth={1.5} className="animate-spin" color="#0A84FF" />
+      ) : (
+        <SendIcon ref={iconRef} size={14} strokeWidth={1.5} color="white" />
+      )}
+    </motion.button>
+  )
+}
 
 // --- Task Row (iOS Mail style) ---
 
@@ -318,6 +349,8 @@ function TaskRow({
 function CommandBlock({ text }: { text: string }) {
   const [expanded, setExpanded] = useState(text.length <= 200)
   const [copied, setCopied] = useState(false)
+  const expandRef = useRef<AnimatedIconHandle>(null)
+  const copyRef = useRef<AnimatedIconHandle>(null)
 
   const handleCopy = async () => {
     try {
@@ -341,8 +374,10 @@ function CommandBlock({ text }: { text: string }) {
               className="h-7 px-2"
               style={{ color: tokens.colors.textTertiary }}
               onClick={() => setExpanded(!expanded)}
+              onMouseEnter={() => expandRef.current?.startAnimation()}
+              onMouseLeave={() => expandRef.current?.stopAnimation()}
             >
-              <ExpandIcon size={14} strokeWidth={1.5} />
+              <ExpandIcon ref={expandRef} size={14} strokeWidth={1.5} />
               <span className="ml-1 text-[11px]">{expanded ? 'Collapse' : 'Expand'}</span>
             </Button>
           )}
@@ -352,8 +387,10 @@ function CommandBlock({ text }: { text: string }) {
             className="h-7 px-2"
             style={{ color: tokens.colors.textTertiary }}
             onClick={handleCopy}
+            onMouseEnter={() => copyRef.current?.startAnimation()}
+            onMouseLeave={() => copyRef.current?.stopAnimation()}
           >
-            {copied ? <SimpleCheckedIcon size={14} strokeWidth={1.5} /> : <CopyIcon size={14} strokeWidth={1.5} />}
+            {copied ? <SimpleCheckedIcon size={14} strokeWidth={1.5} /> : <CopyIcon ref={copyRef} size={14} strokeWidth={1.5} />}
             <span className="ml-1 text-[11px]">{copied ? 'Copied' : 'Copy'}</span>
           </Button>
         </div>
@@ -1250,28 +1287,11 @@ export default function OpsPage() {
             {/* Send button — appears only when there's content */}
             <AnimatePresence>
               {(quickTaskText.trim() || isComposerLoading) && (
-                <motion.button
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                <SendButton
                   onClick={handleQuickTask}
                   disabled={isComposerLoading || !quickTaskText.trim()}
-                  className="shrink-0 ml-3 flex items-center justify-center rounded-md transition-colors duration-150"
-                  style={{
-                    width: 28,
-                    height: 28,
-                    background: isComposerLoading ? 'transparent' : '#0A84FF',
-                  }}
-                  whileHover={!isComposerLoading ? { background: 'rgba(10,132,255,0.80)' } : undefined}
-                  whileTap={!isComposerLoading ? { scale: 0.92 } : undefined}
-                >
-                  {isComposerLoading ? (
-                    <RefreshIcon size={16} strokeWidth={1.5} className="animate-spin" color="#0A84FF" />
-                  ) : (
-                    <SendIcon size={14} strokeWidth={1.5} color="white" />
-                  )}
-                </motion.button>
+                  loading={isComposerLoading}
+                />
               )}
             </AnimatePresence>
           </div>

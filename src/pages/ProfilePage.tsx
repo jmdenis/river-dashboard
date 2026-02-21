@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { toast } from 'sonner'
 import { PlusSignIcon, InboxIcon, Folder01Icon } from 'hugeicons-react'
-import { RefreshIcon, MapPinIcon, SimpleCheckedIcon, TrashIcon, MailFilledIcon, XIcon, LockIcon, GearIcon, TriangleAlertIcon, BugIcon, CopyIcon, ClockIcon, BrainCircuitIcon, FileDescriptionIcon, UploadIcon, FilledCheckedIcon, ArrowNarrowRightIcon, ArrowNarrowLeftIcon, DownloadIcon } from '../components/icons'
+import { RefreshIcon, MapPinIcon, SimpleCheckedIcon, TrashIcon, MailFilledIcon, XIcon, LockIcon, GearIcon, TriangleAlertIcon, BugIcon, CopyIcon, ClockIcon, BrainCircuitIcon, FileDescriptionIcon, UploadIcon, FilledCheckedIcon, ArrowNarrowRightIcon, ArrowNarrowLeftIcon, DownloadIcon, type AnimatedIconHandle } from '../components/icons'
 import ReactMarkdown from 'react-markdown'
 
 // shadcn/ui
@@ -38,6 +38,7 @@ function GeneralTab() {
   const [dirty, setDirty] = useState(false)
   const [settings, setSettings] = useState<HomeSettings | null>(null)
   const [timezone, setTimezone] = useState('Europe/Paris')
+  const saveIconRef = useRef<AnimatedIconHandle>(null)
 
   useEffect(() => {
     lifeApi.getSettings().then(s => {
@@ -96,8 +97,8 @@ function GeneralTab() {
                 placeholder="123 Main Street"
               />
               {dirty && (
-                <Button onClick={save} disabled={saving} size="icon" variant="outline">
-                  {saving ? <RefreshIcon size={16} strokeWidth={1.5} className="animate-spin" /> : <SimpleCheckedIcon size={16} strokeWidth={1.5} />}
+                <Button onClick={save} disabled={saving} size="icon" variant="outline" onMouseEnter={() => saveIconRef.current?.startAnimation()} onMouseLeave={() => saveIconRef.current?.stopAnimation()}>
+                  {saving ? <RefreshIcon size={16} strokeWidth={1.5} className="animate-spin" /> : <SimpleCheckedIcon ref={saveIconRef} size={16} strokeWidth={1.5} />}
                 </Button>
               )}
             </div>
@@ -148,6 +149,66 @@ function GeneralTab() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+// ─── Notification Button Components ─────────────────────────────────────────
+
+function RecipientRemoveButton({ onClick }: { onClick: () => void }) {
+  const iconRef = useRef<AnimatedIconHandle>(null)
+  return (
+    <button
+      onClick={onClick}
+      className="text-muted-foreground hover:text-destructive transition-colors ml-0.5"
+      onMouseEnter={() => iconRef.current?.startAnimation()}
+      onMouseLeave={() => iconRef.current?.stopAnimation()}
+    >
+      <XIcon ref={iconRef} size={12} strokeWidth={1.5} />
+    </button>
+  )
+}
+
+function AddRecipientConfirmButton({ onClick }: { onClick: () => void }) {
+  const iconRef = useRef<AnimatedIconHandle>(null)
+  return (
+    <Button
+      size="icon-xs"
+      variant="ghost"
+      onClick={onClick}
+      onMouseEnter={() => iconRef.current?.startAnimation()}
+      onMouseLeave={() => iconRef.current?.stopAnimation()}
+    >
+      <SimpleCheckedIcon ref={iconRef} size={12} strokeWidth={1.5} />
+    </Button>
+  )
+}
+
+function TestEmailButton({ testId, tState, cooldownSec, onSend }: {
+  testId: string
+  tState: 'idle' | 'sending' | 'sent'
+  cooldownSec: number
+  onSend: (testId: string) => void
+}) {
+  const iconRef = useRef<AnimatedIconHandle>(null)
+  return (
+    <Button
+      variant="ghost"
+      size="xs"
+      onClick={() => onSend(testId)}
+      disabled={tState !== 'idle' || cooldownSec > 0}
+      className="shrink-0"
+      onMouseEnter={() => iconRef.current?.startAnimation()}
+      onMouseLeave={() => iconRef.current?.stopAnimation()}
+    >
+      {tState === 'sending' ? (
+        <RefreshIcon size={12} strokeWidth={1.5} className="animate-spin" />
+      ) : cooldownSec > 0 ? (
+        <SimpleCheckedIcon size={12} strokeWidth={1.5} color="#34d399" />
+      ) : (
+        <MailFilledIcon ref={iconRef} size={12} strokeWidth={1.5} />
+      )}
+      {tState === 'sending' ? 'Test' : cooldownSec > 0 ? `${cooldownSec}s` : 'Test'}
+    </Button>
   )
 }
 
@@ -304,12 +365,7 @@ function NotificationsTab() {
                     {recipients.map(email => (
                       <Badge key={email} variant="secondary" className="gap-1 pr-1">
                         {email}
-                        <button
-                          onClick={() => removeRecipient(id, email)}
-                          className="text-muted-foreground hover:text-destructive transition-colors ml-0.5"
-                        >
-                          <XIcon size={12} strokeWidth={1.5} />
-                        </button>
+                        <RecipientRemoveButton onClick={() => removeRecipient(id, email)} />
                       </Badge>
                     ))}
 
@@ -327,9 +383,7 @@ function NotificationsTab() {
                           onBlur={() => { if (!(newEmails[id] || '').trim()) setAddingFor(null) }}
                           className="h-7 w-40 text-xs"
                         />
-                        <Button size="icon-xs" variant="ghost" onClick={() => addRecipient(id)}>
-                          <SimpleCheckedIcon size={12} strokeWidth={1.5} />
-                        </Button>
+                        <AddRecipientConfirmButton onClick={() => addRecipient(id)} />
                       </div>
                     ) : (
                       <Button
@@ -345,22 +399,12 @@ function NotificationsTab() {
 
                   {/* Test button */}
                   {testId && (
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      onClick={() => sendTest(testId)}
-                      disabled={tState !== 'idle' || (cooldown[testId] || 0) > 0}
-                      className="shrink-0"
-                    >
-                      {tState === 'sending' ? (
-                        <RefreshIcon size={12} strokeWidth={1.5} className="animate-spin" />
-                      ) : (cooldown[testId] || 0) > 0 ? (
-                        <SimpleCheckedIcon size={12} strokeWidth={1.5} color="#34d399" />
-                      ) : (
-                        <MailFilledIcon size={12} strokeWidth={1.5} />
-                      )}
-                      {tState === 'sending' ? 'Test' : (cooldown[testId] || 0) > 0 ? `${cooldown[testId]}s` : 'Test'}
-                    </Button>
+                    <TestEmailButton
+                      testId={testId}
+                      tState={tState as 'idle' | 'sending' | 'sent'}
+                      cooldownSec={cooldown[testId] || 0}
+                      onSend={sendTest}
+                    />
                   )}
                 </div>
               </div>
@@ -380,6 +424,24 @@ const systemJobs = [
   { id: 'stats', label: 'Stats Polling', schedule: 'Every 60s', cron: '* * * * *', enabled: true },
   { id: 'logrotate', label: 'Log Rotation', schedule: 'Daily midnight', cron: '0 0 * * *', enabled: true },
 ]
+
+// ─── Cron Button Components ─────────────────────────────────────────────────
+
+function CronDeleteButton({ onClick, className }: { onClick: () => void; className?: string }) {
+  const iconRef = useRef<AnimatedIconHandle>(null)
+  return (
+    <Button
+      variant="ghost"
+      size="icon-xs"
+      onClick={onClick}
+      className={className || "text-muted-foreground hover:text-destructive"}
+      onMouseEnter={() => iconRef.current?.startAnimation()}
+      onMouseLeave={() => iconRef.current?.stopAnimation()}
+    >
+      <TrashIcon ref={iconRef} size={12} strokeWidth={1.5} />
+    </Button>
+  )
+}
 
 // ─── Cron Jobs Tab ───────────────────────────────────────────────────────────
 
@@ -515,17 +577,10 @@ function CronJobsTab({ cronJobs, cronLoading, onAdd, onDelete }: {
                         <code style={{ fontSize: 12, fontFamily: 'JetBrains Mono, SF Mono, monospace', color: tokens.colors.textQuaternary }}>{rawSchedule}</code>
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          onClick={() => {
-                            onDelete(job.raw)
-                            toast.success(`Deleted ${job.name}`)
-                          }}
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          <TrashIcon size={12} strokeWidth={1.5} />
-                        </Button>
+                        <CronDeleteButton onClick={() => {
+                          onDelete(job.raw)
+                          toast.success(`Deleted ${job.name}`)
+                        }} />
                       </TableCell>
                     </TableRow>
                   )
@@ -574,17 +629,13 @@ function CronJobsTab({ cronJobs, cronLoading, onAdd, onDelete }: {
                     <p className="text-sm text-foreground truncate">{job.name}</p>
                     <p className="text-xs text-muted-foreground">{job.schedule} · <code className="font-mono">{rawSchedule}</code></p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
+                  <CronDeleteButton
                     onClick={() => {
                       onDelete(job.raw)
                       toast.success(`Deleted ${job.name}`)
                     }}
                     className="text-muted-foreground hover:text-destructive shrink-0"
-                  >
-                    <TrashIcon size={12} strokeWidth={1.5} />
-                  </Button>
+                  />
                 </div>
               )
             })
@@ -634,6 +685,25 @@ function CronJobsTab({ cronJobs, cronLoading, onAdd, onDelete }: {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+// ─── Security Button Components ─────────────────────────────────────────────
+
+function CopyKeyButton({ onClick }: { onClick: () => void }) {
+  const iconRef = useRef<AnimatedIconHandle>(null)
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={onClick}
+      className="shrink-0"
+      onMouseEnter={() => iconRef.current?.startAnimation()}
+      onMouseLeave={() => iconRef.current?.stopAnimation()}
+    >
+      <CopyIcon ref={iconRef} size={14} strokeWidth={1.5} />
+      Copy
+    </Button>
   )
 }
 
@@ -727,15 +797,7 @@ function SecurityTab() {
                       readOnly
                       className="flex-1 font-mono text-xs h-8"
                     />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => copyToClipboard(key, masked)}
-                      className="shrink-0"
-                    >
-                      <CopyIcon size={14} strokeWidth={1.5} />
-                      Copy
-                    </Button>
+                    <CopyKeyButton onClick={() => copyToClipboard(key, masked)} />
                   </div>
                 </div>
               ))}

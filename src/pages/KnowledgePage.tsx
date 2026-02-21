@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { motion } from 'motion/react'
 import { toast } from 'sonner'
 import { opsApi, type InboxItem, type IntegrationProposal } from '../services/opsApi'
@@ -22,6 +22,7 @@ import {
 import { AnimatedIcon } from '../components/AnimatedIcon'
 import {
   RefreshIcon, TrashIcon, CopyIcon, SimpleCheckedIcon, XIcon, BookIcon,
+  type AnimatedIconHandle,
 } from '../components/icons'
 import { tokens } from '../designTokens'
 import { TwoPanelLayout } from '../components/TwoPanelLayout'
@@ -167,6 +168,14 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
 
   const [checkedTakeaways, setCheckedTakeaways] = useState<Set<number>>(new Set())
   useEffect(() => { setCheckedTakeaways(new Set()) }, [item.id])
+
+  // Refs for itshover icon button-hover animations
+  const copyIconRef = useRef<AnimatedIconHandle>(null)
+  const copyCheckedRef = useRef<AnimatedIconHandle>(null)
+  const execRefreshRef = useRef<AnimatedIconHandle>(null)
+  const execCheckedRef = useRef<AnimatedIconHandle>(null)
+  const recheckRefreshRef = useRef<AnimatedIconHandle>(null)
+  const recheckRefreshSpinRef = useRef<AnimatedIconHandle>(null)
 
   // Parse actionItems
   const actionItems: { assignee: string; action: string }[] = []
@@ -342,10 +351,12 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
                 variant="ghost"
                 size="sm"
                 onClick={() => onCopy(rrCmd!, item.id)}
+                onMouseEnter={() => { copyIconRef.current?.startAnimation(); copyCheckedRef.current?.startAnimation() }}
+                onMouseLeave={() => { copyIconRef.current?.stopAnimation(); copyCheckedRef.current?.stopAnimation() }}
               >
                 {copiedId === item.id
-                  ? <SimpleCheckedIcon size={14} strokeWidth={1.5} color="rgb(52 211 153)" />
-                  : <CopyIcon size={14} strokeWidth={1.5} />}
+                  ? <SimpleCheckedIcon ref={copyCheckedRef} size={14} strokeWidth={1.5} color="rgb(52 211 153)" />
+                  : <CopyIcon ref={copyIconRef} size={14} strokeWidth={1.5} />}
                 Copy
               </Button>
               <Button
@@ -353,11 +364,13 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
                 size="sm"
                 onClick={() => onExecute(item.id)}
                 disabled={executingId === item.id || executedId === item.id}
+                onMouseEnter={() => { execRefreshRef.current?.startAnimation(); execCheckedRef.current?.startAnimation() }}
+                onMouseLeave={() => { execRefreshRef.current?.stopAnimation(); execCheckedRef.current?.stopAnimation() }}
               >
                 {executingId === item.id
-                  ? <RefreshIcon size={14} strokeWidth={1.5} className="animate-spin" />
+                  ? <RefreshIcon ref={execRefreshRef} size={14} strokeWidth={1.5} className="animate-spin" />
                   : executedId === item.id
-                    ? <SimpleCheckedIcon size={14} strokeWidth={1.5} color="rgb(52 211 153)" />
+                    ? <SimpleCheckedIcon ref={execCheckedRef} size={14} strokeWidth={1.5} color="rgb(52 211 153)" />
                     : <AnimatedIcon icon={PlayIcon} className="h-3.5 w-3.5" strokeWidth={1.5} />}
                 {executedId === item.id ? 'Executed' : 'Execute'}
               </Button>
@@ -415,10 +428,12 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
           size="sm"
           onClick={() => onRecheck(item.id)}
           disabled={recheckingId === item.id}
+          onMouseEnter={() => { recheckRefreshRef.current?.startAnimation(); recheckRefreshSpinRef.current?.startAnimation() }}
+          onMouseLeave={() => { recheckRefreshRef.current?.stopAnimation(); recheckRefreshSpinRef.current?.stopAnimation() }}
         >
           {recheckingId === item.id
-            ? <RefreshIcon size={14} strokeWidth={1.5} className="animate-spin" />
-            : <RefreshIcon size={14} strokeWidth={1.5} />}
+            ? <RefreshIcon ref={recheckRefreshSpinRef} size={14} strokeWidth={1.5} className="animate-spin" />
+            : <RefreshIcon ref={recheckRefreshRef} size={14} strokeWidth={1.5} />}
           <span className="ml-1">Recheck</span>
         </Button>
       </div>

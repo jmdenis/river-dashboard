@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { CopyIcon, SimpleCheckedIcon, RefreshIcon } from './icons'
+import { CopyIcon, SimpleCheckedIcon, RefreshIcon, type AnimatedIconHandle } from './icons'
 import { Button } from './ui/button'
 import { ScrollArea } from './ui/scroll-area'
 import { tokens } from '../designTokens'
@@ -15,6 +15,7 @@ interface LogViewerProps {
 export function LogViewer({ content, loading, notFound, autoScroll, maxHeight = '100%' }: LogViewerProps) {
   const [copied, setCopied] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const copyRef = useRef<AnimatedIconHandle>(null)
 
   useEffect(() => {
     if (autoScroll && bottomRef.current) {
@@ -57,8 +58,10 @@ export function LogViewer({ content, loading, notFound, autoScroll, maxHeight = 
             className="h-7 px-2"
             style={{ color: tokens.colors.textTertiary }}
             onClick={handleCopy}
+            onMouseEnter={() => copyRef.current?.startAnimation()}
+            onMouseLeave={() => copyRef.current?.stopAnimation()}
           >
-            {copied ? <SimpleCheckedIcon size={14} strokeWidth={1.5} /> : <CopyIcon size={14} strokeWidth={1.5} />}
+            {copied ? <SimpleCheckedIcon size={14} strokeWidth={1.5} /> : <CopyIcon ref={copyRef} size={14} strokeWidth={1.5} />}
             <span className="ml-1 text-[11px]">{copied ? 'Copied' : 'Copy'}</span>
           </Button>
         )}

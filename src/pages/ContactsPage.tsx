@@ -8,6 +8,7 @@ import {
 import {
   UsersGroupIcon, PenIcon, MailFilledIcon, TrashIcon, RefreshIcon,
   FilledCheckedIcon, ClockIcon, ArrowNarrowRightIcon,
+  type AnimatedIconHandle,
 } from '../components/icons'
 import { tokens } from '../designTokens'
 import { TwoPanelLayout } from '../components/TwoPanelLayout'
@@ -317,6 +318,7 @@ function EditContactDialog({
     notes: '',
   })
   const [saving, setSaving] = useState(false)
+  const saveSpinnerRef = useRef<AnimatedIconHandle>(null)
 
   useEffect(() => {
     if (contact && open) {
@@ -410,8 +412,13 @@ function EditContactDialog({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} disabled={saving}>
-            {saving && <RefreshIcon size={14} strokeWidth={1.5} className="animate-spin mr-1" />}
+          <Button
+            onClick={handleSubmit}
+            disabled={saving}
+            onMouseEnter={() => saveSpinnerRef.current?.startAnimation()}
+            onMouseLeave={() => saveSpinnerRef.current?.stopAnimation()}
+          >
+            {saving && <RefreshIcon ref={saveSpinnerRef} size={14} strokeWidth={1.5} className="animate-spin mr-1" />}
             Save
           </Button>
         </DialogFooter>
@@ -434,6 +441,14 @@ export default function ContactsPage() {
   const [editMode, setEditMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkDeleting, setBulkDeleting] = useState(false)
+
+  // Icon animation refs
+  const selectAllIconRef = useRef<AnimatedIconHandle>(null)
+  const bulkDeleteTrashRef = useRef<AnimatedIconHandle>(null)
+  const bulkDeleteSpinnerRef = useRef<AnimatedIconHandle>(null)
+  const mobileSelectAllIconRef = useRef<AnimatedIconHandle>(null)
+  const mobileBulkDeleteTrashRef = useRef<AnimatedIconHandle>(null)
+  const mobileBulkDeleteSpinnerRef = useRef<AnimatedIconHandle>(null)
 
   // Dialogs
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -623,9 +638,11 @@ export default function ContactsPage() {
             onClick={toggleSelectAll}
             className="flex items-center gap-1.5 transition-colors"
             style={{ ...tokens.typography.caption, color: tokens.colors.accent }}
+            onMouseEnter={() => selectAllIconRef.current?.startAnimation()}
+            onMouseLeave={() => selectAllIconRef.current?.stopAnimation()}
           >
             {selectedIds.size === filteredContacts.length
-              ? <><FilledCheckedIcon size={14} strokeWidth={1.5} /> Deselect All</>
+              ? <><FilledCheckedIcon ref={selectAllIconRef} size={14} strokeWidth={1.5} /> Deselect All</>
               : <><CircleIcon className="h-3.5 w-3.5" strokeWidth={1.5} /> Select All</>}
           </button>
           {selectedIds.size > 0 && (
@@ -695,10 +712,12 @@ export default function ContactsPage() {
               disabled={bulkDeleting}
               onClick={handleBulkDelete}
               className="flex-1"
+              onMouseEnter={() => { bulkDeleteTrashRef.current?.startAnimation(); bulkDeleteSpinnerRef.current?.startAnimation() }}
+              onMouseLeave={() => { bulkDeleteTrashRef.current?.stopAnimation(); bulkDeleteSpinnerRef.current?.stopAnimation() }}
             >
               {bulkDeleting
-                ? <RefreshIcon size={14} strokeWidth={1.5} className="animate-spin mr-1" />
-                : <TrashIcon size={14} strokeWidth={1.5} className="mr-1" />}
+                ? <RefreshIcon ref={bulkDeleteSpinnerRef} size={14} strokeWidth={1.5} className="animate-spin mr-1" />
+                : <TrashIcon ref={bulkDeleteTrashRef} size={14} strokeWidth={1.5} className="mr-1" />}
               Delete {selectedIds.size}
             </Button>
           </motion.div>
@@ -784,9 +803,11 @@ export default function ContactsPage() {
             onClick={toggleSelectAll}
             className="flex items-center gap-1.5 transition-colors"
             style={{ ...tokens.typography.caption, color: tokens.colors.accent }}
+            onMouseEnter={() => mobileSelectAllIconRef.current?.startAnimation()}
+            onMouseLeave={() => mobileSelectAllIconRef.current?.stopAnimation()}
           >
             {selectedIds.size === filteredContacts.length
-              ? <><FilledCheckedIcon size={14} strokeWidth={1.5} /> Deselect All</>
+              ? <><FilledCheckedIcon ref={mobileSelectAllIconRef} size={14} strokeWidth={1.5} /> Deselect All</>
               : <><CircleIcon className="h-3.5 w-3.5" strokeWidth={1.5} /> Select All</>}
           </button>
           {selectedIds.size > 0 && (
