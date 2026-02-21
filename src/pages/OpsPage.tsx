@@ -2,9 +2,11 @@ import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { toast } from 'sonner'
 import { opsApi, type Task, type SystemInfo } from '../services/opsApi'
-import { Loading03Icon, Delete02Icon, Tick02Icon, SentIcon, Copy01Icon, ArrowDown01Icon, ArrowRight01Icon, CheckmarkCircle02Icon, CircleIcon, Cancel01Icon, UnfoldMoreIcon } from 'hugeicons-react'
-import { TerminalIcon } from '../components/ui/terminal-icon'
-import { AnimatedIcon } from '../components/AnimatedIcon'
+import {
+  TrashIcon, SimpleCheckedIcon, SendIcon, CopyIcon,
+  DownChevron, RightChevron, FilledCheckedIcon,
+  XIcon, ExpandIcon, RefreshIcon, TerminalIcon,
+} from '../components/icons'
 import { tokens } from '../designTokens'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
@@ -189,9 +191,9 @@ function TaskRow({
         {editMode && (
           <div className="shrink-0 flex items-center justify-center" style={{ width: 24 }}>
             {isSelected ? (
-              <CheckmarkCircle02Icon className="h-5 w-5" strokeWidth={1.5} style={{ color: tokens.colors.accent }} />
+              <FilledCheckedIcon size={20} strokeWidth={1.5} color={tokens.colors.accent} />
             ) : (
-              <CircleIcon className="h-5 w-5" strokeWidth={1.5} style={{ color: tokens.colors.textQuaternary }} />
+              <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={tokens.colors.textQuaternary} strokeWidth={1.5}><circle cx="12" cy="12" r="9" /></svg>
             )}
           </div>
         )}
@@ -340,7 +342,7 @@ function CommandBlock({ text }: { text: string }) {
               style={{ color: tokens.colors.textTertiary }}
               onClick={() => setExpanded(!expanded)}
             >
-              <AnimatedIcon icon={UnfoldMoreIcon} className="h-3.5 w-3.5" strokeWidth={1.5} />
+              <ExpandIcon size={14} strokeWidth={1.5} />
               <span className="ml-1 text-[11px]">{expanded ? 'Collapse' : 'Expand'}</span>
             </Button>
           )}
@@ -351,7 +353,7 @@ function CommandBlock({ text }: { text: string }) {
             style={{ color: tokens.colors.textTertiary }}
             onClick={handleCopy}
           >
-            {copied ? <AnimatedIcon icon={Tick02Icon} className="h-3.5 w-3.5" strokeWidth={1.5} noStroke /> : <AnimatedIcon icon={Copy01Icon} className="h-3.5 w-3.5" strokeWidth={1.5} />}
+            {copied ? <SimpleCheckedIcon size={14} strokeWidth={1.5} /> : <CopyIcon size={14} strokeWidth={1.5} />}
             <span className="ml-1 text-[11px]">{copied ? 'Copied' : 'Copy'}</span>
           </Button>
         </div>
@@ -420,12 +422,12 @@ function TaskDetail({
         actions={
           <>
             {isKillable && (
-              <ToolbarAction icon={Cancel01Icon} label="Kill" destructive onClick={() => onKill(task.id)} />
+              <ToolbarAction icon={XIcon} label="Kill" destructive onClick={() => onKill(task.id)} />
             )}
             {logContent && (
-              <ToolbarAction icon={Copy01Icon} label="Copy log" onClick={handleCopyLog} />
+              <ToolbarAction icon={CopyIcon} label="Copy log" onClick={handleCopyLog} />
             )}
-            <ToolbarAction icon={Delete02Icon} label="Delete" destructive onClick={() => onDelete(task.id)} />
+            <ToolbarAction icon={TrashIcon} label="Delete" destructive onClick={() => onDelete(task.id)} />
           </>
         }
       />
@@ -918,9 +920,9 @@ export default function OpsPage() {
                     style={{ color: tokens.colors.accent }}
                   >
                     {committing ? (
-                      <Loading03Icon className="h-3 w-3 animate-spin" strokeWidth={1.5} />
+                      <RefreshIcon size={12} strokeWidth={1.5} className="animate-spin" />
                     ) : (
-                      <Tick02Icon className="h-3 w-3" strokeWidth={1.5} />
+                      <SimpleCheckedIcon size={12} strokeWidth={1.5} />
                     )}
                     Commit
                   </button>
@@ -977,9 +979,9 @@ export default function OpsPage() {
             style={{ ...tokens.typography.caption, color: tokens.colors.accent }}
           >
             {selectedIds.size === filteredTasks.length ? (
-              <><CheckmarkCircle02Icon className="h-3.5 w-3.5" strokeWidth={1.5} /> Deselect All</>
+              <><FilledCheckedIcon size={14} strokeWidth={1.5} /> Deselect All</>
             ) : (
-              <><CircleIcon className="h-3.5 w-3.5" strokeWidth={1.5} /> Select All</>
+              <><svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><circle cx="12" cy="12" r="9" /></svg> Select All</>
             )}
           </button>
           {selectedIds.size > 0 && (
@@ -994,7 +996,7 @@ export default function OpsPage() {
       <div className="flex-1 overflow-y-auto" style={editMode && selectedIds.size > 0 ? { paddingBottom: 64 } : undefined}>
         {filteredTasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-5">
-            <TerminalIcon size={32} className="mb-3" style={{ color: tokens.colors.textQuaternary, opacity: 0.4 }} isAnimated={false} />
+            <TerminalIcon size={32} className="mb-3" color={tokens.colors.textQuaternary} />
             <p className="text-[13px]" style={{ color: tokens.colors.textQuaternary }}>
               {tasks.length === 0 ? 'No tasks yet' : 'No matches'}
             </p>
@@ -1038,8 +1040,8 @@ export default function OpsPage() {
                     }}
                   >
                     {isExpanded
-                      ? <AnimatedIcon icon={ArrowDown01Icon} className="h-3.5 w-3.5" strokeWidth={1.5} style={{ color: tokens.colors.textTertiary }} />
-                      : <AnimatedIcon icon={ArrowRight01Icon} className="h-3.5 w-3.5" strokeWidth={1.5} style={{ color: tokens.colors.textTertiary }} />
+                      ? <DownChevron size={14} strokeWidth={1.5} color={tokens.colors.textTertiary} />
+                      : <RightChevron size={14} strokeWidth={1.5} color={tokens.colors.textTertiary} />
                     }
                     <span style={{ ...tokens.typography.title, color: tokens.colors.textSecondary }} className="flex-1 truncate">
                       {group.label}
@@ -1137,7 +1139,7 @@ export default function OpsPage() {
               onClick={handleBulkDelete}
               className="flex-1"
             >
-              {bulkDeleting ? <Loading03Icon className="h-3.5 w-3.5 animate-spin mr-1" strokeWidth={1.5} /> : <AnimatedIcon icon={Delete02Icon} className="h-3.5 w-3.5 mr-1" strokeWidth={1.5} />}
+              {bulkDeleting ? <RefreshIcon size={14} strokeWidth={1.5} className="animate-spin mr-1" /> : <TrashIcon size={14} strokeWidth={1.5} className="mr-1" />}
               Delete {selectedIds.size}
             </Button>
             {selectedHasKillable && (
@@ -1148,7 +1150,7 @@ export default function OpsPage() {
                 onClick={handleBulkKill}
                 className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
               >
-                {bulkKilling ? <Loading03Icon className="h-3.5 w-3.5 animate-spin mr-1" strokeWidth={1.5} /> : <AnimatedIcon icon={Cancel01Icon} className="h-3.5 w-3.5 mr-1" strokeWidth={1.5} />}
+                {bulkKilling ? <RefreshIcon size={14} strokeWidth={1.5} className="animate-spin mr-1" /> : <XIcon size={14} strokeWidth={1.5} className="mr-1" />}
                 Kill Active
               </Button>
             )}
@@ -1265,9 +1267,9 @@ export default function OpsPage() {
                   whileTap={!isComposerLoading ? { scale: 0.92 } : undefined}
                 >
                   {isComposerLoading ? (
-                    <Loading03Icon className="h-4 w-4 animate-spin" strokeWidth={1.5} style={{ color: '#0A84FF' }} />
+                    <RefreshIcon size={16} strokeWidth={1.5} className="animate-spin" color="#0A84FF" />
                   ) : (
-                    <SentIcon className="h-3.5 w-3.5 text-white" strokeWidth={1.5} />
+                    <SendIcon size={14} strokeWidth={1.5} color="white" />
                   )}
                 </motion.button>
               )}
@@ -1279,7 +1281,7 @@ export default function OpsPage() {
         <TwoPanelLayout
           leftPanel={taskListPanel}
           rightPanel={rightPanel}
-          emptyState={{ icon: <TerminalIcon size={48} isAnimated={false} />, text: 'Select a task' }}
+          emptyState={{ icon: <TerminalIcon size={48} />, text: 'Select a task' }}
           selectedKey={selectedTask?.id}
           mobileOpen={mobileSheetOpen}
           onMobileClose={handleMobileClose}

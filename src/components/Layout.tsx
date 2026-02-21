@@ -1,18 +1,17 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence } from 'motion/react'
-import { Upload02Icon, CommandLineIcon, Home01Icon, BookOpen01Icon, Settings01Icon } from 'hugeicons-react'
+import { TerminalIcon, HomeIcon, BookIcon, GearIcon, UploadIcon, type AnimatedIconHandle } from './icons'
 
 import UploadModal from './UploadModal'
-import { AnimatedIcon } from './AnimatedIcon'
 import { Popover, PopoverTrigger, PopoverContent } from './ui/popover'
 import { tokens } from '../designTokens'
 
 const NAV_ITEMS: { name: string; value: string; href: string; Icon: React.ComponentType<any> }[] = [
-  { name: 'Ops', value: 'ops', href: '/ops', Icon: CommandLineIcon },
-  { name: 'Home', value: 'home', href: '/home', Icon: Home01Icon },
-  { name: 'Knowledge', value: 'knowledge', href: '/knowledge', Icon: BookOpen01Icon },
-  { name: 'Settings', value: 'settings', href: '/settings', Icon: Settings01Icon },
+  { name: 'Ops', value: 'ops', href: '/ops', Icon: TerminalIcon },
+  { name: 'Home', value: 'home', href: '/home', Icon: HomeIcon },
+  { name: 'Knowledge', value: 'knowledge', href: '/knowledge', Icon: BookIcon },
+  { name: 'Settings', value: 'settings', href: '/settings', Icon: GearIcon },
 ]
 
 function pathToTab(pathname: string): string {
@@ -113,7 +112,7 @@ export default function Layout() {
                       }
                     }}
                   >
-                    <AnimatedIcon icon={item.Icon} style={{ width: 20, height: 20 }} strokeWidth={1.5} />
+                    <item.Icon size={20} strokeWidth={1.5} />
                     <span style={{ fontSize: 14, fontWeight: 500, lineHeight: '20px' }}>
                       {item.name}
                     </span>
@@ -164,7 +163,7 @@ export default function Layout() {
                   e.currentTarget.style.borderColor = tokens.colors.borderSubtle
                 }}
               >
-                <AnimatedIcon icon={Upload02Icon} style={{ width: 16, height: 16 }} strokeWidth={1.5} />
+                <UploadIcon size={16} strokeWidth={1.5} />
                 Upload
               </button>
             </PopoverTrigger>
@@ -222,7 +221,7 @@ export default function Layout() {
                   cursor: 'pointer',
                 }}
               >
-                <AnimatedIcon icon={item.Icon} className="h-7 w-7" strokeWidth={1.5} />
+                <item.Icon size={28} strokeWidth={1.5} />
                 <span style={{ fontSize: 10, fontWeight: 500, lineHeight: '12px', color }}>
                   {item.name}
                 </span>
