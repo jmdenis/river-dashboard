@@ -248,8 +248,8 @@ function TaskRow({
                 {duration}
               </span>
             )}
-            {/* Summary fallback (if no model pills) */}
-            {modelNames.length === 0 && task.summary && (
+            {/* Summary */}
+            {task.summary && (
               <span
                 className="truncate text-[11px]"
                 style={{ color: tokens.colors.textTertiary }}
