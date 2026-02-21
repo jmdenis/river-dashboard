@@ -312,7 +312,6 @@ function TaskDetail({
   onKill,
   onDelete,
   onBack,
-  onSummaryGenerated,
 }: {
   task: Task
   logContent: string | null
@@ -321,7 +320,6 @@ function TaskDetail({
   onKill: (id: string) => void
   onDelete: (id: string) => void
   onBack?: () => void
-  onSummaryGenerated?: (taskId: string, summary: string) => void
 }) {
   const isRunning = task.status === 'running'
   const isKillable = isRunning || task.status === 'queued'
@@ -331,36 +329,6 @@ function TaskDetail({
     ? task.model.split(',').map(m => m.trim()).filter(Boolean).map(m => m.split('/').pop() || m)
     : []
   const fullPrompt = task.prompt || task.title
-
-  // Summary state
-  const [summary, setSummary] = useState<string | null>(task.summary || null)
-  const [summaryLoading, setSummaryLoading] = useState(false)
-  const summaryRequestedRef = useRef<string | null>(null)
-
-  // Fetch summary for done tasks with log content
-  useEffect(() => {
-    if (task.summary) {
-      setSummary(task.summary)
-      return
-    }
-    if (task.status !== 'done' || !logContent || summaryRequestedRef.current === task.id) return
-    summaryRequestedRef.current = task.id
-    setSummaryLoading(true)
-    opsApi.summarizeTask(task.id).then(result => {
-      if (result.ok && result.summary) {
-        setSummary(result.summary)
-        onSummaryGenerated?.(task.id, result.summary)
-      }
-    }).catch(() => {}).finally(() => setSummaryLoading(false))
-  }, [task.id, task.status, task.summary, logContent])
-
-  // Reset when task changes
-  useEffect(() => {
-    setSummary(task.summary || null)
-    if (summaryRequestedRef.current !== task.id) {
-      summaryRequestedRef.current = null
-    }
-  }, [task.id])
 
   const handleCopyLog = async () => {
     if (!logContent) return
@@ -426,7 +394,7 @@ function TaskDetail({
         </div>
       </div>
 
-      {/* Scrollable content area: 4. Command + 5. Output + 6. Summary + 7. Exit code */}
+      {/* Scrollable content area: 4. Command + 5. Output + 6. Exit code */}
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
         {/* 4. Command block */}
         <CommandBlock text={fullPrompt} />
@@ -440,22 +408,7 @@ function TaskDetail({
           maxHeight="calc(100vh - 440px)"
         />
 
-        {/* 6. Summary */}
-        {(summary || summaryLoading) && (
-          <div>
-            <span className="text-[11px] uppercase tracking-wider" style={{ color: tokens.colors.textTertiary }}>Summary</span>
-            {summaryLoading ? (
-              <div className="flex items-center gap-2 mt-1.5">
-                <Loading03Icon className="h-3 w-3 animate-spin" strokeWidth={1.5} style={{ color: tokens.colors.textQuaternary }} />
-                <span className="text-sm italic" style={{ color: 'rgba(255,255,255,0.35)' }}>Generating summary...</span>
-              </div>
-            ) : (
-              <p className="text-sm italic mt-1.5" style={{ color: 'rgba(255,255,255,0.60)' }}>{summary}</p>
-            )}
-          </div>
-        )}
-
-        {/* 7. Exit code / result */}
+        {/* 6. Exit code / result */}
         {task.result && (
           <p className="text-[11px] truncate" style={{ color: tokens.colors.textTertiary }}>
             {task.result}
@@ -1121,10 +1074,6 @@ export default function OpsPage() {
     setSelectedTaskId(null)
   }
 
-  const handleSummaryGenerated = useCallback((taskId: string, summary: string) => {
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, summary } : t))
-  }, [])
-
   const rightPanel = selectedTask ? (
     <TaskDetail
       task={selectedTask}
@@ -1134,7 +1083,6 @@ export default function OpsPage() {
       onKill={(id) => setKillConfirmId(id)}
       onDelete={(id) => setDeleteConfirmId(id)}
       onBack={handleMobileClose}
-      onSummaryGenerated={handleSummaryGenerated}
     />
   ) : null
 

@@ -1767,7 +1767,7 @@ function WeekendWeatherCard({ weather }: { weather: WeekendWeather | null }) {
  <div className="flex items-center gap-3 md:gap-4 flex-shrink-0 flex-wrap">
  {weather.saturday && (
  <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.sm }}>
- <WeatherIcon code={weather.saturday.weatherCode} className="h-4 w-4 text-amber-400/80" />
+ <WeatherIcon code={weather?.saturday?.weatherCode} className="h-4 w-4 text-amber-400/80" />
  <span style={{ ...tokens.typography.body, color: tokens.colors.textSecondary }}>Sat</span>
  <span style={{ ...tokens.typography.body, color: tokens.colors.textPrimary }}>{Math.round(weather.saturday.tempMax)}°</span>
  <span style={{ ...tokens.typography.caption, color: tokens.colors.textTertiary }}>{Math.round(weather.saturday.tempMin)}°</span>
@@ -1781,7 +1781,7 @@ function WeekendWeatherCard({ weather }: { weather: WeekendWeather | null }) {
  )}
  {weather.sunday && (
  <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.sm }}>
- <WeatherIcon code={weather.sunday.weatherCode} className="h-4 w-4 text-amber-400/80" />
+ <WeatherIcon code={weather?.sunday?.weatherCode} className="h-4 w-4 text-amber-400/80" />
  <span style={{ ...tokens.typography.body, color: tokens.colors.textSecondary }}>Sun</span>
  <span style={{ ...tokens.typography.body, color: tokens.colors.textPrimary }}>{Math.round(weather.sunday.tempMax)}°</span>
  <span style={{ ...tokens.typography.caption, color: tokens.colors.textTertiary }}>{Math.round(weather.sunday.tempMin)}°</span>
