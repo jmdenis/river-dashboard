@@ -45,8 +45,9 @@ export function TwoPanelLayout({
         style={{
           background: tokens.colors.surface,
           marginTop: 12,
-          border: '1px solid #ccc',
-          boxShadow: 'inset 0 1px 0 0 rgba(255,255,255,0.01)',
+          border: '1px solid rgba(255,255,255,0.06)',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
+          borderRadius: 12,
         }}
       >
         {/* Left Panel — 35% width, surface bg, dense list */}

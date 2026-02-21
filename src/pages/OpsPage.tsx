@@ -328,7 +328,7 @@ function CommandBlock({ text }: { text: string }) {
   }
 
   return (
-    <div className="rounded-md overflow-hidden" style={{ background: tokens.colors.bg, border: '1px solid ' + tokens.colors.borderSubtle, borderRadius: 6 }}>
+    <div className="rounded-md overflow-hidden" style={{ background: tokens.colors.bg, border: '1px solid rgba(255,255,255,0.06)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)', borderRadius: 12 }}>
       <div className="flex items-center justify-between px-3 py-2" style={{ borderBottom: '1px solid ' + tokens.colors.borderSubtle, background: tokens.colors.surface }}>
         <span className="text-[11px] uppercase tracking-wider" style={{ color: tokens.colors.textTertiary }}>Command</span>
         <div className="flex items-center gap-1">
