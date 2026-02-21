@@ -11,6 +11,8 @@ export interface Task {
   created: string
   startTime?: string
   endTime?: string
+  startedAt?: string
+  completedAt?: string
   result?: string
   cost?: string
   tokensIn?: number

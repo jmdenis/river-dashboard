@@ -260,16 +260,48 @@ function TaskRow({
           </div>
         </div>
 
-        {/* Timestamp (right) */}
+        {/* Timestamps (right) */}
         <div className="shrink-0 flex flex-col items-end gap-0.5">
-          <span className="text-[11px] tabular-nums" style={{ color: tokens.colors.textQuaternary }}>
-            {formatTime(task.created)}
-          </span>
-          {task.status !== 'done' && task.status !== 'failed' && task.status !== 'cancelled' && (
-            <span className="text-[10px]" style={{ color: tokens.colors.textQuaternary }}>
-              {task.status}
-            </span>
-          )}
+          {(() => {
+            const started = task.startedAt || task.startTime
+            const completed = task.completedAt || task.endTime
+            if (started && completed) {
+              return (
+                <>
+                  <span className="text-[10px] tabular-nums" style={{ color: tokens.colors.textTertiary }}>
+                    {formatTime(started)}
+                  </span>
+                  <span className="text-[10px] tabular-nums" style={{ color: tokens.colors.textQuaternary }}>
+                    {formatTime(completed)}
+                  </span>
+                </>
+              )
+            }
+            if (started) {
+              return (
+                <>
+                  <span className="text-[10px] tabular-nums" style={{ color: tokens.colors.textTertiary }}>
+                    {formatTime(started)}
+                  </span>
+                  <span className="text-[10px]" style={{ color: tokens.colors.textQuaternary }}>
+                    {task.status}
+                  </span>
+                </>
+              )
+            }
+            return (
+              <>
+                <span className="text-[11px] tabular-nums" style={{ color: tokens.colors.textQuaternary }}>
+                  {formatTime(task.created)}
+                </span>
+                {task.status !== 'done' && task.status !== 'failed' && task.status !== 'cancelled' && (
+                  <span className="text-[10px]" style={{ color: tokens.colors.textQuaternary }}>
+                    {task.status}
+                  </span>
+                )}
+              </>
+            )
+          })()}
         </div>
       </div>
 
@@ -416,9 +448,33 @@ function TaskDetail({
           {task.status === 'cancelled' && (
             <Badge variant="default" className="text-[11px]" style={{ background: 'rgba(255,255,255,0.06)', color: tokens.colors.textTertiary, borderColor: 'rgba(255,255,255,0.08)' }}>cancelled</Badge>
           )}
-          <span className="text-[11px] tabular-nums" style={{ color: tokens.colors.textTertiary }}>
-            {formatTime(task.created)}
-          </span>
+          {(() => {
+            const started = task.startedAt || task.startTime
+            const completed = task.completedAt || task.endTime
+            if (started) {
+              return (
+                <span className="text-[11px] tabular-nums" style={{ color: tokens.colors.textTertiary }}>
+                  started {formatTime(started)}
+                </span>
+              )
+            }
+            return (
+              <span className="text-[11px] tabular-nums" style={{ color: tokens.colors.textTertiary }}>
+                {formatTime(task.created)}
+              </span>
+            )
+          })()}
+          {(() => {
+            const completed = task.completedAt || task.endTime
+            if (completed) {
+              return (
+                <span className="text-[11px] tabular-nums" style={{ color: tokens.colors.textTertiary }}>
+                  done {formatTime(completed)}
+                </span>
+              )
+            }
+            return null
+          })()}
           {duration && (
             <span className="text-[11px] tabular-nums" style={{ color: tokens.colors.textTertiary }}>{duration}</span>
           )}
