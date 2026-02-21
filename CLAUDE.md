@@ -92,3 +92,4 @@ Nginx basic auth (user: jm) protects the dashboard. No token in URL path.
 - Keep dark mode + violet accent aesthetic
 - jmd's personal machine is Windows 11 with NO WSL — use PowerShell/CMD only for local instructions
 - jmd's work machine is macOS
+IMPORTANT: Never use shadcn components (AlertDialog, Dialog, Sheet, etc) without importing them from '@/components/ui/'. Always verify imports exist before using components.
