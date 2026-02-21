@@ -171,7 +171,7 @@ export const opsApi = {
   },
 
   async smartTask(input: string): Promise<{ ok: boolean; command?: string; error?: string }> {
-    const res = await fetch(`${API_BASE}/tasks/smart`, {
+    const res = await fetch(`${API_BASE}/tasks/enhance`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ input }),
