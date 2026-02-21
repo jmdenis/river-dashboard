@@ -61,7 +61,7 @@ export function TwoPanelLayout({
         {/* Right Panel — desktop only, slightly lifted bg for depth */}
         <div
           className="hidden md:flex flex-1 min-w-0 flex-col overflow-hidden"
-          style={{ background: '#0F0F10' }}
+          style={{ background: tokens.colors.surfaceDetail }}
         >
           <AnimatePresence mode="wait">
             {rightPanel ? (

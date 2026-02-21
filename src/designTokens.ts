@@ -6,6 +6,7 @@ export const tokens = {
   colors: {
     bg: '#1C1C1C',
     surface: '#242424',
+    surfaceDetail: '#1A1A1E',
     surfaceHover: '#323232',
     overlay: '#2C2C2C',
     border: 'rgba(255,255,255,0.08)',
