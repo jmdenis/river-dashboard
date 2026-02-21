@@ -174,7 +174,7 @@ export const opsApi = {
     const res = await fetch(`${API_BASE}/tasks/enhance`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ input }),
+      body: JSON.stringify({ prompt: input }),
     })
     return res.json()
   },
