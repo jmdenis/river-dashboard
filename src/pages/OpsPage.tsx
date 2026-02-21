@@ -312,6 +312,7 @@ function TaskDetail({
   onKill,
   onDelete,
   onBack,
+  onSummaryLoaded,
 }: {
   task: Task
   logContent: string | null
@@ -320,6 +321,7 @@ function TaskDetail({
   onKill: (id: string) => void
   onDelete: (id: string) => void
   onBack?: () => void
+  onSummaryLoaded?: (taskId: string, summary: string) => void
 }) {
   const isRunning = task.status === 'running'
   const isKillable = isRunning || task.status === 'queued'
@@ -329,6 +331,31 @@ function TaskDetail({
     ? task.model.split(',').map(m => m.trim()).filter(Boolean).map(m => m.split('/').pop() || m)
     : []
   const fullPrompt = task.prompt || task.title
+
+  // Auto-summarize for done tasks
+  const [summaryText, setSummaryText] = useState<string | null>(task.summary || null)
+  const [summaryLoading, setSummaryLoading] = useState(false)
+  const summaryRequestedRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    setSummaryText(task.summary || null)
+    summaryRequestedRef.current = null
+  }, [task.id])
+
+  useEffect(() => {
+    if (task.status !== 'done') return
+    if (task.summary) { setSummaryText(task.summary); return }
+    if (logLoading || !logContent) return
+    if (summaryRequestedRef.current === task.id) return
+    summaryRequestedRef.current = task.id
+    setSummaryLoading(true)
+    opsApi.summarizeTask(task.id).then(result => {
+      if (result.ok && result.summary) {
+        setSummaryText(result.summary)
+        onSummaryLoaded?.(task.id, result.summary)
+      }
+    }).catch(() => {}).finally(() => setSummaryLoading(false))
+  }, [task.id, task.status, task.summary, logContent, logLoading])
 
   const handleCopyLog = async () => {
     if (!logContent) return
@@ -408,7 +435,24 @@ function TaskDetail({
           maxHeight="calc(100vh - 440px)"
         />
 
-        {/* 6. Exit code / result */}
+        {/* 6. Summary */}
+        {(summaryText || summaryLoading) && (
+          <div>
+            <span className="text-[11px] uppercase tracking-wider" style={{ color: tokens.colors.textTertiary }}>Summary</span>
+            {summaryLoading ? (
+              <div className="flex items-center gap-2 mt-1.5">
+                <Loading03Icon className="h-3.5 w-3.5 animate-spin" strokeWidth={1.5} style={{ color: tokens.colors.textQuaternary }} />
+                <span className="text-sm italic" style={{ color: 'rgba(255,255,255,0.35)' }}>Generating summary…</span>
+              </div>
+            ) : (
+              <p className="text-sm italic mt-1.5" style={{ color: 'rgba(255,255,255,0.60)' }}>
+                {summaryText}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* 7. Exit code / result */}
         {task.result && (
           <p className="text-[11px] truncate" style={{ color: tokens.colors.textTertiary }}>
             {task.result}
@@ -1074,6 +1118,10 @@ export default function OpsPage() {
     setSelectedTaskId(null)
   }
 
+  const handleSummaryLoaded = useCallback((taskId: string, summary: string) => {
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, summary } : t))
+  }, [])
+
   const rightPanel = selectedTask ? (
     <TaskDetail
       task={selectedTask}
@@ -1083,6 +1131,7 @@ export default function OpsPage() {
       onKill={(id) => setKillConfirmId(id)}
       onDelete={(id) => setDeleteConfirmId(id)}
       onBack={handleMobileClose}
+      onSummaryLoaded={handleSummaryLoaded}
     />
   ) : null
 
