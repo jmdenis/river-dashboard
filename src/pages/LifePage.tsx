@@ -11,10 +11,6 @@ import { Input } from '../components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '../components/ui/dialog'
 import { Loading03Icon, PlusSignIcon, Delete02Icon, Tick02Icon, Clock01Icon, Calendar01Icon, MessageMultiple01Icon, GiftIcon, Copy01Icon, LinkSquare02Icon, SparklesIcon, FavouriteIcon, PencilEdit02Icon, Cancel01Icon, ViewIcon, ViewOffSlashIcon, Mail01Icon, RotateClockwiseIcon, Car01Icon, Share01Icon, Location01Icon, ParkingAreaCircleIcon, Hotel01Icon, Search01Icon, ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, StarIcon, CookBookIcon, WorkHistoryIcon, CloudBigRainIcon, Sun01Icon, SunCloud01Icon, CloudIcon, SnowIcon, CloudLittleRainIcon, ZapIcon, WindPower01Icon, Home01Icon, Airplane01Icon, Dumbbell01Icon, SentIcon, Download02Icon, SmartPhone01Icon, UserMultiple02Icon, UserAdd01Icon, Tag01Icon, ArrowUp01Icon, Luggage01Icon } from 'hugeicons-react'
 import { AnimatedIcon } from '../components/AnimatedIcon'
-import { PlaneIcon, type PlaneIconHandle } from '../components/ui/plane-icon'
-import { CalendarIcon } from '../components/ui/calendar-icon'
-import { GiftIcon } from '../components/ui/gift-icon'
-import { ClockIcon } from '../components/ui/clock-icon'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Checkbox } from '../components/ui/checkbox'
@@ -1608,7 +1604,7 @@ function IdeaCard({ idea, type, toast, onDidThis, weather, onOpenPlan }: { idea:
  setPlanning(true)
  try {
  const weatherStr = weather
- ? `${planDay === 'Saturday' ? weather.saturday.condition : weather.sunday.condition}, ${planDay === 'Saturday' ? weather.saturday.tempMax : weather.sunday.tempMax}°C`
+ ? `${planDay === 'Saturday' ? weather.saturday?.condition : weather.sunday?.condition}, ${planDay === 'Saturday' ? weather.saturday?.tempMax : weather.sunday?.tempMax}°C`
  : undefined
  const plan = await lifeApi.planDay({
  title: idea.title,
@@ -1759,7 +1755,7 @@ function WeatherIcon({ code, className }: { code: number; className?: string }) 
 
 // --- Weekend Weather Card ---
 function WeekendWeatherCard({ weather }: { weather: WeekendWeather | null }) {
- if (!weather) return null
+ if (!weather || (!weather.saturday && !weather.sunday)) return null
  const homeCity = weather.homeCity
 
  return (
@@ -1769,6 +1765,7 @@ function WeekendWeatherCard({ weather }: { weather: WeekendWeather | null }) {
  This weekend{homeCity ? ` — ${homeCity}` : ''}
  </span>
  <div className="flex items-center gap-3 md:gap-4 flex-shrink-0 flex-wrap">
+ {weather.saturday && (
  <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.sm }}>
  <WeatherIcon code={weather.saturday.weatherCode} className="h-4 w-4 text-amber-400/80" />
  <span style={{ ...tokens.typography.body, color: tokens.colors.textSecondary }}>Sat</span>
@@ -1778,7 +1775,11 @@ function WeekendWeatherCard({ weather }: { weather: WeekendWeather | null }) {
  <span className="text-[10px] text-blue-400/60">{weather.saturday.precipitation}mm</span>
  )}
  </div>
+ )}
+ {weather.saturday && weather.sunday && (
  <div style={{ width: 1, height: tokens.spacing.lg, background: tokens.colors.border }} />
+ )}
+ {weather.sunday && (
  <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.sm }}>
  <WeatherIcon code={weather.sunday.weatherCode} className="h-4 w-4 text-amber-400/80" />
  <span style={{ ...tokens.typography.body, color: tokens.colors.textSecondary }}>Sun</span>
@@ -1788,6 +1789,7 @@ function WeekendWeatherCard({ weather }: { weather: WeekendWeather | null }) {
  <span className="text-[10px] text-blue-400/60">{weather.sunday.precipitation}mm</span>
  )}
  </div>
+ )}
  </div>
  </div>
  </div>
