@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { toast } from 'sonner'
-import { Loading03Icon, Location01Icon, Tick02Icon, PlusSignIcon, Delete02Icon, Mail01Icon, Cancel01Icon, ShieldKeyIcon, Settings01Icon, Alert02Icon, Key01Icon, Bug01Icon, InboxIcon, RotateClockwiseIcon, Copy01Icon, Clock01Icon, ArtificialIntelligence01Icon, Note01Icon, Upload02Icon, CheckmarkCircle02Icon, Folder01Icon, ArrowRight01Icon, ArrowLeft01Icon, Download02Icon } from 'hugeicons-react'
-import { AnimatedIcon } from '../components/AnimatedIcon'
+import { PlusSignIcon, InboxIcon, Folder01Icon } from 'hugeicons-react'
+import { RefreshIcon, MapPinIcon, SimpleCheckedIcon, TrashIcon, MailFilledIcon, XIcon, LockIcon, GearIcon, TriangleAlertIcon, BugIcon, CopyIcon, ClockIcon, BrainCircuitIcon, FileDescriptionIcon, UploadIcon, FilledCheckedIcon, ArrowNarrowRightIcon, ArrowNarrowLeftIcon, DownloadIcon } from '../components/icons'
 import ReactMarkdown from 'react-markdown'
 
 // shadcn/ui
@@ -69,7 +69,7 @@ function GeneralTab() {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <Loading03Icon strokeWidth={1.5} className="size-5 animate-spin text-muted-foreground" />
+        <RefreshIcon size={20} strokeWidth={1.5} className="animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -80,7 +80,7 @@ function GeneralTab() {
       <Card className="md:py-6 py-4">
         <CardHeader className="md:px-6 px-4">
           <CardTitle className="flex items-center gap-2 text-sm">
-            <AnimatedIcon icon={Location01Icon} strokeWidth={1.5} className="size-4 text-muted-foreground" />
+            <MapPinIcon size={16} strokeWidth={1.5} className="text-muted-foreground" />
             Home Location
           </CardTitle>
           <CardDescription>Your home address for weather, commute, and location-based features.</CardDescription>
@@ -97,7 +97,7 @@ function GeneralTab() {
               />
               {dirty && (
                 <Button onClick={save} disabled={saving} size="icon" variant="outline">
-                  {saving ? <Loading03Icon strokeWidth={1.5} className="size-4 animate-spin" /> : <AnimatedIcon icon={Tick02Icon} strokeWidth={1.5} className="size-4" />}
+                  {saving ? <RefreshIcon size={16} strokeWidth={1.5} className="animate-spin" /> : <SimpleCheckedIcon size={16} strokeWidth={1.5} />}
                 </Button>
               )}
             </div>
@@ -115,7 +115,7 @@ function GeneralTab() {
       <Card className="md:py-6 py-4">
         <CardHeader className="md:px-6 px-4">
           <CardTitle className="flex items-center gap-2 text-sm">
-            <AnimatedIcon icon={Settings01Icon} strokeWidth={1.5} className="size-4 text-muted-foreground" />
+            <GearIcon size={16} strokeWidth={1.5} className="text-muted-foreground" />
             Configuration
           </CardTitle>
         </CardHeader>
@@ -261,7 +261,7 @@ function NotificationsTab() {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <Loading03Icon strokeWidth={1.5} className="size-5 animate-spin text-muted-foreground" />
+        <RefreshIcon size={20} strokeWidth={1.5} className="animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -272,10 +272,10 @@ function NotificationsTab() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <CardTitle className="flex items-center gap-2 text-sm">
-              <AnimatedIcon icon={Mail01Icon} strokeWidth={1.5} className="size-4 text-muted-foreground" />
+              <MailFilledIcon size={16} strokeWidth={1.5} className="text-muted-foreground" />
               Email Notifications
             </CardTitle>
-            {saving && <Loading03Icon strokeWidth={1.5} className="size-3.5 animate-spin text-primary ml-auto" />}
+            {saving && <RefreshIcon size={14} strokeWidth={1.5} className="animate-spin text-primary ml-auto" />}
           </div>
           <CardDescription>Manage notification recipients and test delivery.</CardDescription>
         </CardHeader>
@@ -308,7 +308,7 @@ function NotificationsTab() {
                           onClick={() => removeRecipient(id, email)}
                           className="text-muted-foreground hover:text-destructive transition-colors ml-0.5"
                         >
-                          <AnimatedIcon icon={Cancel01Icon} strokeWidth={1.5} className="size-3" />
+                          <XIcon size={12} strokeWidth={1.5} />
                         </button>
                       </Badge>
                     ))}
@@ -328,7 +328,7 @@ function NotificationsTab() {
                           className="h-7 w-40 text-xs"
                         />
                         <Button size="icon-xs" variant="ghost" onClick={() => addRecipient(id)}>
-                          <AnimatedIcon icon={Tick02Icon} strokeWidth={1.5} className="size-3" />
+                          <SimpleCheckedIcon size={12} strokeWidth={1.5} />
                         </Button>
                       </div>
                     ) : (
@@ -338,7 +338,7 @@ function NotificationsTab() {
                         onClick={() => setAddingFor(id)}
                         className="text-muted-foreground"
                       >
-                        <AnimatedIcon icon={PlusSignIcon} strokeWidth={1.5} className="size-3" />
+                        <PlusSignIcon strokeWidth={1.5} className="size-3" />
                       </Button>
                     )}
                   </div>
@@ -353,11 +353,11 @@ function NotificationsTab() {
                       className="shrink-0"
                     >
                       {tState === 'sending' ? (
-                        <Loading03Icon strokeWidth={1.5} className="size-3 animate-spin" />
+                        <RefreshIcon size={12} strokeWidth={1.5} className="animate-spin" />
                       ) : (cooldown[testId] || 0) > 0 ? (
-                        <AnimatedIcon icon={Tick02Icon} strokeWidth={1.5} className="size-3 text-emerald-400" noStroke />
+                        <SimpleCheckedIcon size={12} strokeWidth={1.5} color="#34d399" />
                       ) : (
-                        <AnimatedIcon icon={Mail01Icon} strokeWidth={1.5} className="size-3" />
+                        <MailFilledIcon size={12} strokeWidth={1.5} />
                       )}
                       {tState === 'sending' ? 'Test' : (cooldown[testId] || 0) > 0 ? `${cooldown[testId]}s` : 'Test'}
                     </Button>
@@ -425,7 +425,7 @@ function CronJobsTab({ cronJobs, cronLoading, onAdd, onDelete }: {
   if (cronLoading) {
     return (
       <div className="flex justify-center py-12">
-        <Loading03Icon strokeWidth={1.5} className="size-5 animate-spin text-muted-foreground" />
+        <RefreshIcon size={20} strokeWidth={1.5} className="animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -436,12 +436,12 @@ function CronJobsTab({ cronJobs, cronLoading, onAdd, onDelete }: {
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: `1px solid ${tokens.colors.borderSubtle}` }}>
           <div className="flex items-center gap-2">
-            <AnimatedIcon icon={Clock01Icon} strokeWidth={1.5} className="size-4 text-muted-foreground" />
+            <ClockIcon size={16} strokeWidth={1.5} className="text-muted-foreground" />
             <span className="text-sm font-medium">Cron Jobs</span>
             <Badge variant="secondary" className="ml-1">{systemJobs.length + cronJobs.length}</Badge>
           </div>
           <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-            <AnimatedIcon icon={PlusSignIcon} strokeWidth={1.5} className="size-3.5" />
+            <PlusSignIcon strokeWidth={1.5} className="size-3.5" />
             Add
           </Button>
         </div>
@@ -524,7 +524,7 @@ function CronJobsTab({ cronJobs, cronLoading, onAdd, onDelete }: {
                           }}
                           className="text-muted-foreground hover:text-destructive"
                         >
-                          <AnimatedIcon icon={Delete02Icon} strokeWidth={1.5} className="size-3" />
+                          <TrashIcon size={12} strokeWidth={1.5} />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -583,7 +583,7 @@ function CronJobsTab({ cronJobs, cronLoading, onAdd, onDelete }: {
                     }}
                     className="text-muted-foreground hover:text-destructive shrink-0"
                   >
-                    <AnimatedIcon icon={Delete02Icon} strokeWidth={1.5} className="size-3" />
+                    <TrashIcon size={12} strokeWidth={1.5} />
                   </Button>
                 </div>
               )
@@ -660,8 +660,8 @@ function SecurityTab() {
   }
 
   const dangerActions = [
-    { id: 'rotate-token', label: 'Rotate Auth Token', description: 'Generate a new auth token. Requires service restart.', icon: Key01Icon },
-    { id: 'clear-debug', label: 'Clear Debug Logs', description: 'Clear the server debug log file.', icon: Bug01Icon },
+    { id: 'rotate-token', label: 'Rotate Auth Token', description: 'Generate a new auth token. Requires service restart.', icon: LockIcon },
+    { id: 'clear-debug', label: 'Clear Debug Logs', description: 'Clear the server debug log file.', icon: BugIcon },
     { id: 'clear-inbox', label: 'Clear Inbox History', description: 'Delete all processed inbox analysis files.', icon: InboxIcon },
   ]
 
@@ -702,7 +702,7 @@ function SecurityTab() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm">
-            <AnimatedIcon icon={Key01Icon} strokeWidth={1.5} className="size-4 text-muted-foreground" />
+            <LockIcon size={16} strokeWidth={1.5} className="text-muted-foreground" />
             API Keys & Secrets
             <Badge variant="secondary" className="ml-1">{Object.keys(vars).length}</Badge>
           </CardTitle>
@@ -711,7 +711,7 @@ function SecurityTab() {
         <CardContent>
           {varsLoading ? (
             <div className="flex justify-center py-6">
-              <Loading03Icon strokeWidth={1.5} className="size-4 animate-spin text-muted-foreground" />
+              <RefreshIcon size={16} strokeWidth={1.5} className="animate-spin text-muted-foreground" />
             </div>
           ) : Object.keys(vars).length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">No environment variables found</p>
@@ -733,7 +733,7 @@ function SecurityTab() {
                       onClick={() => copyToClipboard(key, masked)}
                       className="shrink-0"
                     >
-                      <AnimatedIcon icon={Copy01Icon} strokeWidth={1.5} className="size-3.5" />
+                      <CopyIcon size={14} strokeWidth={1.5} />
                       Copy
                     </Button>
                   </div>
@@ -748,14 +748,14 @@ function SecurityTab() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm">
-            <AnimatedIcon icon={ShieldKeyIcon} strokeWidth={1.5} className="size-4 text-muted-foreground" />
+            <LockIcon size={16} strokeWidth={1.5} className="text-muted-foreground" />
             Connected Services
           </CardTitle>
         </CardHeader>
         <CardContent>
           {statusLoading ? (
             <div className="flex items-center justify-center py-6 gap-2">
-              <Loading03Icon strokeWidth={1.5} className="size-4 animate-spin text-muted-foreground" />
+              <RefreshIcon size={16} strokeWidth={1.5} className="animate-spin text-muted-foreground" />
               <span className="text-sm text-muted-foreground">Testing connections...</span>
             </div>
           ) : status ? (
@@ -773,7 +773,7 @@ function SecurityTab() {
               </div>
               <Separator />
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <AnimatedIcon icon={ShieldKeyIcon} strokeWidth={1.5} className="size-3.5" />
+                <LockIcon size={14} strokeWidth={1.5} />
                 Auth: {status.auth.method}
                 <span className="text-xs">(user: {status.auth.user})</span>
               </div>
@@ -784,7 +784,7 @@ function SecurityTab() {
 
       {/* Danger Zone */}
       <Alert variant="destructive">
-        <AnimatedIcon icon={Alert02Icon} strokeWidth={1.5} className="size-4" />
+        <TriangleAlertIcon size={16} strokeWidth={1.5} />
         <AlertTitle>Danger Zone</AlertTitle>
         <AlertDescription>
           <p className="mb-3">These actions are irreversible. Proceed with caution.</p>
@@ -792,7 +792,7 @@ function SecurityTab() {
             {dangerActions.map(a => (
               <div key={a.id} className="flex items-center justify-between py-2">
                 <div className="flex items-center gap-2.5">
-                  <a.icon className="size-3.5 text-muted-foreground" />
+                  <a.icon size={14} className="size-3.5 text-muted-foreground" />
                   <div>
                     <p className="text-sm text-foreground">{a.label}</p>
                     <p className="text-xs text-muted-foreground">{a.description}</p>
@@ -827,7 +827,7 @@ function SecurityTab() {
               onClick={() => confirmAction && executeAction(confirmAction)}
               disabled={actionLoading}
             >
-              {actionLoading && <Loading03Icon strokeWidth={1.5} className="size-3.5 animate-spin" />}
+              {actionLoading && <RefreshIcon size={14} strokeWidth={1.5} className="animate-spin" />}
               Confirm
             </Button>
           </DialogFooter>
@@ -869,7 +869,7 @@ function MemoryTab() {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <Loading03Icon strokeWidth={1.5} className="size-5 animate-spin text-muted-foreground" />
+        <RefreshIcon size={20} strokeWidth={1.5} className="animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -879,10 +879,10 @@ function MemoryTab() {
       <div className="max-w-3xl">
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 gap-4">
-            <AnimatedIcon icon={ArtificialIntelligence01Icon} strokeWidth={1.5} className="size-8 text-muted-foreground" />
+            <BrainCircuitIcon size={32} strokeWidth={1.5} className="text-muted-foreground" />
             <p className="text-sm text-muted-foreground">No memory file generated yet.</p>
             <Button onClick={regenerate} disabled={regenerating}>
-              {regenerating ? <Loading03Icon strokeWidth={1.5} className="size-4 animate-spin" /> : <AnimatedIcon icon={RotateClockwiseIcon} strokeWidth={1.5} className="size-4" />}
+              {regenerating ? <RefreshIcon size={16} strokeWidth={1.5} className="animate-spin" /> : <RefreshIcon size={16} strokeWidth={1.5} />}
               Generate Memory
             </Button>
           </CardContent>
@@ -897,11 +897,11 @@ function MemoryTab() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-sm">
-              <AnimatedIcon icon={ArtificialIntelligence01Icon} strokeWidth={1.5} className="size-4 text-muted-foreground" />
+              <BrainCircuitIcon size={16} strokeWidth={1.5} className="text-muted-foreground" />
               Weekly Memory
             </CardTitle>
             <Button variant="outline" size="sm" onClick={regenerate} disabled={regenerating}>
-              {regenerating ? <Loading03Icon strokeWidth={1.5} className="size-3.5 animate-spin" /> : <AnimatedIcon icon={RotateClockwiseIcon} strokeWidth={1.5} className="size-3.5" />}
+              {regenerating ? <RefreshIcon size={14} strokeWidth={1.5} className="animate-spin" /> : <RefreshIcon size={14} strokeWidth={1.5} />}
               Regenerate
             </Button>
           </div>
@@ -1039,7 +1039,7 @@ function FilesTab() {
 
   if (isLoading && !currentDir) return (
     <div className="flex items-center justify-center py-20">
-      <Loading03Icon className="h-6 w-6 animate-spin text-[var(--text-3)]" strokeWidth={1.5} />
+      <RefreshIcon size={24} className="animate-spin text-[var(--text-3)]" strokeWidth={1.5} />
     </div>
   )
 
@@ -1055,10 +1055,10 @@ function FilesTab() {
             className="flex items-center gap-1.5 text-[13px] transition-colors duration-150 hover:text-[var(--accent)]"
             style={{ color: 'var(--text-3)' }}
           >
-            <ArrowLeft01Icon className="h-3.5 w-3.5" strokeWidth={1.5} />
+            <ArrowNarrowLeftIcon size={14} strokeWidth={1.5} />
             All folders
           </button>
-          <ArrowRight01Icon className="h-3 w-3" strokeWidth={1.5} style={{ color: 'var(--text-3)' }} />
+          <ArrowNarrowRightIcon size={12} strokeWidth={1.5} style={{ color: 'var(--text-3)' }} />
           <span className="text-[13px]" style={{ color: 'var(--text-1)' }}>{currentDir}/</span>
         </div>
       )}
@@ -1076,7 +1076,7 @@ function FilesTab() {
           background: dragOver ? 'var(--accent-subtle)' : 'transparent',
         }}
       >
-        <div className="flex justify-center mb-2"><AnimatedIcon icon={Upload02Icon} strokeWidth={1.5} className="h-5 w-5" style={{ color: dragOver ? 'var(--accent)' : 'var(--text-3)' }} /></div>
+        <div className="flex justify-center mb-2"><UploadIcon size={20} strokeWidth={1.5} style={{ color: dragOver ? 'var(--accent)' : 'var(--text-3)' }} /></div>
         <p className="text-[13px]" style={{ color: 'var(--text-2)' }}>{dragOver ? 'Drop files here' : 'Drag & drop files, or click to browse'}</p>
         <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-3)' }}>Up to 200 MB per file</p>
         <input ref={fileInputRef} type="file" multiple onChange={handleFileSelect} className="hidden" />
@@ -1093,9 +1093,9 @@ function FilesTab() {
           >
             {uploads.map((u, i) => (
               <div key={i} className="flex items-center gap-3 text-[13px] px-2 py-1.5">
-                {u.status === 'uploading' && <Loading03Icon className="h-4 w-4 animate-spin text-[var(--accent)] shrink-0" strokeWidth={1.5} />}
-                {u.status === 'done' && <CheckmarkCircle02Icon className="h-4 w-4 text-emerald-400/80 shrink-0" strokeWidth={1.5} />}
-                {u.status === 'error' && <Alert02Icon className="h-4 w-4 text-rose-400/80 shrink-0" strokeWidth={1.5} />}
+                {u.status === 'uploading' && <RefreshIcon size={16} className="animate-spin text-[var(--accent)] shrink-0" strokeWidth={1.5} />}
+                {u.status === 'done' && <FilledCheckedIcon size={16} className="text-emerald-400/80 shrink-0" strokeWidth={1.5} />}
+                {u.status === 'error' && <TriangleAlertIcon size={16} className="text-rose-400/80 shrink-0" strokeWidth={1.5} />}
                 <span className="truncate text-[var(--text-2)]">{u.name}</span>
                 {u.error && <span className="text-[12px] text-rose-400/80">Error {u.error}</span>}
               </div>
@@ -1156,7 +1156,7 @@ function FilesTab() {
                               </p>
                             </div>
                           </div>
-                          <ArrowRight01Icon className="h-4 w-4 mt-1" strokeWidth={1.5} style={{ color: 'var(--text-3)' }} />
+                          <ArrowNarrowRightIcon size={16} className="mt-1" strokeWidth={1.5} style={{ color: 'var(--text-3)' }} />
                         </div>
                         {latestMtime > 0 && (
                           <p className="text-[11px] mt-3 pl-12" style={{ color: 'var(--text-3)' }}>
@@ -1186,7 +1186,7 @@ function FilesTab() {
                         style={{ borderBottom: i < rootFiles.length - 1 ? '1px solid var(--divider)' : 'none' }}
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <AnimatedIcon icon={Note01Icon} strokeWidth={1.5} className="h-4 w-4" style={{ color: 'var(--text-3)' }} />
+                          <FileDescriptionIcon size={16} strokeWidth={1.5} style={{ color: 'var(--text-3)' }} />
                           <div className="min-w-0">
                             <p className="text-[13px] truncate" style={{ color: 'var(--text-1)' }}>{f.name}</p>
                             <p className="text-[12px]" style={{ color: 'var(--text-3)' }}>{formatFileDate(f.mtime)}</p>
@@ -1209,7 +1209,7 @@ function FilesTab() {
           >
             {activeFolderData?.loading ? (
               <div className="flex items-center justify-center py-16">
-                <Loading03Icon className="h-5 w-5 animate-spin text-[var(--text-3)]" strokeWidth={1.5} />
+                <RefreshIcon size={20} className="animate-spin text-[var(--text-3)]" strokeWidth={1.5} />
               </div>
             ) : (
               <Card>
@@ -1229,7 +1229,7 @@ function FilesTab() {
                           style={{ borderBottom: i < activeFolderData.files.length - 1 ? '1px solid var(--divider)' : 'none' }}
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            <AnimatedIcon icon={Note01Icon} strokeWidth={1.5} className="h-4 w-4" style={{ color: 'var(--text-3)' }} />
+                            <FileDescriptionIcon size={16} strokeWidth={1.5} style={{ color: 'var(--text-3)' }} />
                             <div className="min-w-0">
                               <p className="text-[13px] truncate" style={{ color: 'var(--text-1)' }}>{f.name}</p>
                               <p className="text-[12px]" style={{ color: 'var(--text-3)' }}>{formatFileSize(f.size)} · {formatFileDate(f.mtime)}</p>
@@ -1243,7 +1243,7 @@ function FilesTab() {
                             title="Download"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <AnimatedIcon icon={Download02Icon} strokeWidth={1.5} className="h-4 w-4" />
+                            <DownloadIcon size={16} strokeWidth={1.5} />
                           </a>
                         </motion.div>
                       ))}

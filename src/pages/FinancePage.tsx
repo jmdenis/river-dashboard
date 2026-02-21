@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { api, type SpendingAnalysis, type WasteReport } from '../services/api'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table'
-import { Loading03Icon } from 'hugeicons-react'
+import { RefreshIcon } from '../components/icons'
 import { ResponsiveContainer, PieChart, Pie, Cell, BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart as RechartsAreaChart, Area } from 'recharts'
 import { tokens } from '../designTokens'
 
@@ -52,7 +52,7 @@ export default function FinancePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loading03Icon className="h-8 w-8 animate-spin text-[var(--text-2)]" strokeWidth={1.5} />
+        <RefreshIcon size={32} strokeWidth={1.5} className="animate-spin text-[var(--text-2)]" />
       </div>
     )
   }

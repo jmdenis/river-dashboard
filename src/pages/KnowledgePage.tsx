@@ -14,12 +14,15 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import {
-  News01Icon, TestTube01Icon, Wrench01Icon, BookOpen01Icon, YoutubeIcon,
-  Share01Icon, Briefcase01Icon, Package01Icon, LinkSquare02Icon, ArrowReloadHorizontalIcon, Loading03Icon,
-  PlayIcon, Copy01Icon, Tick02Icon, BookmarkAdd01Icon, Cancel01Icon, Delete02Icon, InformationCircleIcon,
+  News01Icon, TestTube01Icon, Wrench01Icon, YoutubeIcon,
+  Share01Icon, Briefcase01Icon, Package01Icon, LinkSquare02Icon,
+  PlayIcon, BookmarkAdd01Icon, InformationCircleIcon,
   InstagramIcon,
 } from 'hugeicons-react'
 import { AnimatedIcon } from '../components/AnimatedIcon'
+import {
+  RefreshIcon, TrashIcon, CopyIcon, SimpleCheckedIcon, XIcon, BookIcon,
+} from '../components/icons'
 import { tokens } from '../designTokens'
 import { TwoPanelLayout } from '../components/TwoPanelLayout'
 import { PanelToolbar, ToolbarAction } from '../components/PanelToolbar'
@@ -34,7 +37,7 @@ const categoryIcons: Record<string, React.ComponentType<any>> = {
   'tech-news': News01Icon,
   'ai-research': TestTube01Icon,
   'tool-update': Wrench01Icon,
-  'tutorial': BookOpen01Icon,
+  'tutorial': BookIcon,
   'youtube-video': YoutubeIcon,
   'instagram-reel': InstagramIcon,
   'social-media': Share01Icon,
@@ -198,8 +201,8 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
           <>
             <ToolbarAction icon={BookmarkAdd01Icon} label="Save" onClick={() => onSave(item.id)} />
             <ToolbarAction icon={PlayIcon} label="Execute" disabled={executingId === item.id || executedId === item.id} onClick={() => onExecute(item.id)} />
-            <ToolbarAction icon={Cancel01Icon} label="Dismiss" onClick={() => onDismiss(item.id)} />
-            <ToolbarAction icon={Delete02Icon} label="Delete" destructive onClick={() => onDelete(item.id)} />
+            <ToolbarAction icon={XIcon} label="Dismiss" onClick={() => onDismiss(item.id)} />
+            <ToolbarAction icon={TrashIcon} label="Delete" destructive onClick={() => onDelete(item.id)} />
           </>
         }
       />
@@ -341,8 +344,8 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
                 onClick={() => onCopy(rrCmd!, item.id)}
               >
                 {copiedId === item.id
-                  ? <AnimatedIcon icon={Tick02Icon} className="h-3.5 w-3.5 text-emerald-400" strokeWidth={1.5} noStroke />
-                  : <AnimatedIcon icon={Copy01Icon} className="h-3.5 w-3.5" strokeWidth={1.5} />}
+                  ? <SimpleCheckedIcon size={14} strokeWidth={1.5} color="rgb(52 211 153)" />
+                  : <CopyIcon size={14} strokeWidth={1.5} />}
                 Copy
               </Button>
               <Button
@@ -352,9 +355,9 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
                 disabled={executingId === item.id || executedId === item.id}
               >
                 {executingId === item.id
-                  ? <Loading03Icon className="h-3.5 w-3.5 animate-spin" strokeWidth={1.5} />
+                  ? <RefreshIcon size={14} strokeWidth={1.5} className="animate-spin" />
                   : executedId === item.id
-                    ? <AnimatedIcon icon={Tick02Icon} className="h-3.5 w-3.5 text-emerald-400" strokeWidth={1.5} noStroke />
+                    ? <SimpleCheckedIcon size={14} strokeWidth={1.5} color="rgb(52 211 153)" />
                     : <AnimatedIcon icon={PlayIcon} className="h-3.5 w-3.5" strokeWidth={1.5} />}
                 {executedId === item.id ? 'Executed' : 'Execute'}
               </Button>
@@ -414,8 +417,8 @@ function DetailView({ item, onRecheck, recheckingId, onExecute, executingId, exe
           disabled={recheckingId === item.id}
         >
           {recheckingId === item.id
-            ? <Loading03Icon className="h-3.5 w-3.5 animate-spin" strokeWidth={1.5} />
-            : <AnimatedIcon icon={ArrowReloadHorizontalIcon} className="h-3.5 w-3.5" strokeWidth={1.5} />}
+            ? <RefreshIcon size={14} strokeWidth={1.5} className="animate-spin" />
+            : <RefreshIcon size={14} strokeWidth={1.5} />}
           <span className="ml-1">Recheck</span>
         </Button>
       </div>
@@ -681,7 +684,7 @@ export default function KnowledgePage() {
       <div className="flex-1 overflow-y-auto">
         {filteredItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-5">
-            <AnimatedIcon icon={BookOpen01Icon} className="h-8 w-8 mb-3" strokeWidth={1.5} style={{ color: tokens.colors.textQuaternary, opacity: 0.4 }} />
+            <BookIcon size={32} strokeWidth={1.5} color={tokens.colors.textQuaternary} className="mb-3 opacity-40" />
             <p className="text-[13px]" style={{ color: tokens.colors.textQuaternary }}>
               {nonJunk.length === 0 ? 'No articles yet' : 'No matches'}
             </p>
@@ -796,7 +799,7 @@ export default function KnowledgePage() {
         <TwoPanelLayout
           leftPanel={leftPanel}
           rightPanel={rightPanel}
-          emptyState={{ icon: <AnimatedIcon icon={BookOpen01Icon} className="h-12 w-12" strokeWidth={1.5} />, text: 'Select an article' }}
+          emptyState={{ icon: <BookIcon size={48} strokeWidth={1.5} />, text: 'Select an article' }}
           selectedKey={selectedItem?.id}
           mobileOpen={mobileOpen}
           onMobileClose={handleMobileClose}

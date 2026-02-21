@@ -3,12 +3,12 @@ import { motion, AnimatePresence } from 'motion/react'
 import { toast } from 'sonner'
 import { lifeApi, type Contact } from '../services/lifeApi'
 import {
-  UserMultiple02Icon, PencilEdit02Icon, SmartPhone01Icon, Mail01Icon,
-  Delete02Icon, Loading03Icon, Search01Icon, CheckmarkCircle02Icon,
-  CircleIcon, PlusSignIcon, GiftIcon, Calendar01Icon, Tag01Icon,
-  Clock01Icon, ArrowRight01Icon,
+  SmartPhone01Icon, CircleIcon, PlusSignIcon, GiftIcon, Calendar01Icon, Tag01Icon,
 } from 'hugeicons-react'
-import { AnimatedIcon } from '../components/AnimatedIcon'
+import {
+  UsersGroupIcon, PenIcon, MailFilledIcon, TrashIcon, RefreshIcon,
+  FilledCheckedIcon, ClockIcon, ArrowNarrowRightIcon,
+} from '../components/icons'
 import { tokens } from '../designTokens'
 import { TwoPanelLayout } from '../components/TwoPanelLayout'
 import { PanelToolbar, ToolbarAction } from '../components/PanelToolbar'
@@ -127,7 +127,7 @@ function ContactRow({
         {editMode && (
           <div className="shrink-0 flex items-center justify-center" style={{ width: 24 }}>
             {isSelected ? (
-              <CheckmarkCircle02Icon className="h-5 w-5" strokeWidth={1.5} style={{ color: tokens.colors.accent }} />
+              <FilledCheckedIcon size={20} strokeWidth={1.5} color={tokens.colors.accent} />
             ) : (
               <CircleIcon className="h-5 w-5" strokeWidth={1.5} style={{ color: tokens.colors.textQuaternary }} />
             )}
@@ -163,7 +163,7 @@ function ContactRow({
 
         {/* Mobile chevron */}
         {!editMode && (
-          <AnimatedIcon icon={ArrowRight01Icon} className="h-4 w-4 md:hidden" strokeWidth={1.5} style={{ color: tokens.colors.textQuaternary }} />
+          <ArrowNarrowRightIcon size={16} strokeWidth={1.5} color={tokens.colors.textQuaternary} className="md:hidden" />
         )}
       </div>
 
@@ -213,7 +213,7 @@ function ContactDetail({ contact }: { contact: Contact }) {
         )}
 
         {contact.email && (
-          <DetailField icon={Mail01Icon} label="Email">
+          <DetailField icon={MailFilledIcon} label="Email">
             <a href={`mailto:${contact.email}`} className="hover:underline" style={{ color: tokens.colors.accent }}>
               {contact.email}
             </a>
@@ -241,7 +241,7 @@ function ContactDetail({ contact }: { contact: Contact }) {
         )}
 
         {contact.lastContact && (
-          <DetailField icon={Clock01Icon} label="Last Contact">
+          <DetailField icon={ClockIcon} label="Last Contact">
             <span style={{ color: tokens.colors.textSecondary }}>
               {formatLastContact(contact.lastContact)}
             </span>
@@ -261,7 +261,7 @@ function ContactDetail({ contact }: { contact: Contact }) {
         )}
 
         {contact.notes && (
-          <DetailField icon={PencilEdit02Icon} label="Notes">
+          <DetailField icon={PenIcon} label="Notes">
             <p className="text-[13px] whitespace-pre-wrap leading-relaxed" style={{ color: tokens.colors.textSecondary }}>
               {contact.notes}
             </p>
@@ -277,13 +277,13 @@ function DetailField({
   label,
   children,
 }: {
-  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>
+  icon: React.ComponentType<{ size?: number; strokeWidth?: number; color?: string; className?: string }>
   label: string
   children: React.ReactNode
 }) {
   return (
     <div className="flex gap-3">
-      <AnimatedIcon icon={Icon} className="h-4 w-4 mt-0.5" strokeWidth={1.5} style={{ color: tokens.colors.textQuaternary }} />
+      <Icon size={16} strokeWidth={1.5} color={tokens.colors.textQuaternary} className="mt-0.5" />
       <div className="min-w-0">
         <p style={{ ...tokens.typography.label, color: tokens.colors.textQuaternary, marginBottom: 4 }}>{label}</p>
         {children}
@@ -411,7 +411,7 @@ function EditContactDialog({
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSubmit} disabled={saving}>
-            {saving && <Loading03Icon className="h-3.5 w-3.5 animate-spin mr-1" strokeWidth={1.5} />}
+            {saving && <RefreshIcon size={14} strokeWidth={1.5} className="animate-spin mr-1" />}
             Save
           </Button>
         </DialogFooter>
@@ -625,7 +625,7 @@ export default function ContactsPage() {
             style={{ ...tokens.typography.caption, color: tokens.colors.accent }}
           >
             {selectedIds.size === filteredContacts.length
-              ? <><CheckmarkCircle02Icon className="h-3.5 w-3.5" strokeWidth={1.5} /> Deselect All</>
+              ? <><FilledCheckedIcon size={14} strokeWidth={1.5} /> Deselect All</>
               : <><CircleIcon className="h-3.5 w-3.5" strokeWidth={1.5} /> Select All</>}
           </button>
           {selectedIds.size > 0 && (
@@ -643,7 +643,7 @@ export default function ContactsPage() {
       >
         {filteredContacts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-5">
-            <AnimatedIcon icon={UserMultiple02Icon} className="h-8 w-8 mb-3" strokeWidth={1.5} style={{ color: tokens.colors.textQuaternary, opacity: 0.4 }} />
+            <UsersGroupIcon size={32} strokeWidth={1.5} color={tokens.colors.textQuaternary} className="mb-3" style={{ opacity: 0.4 }} />
             <p className="text-[13px]" style={{ color: tokens.colors.textQuaternary }}>
               {contacts.length === 0 ? 'No contacts yet' : 'No matches'}
             </p>
@@ -697,8 +697,8 @@ export default function ContactsPage() {
               className="flex-1"
             >
               {bulkDeleting
-                ? <Loading03Icon className="h-3.5 w-3.5 animate-spin mr-1" strokeWidth={1.5} />
-                : <AnimatedIcon icon={Delete02Icon} className="h-3.5 w-3.5 mr-1" strokeWidth={1.5} />}
+                ? <RefreshIcon size={14} strokeWidth={1.5} className="animate-spin mr-1" />
+                : <TrashIcon size={14} strokeWidth={1.5} className="mr-1" />}
               Delete {selectedIds.size}
             </Button>
           </motion.div>
@@ -730,10 +730,10 @@ export default function ContactsPage() {
               <ToolbarAction icon={SmartPhone01Icon} label="Call" onClick={() => window.open(`tel:${selectedContact.phone}`)} />
             )}
             {selectedContact.email && (
-              <ToolbarAction icon={Mail01Icon} label="Email" onClick={() => window.open(`mailto:${selectedContact.email}`)} />
+              <ToolbarAction icon={MailFilledIcon} label="Email" onClick={() => window.open(`mailto:${selectedContact.email}`)} />
             )}
-            <ToolbarAction icon={PencilEdit02Icon} label="Edit" onClick={() => setEditDialogOpen(true)} />
-            <ToolbarAction icon={Delete02Icon} label="Delete" destructive onClick={() => setDeleteConfirmId(selectedContact.id)} />
+            <ToolbarAction icon={PenIcon} label="Edit" onClick={() => setEditDialogOpen(true)} />
+            <ToolbarAction icon={TrashIcon} label="Delete" destructive onClick={() => setDeleteConfirmId(selectedContact.id)} />
           </>
         }
       />
@@ -786,7 +786,7 @@ export default function ContactsPage() {
             style={{ ...tokens.typography.caption, color: tokens.colors.accent }}
           >
             {selectedIds.size === filteredContacts.length
-              ? <><CheckmarkCircle02Icon className="h-3.5 w-3.5" strokeWidth={1.5} /> Deselect All</>
+              ? <><FilledCheckedIcon size={14} strokeWidth={1.5} /> Deselect All</>
               : <><CircleIcon className="h-3.5 w-3.5" strokeWidth={1.5} /> Select All</>}
           </button>
           {selectedIds.size > 0 && (
@@ -804,7 +804,7 @@ export default function ContactsPage() {
       >
         {filteredContacts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-5">
-            <AnimatedIcon icon={UserMultiple02Icon} className="h-8 w-8 mb-3" strokeWidth={1.5} style={{ color: tokens.colors.textQuaternary, opacity: 0.4 }} />
+            <UsersGroupIcon size={32} strokeWidth={1.5} color={tokens.colors.textQuaternary} className="mb-3" style={{ opacity: 0.4 }} />
             <p className="text-[13px]" style={{ color: tokens.colors.textQuaternary }}>
               {contacts.length === 0 ? 'No contacts yet' : 'No matches'}
             </p>
@@ -826,7 +826,7 @@ export default function ContactsPage() {
                   {editMode ? (
                     <div className="shrink-0 flex items-center justify-center" style={{ width: 24 }}>
                       {isSelected ? (
-                        <CheckmarkCircle02Icon className="h-5 w-5" strokeWidth={1.5} style={{ color: tokens.colors.accent }} />
+                        <FilledCheckedIcon size={20} strokeWidth={1.5} color={tokens.colors.accent} />
                       ) : (
                         <CircleIcon className="h-5 w-5" strokeWidth={1.5} style={{ color: tokens.colors.textQuaternary }} />
                       )}
@@ -852,7 +852,7 @@ export default function ContactsPage() {
                     )}
                   </div>
                   {!editMode && (
-                    <AnimatedIcon icon={ArrowRight01Icon} className="h-4 w-4" strokeWidth={1.5} style={{ color: tokens.colors.textQuaternary }} />
+                    <ArrowNarrowRightIcon size={16} strokeWidth={1.5} color={tokens.colors.textQuaternary} />
                   )}
                 </div>
                 {/* Indented divider */}
@@ -887,8 +887,8 @@ export default function ContactsPage() {
               className="flex-1"
             >
               {bulkDeleting
-                ? <Loading03Icon className="h-3.5 w-3.5 animate-spin mr-1" strokeWidth={1.5} />
-                : <AnimatedIcon icon={Delete02Icon} className="h-3.5 w-3.5 mr-1" strokeWidth={1.5} />}
+                ? <RefreshIcon size={14} strokeWidth={1.5} className="animate-spin mr-1" />
+                : <TrashIcon size={14} strokeWidth={1.5} className="mr-1" />}
               Delete {selectedIds.size}
             </Button>
           </motion.div>
@@ -928,10 +928,10 @@ export default function ContactsPage() {
                     <ToolbarAction icon={SmartPhone01Icon} label="Call" onClick={() => window.open(`tel:${selectedContact.phone}`)} />
                   )}
                   {selectedContact.email && (
-                    <ToolbarAction icon={Mail01Icon} label="Email" onClick={() => window.open(`mailto:${selectedContact.email}`)} />
+                    <ToolbarAction icon={MailFilledIcon} label="Email" onClick={() => window.open(`mailto:${selectedContact.email}`)} />
                   )}
-                  <ToolbarAction icon={PencilEdit02Icon} label="Edit" onClick={() => setEditDialogOpen(true)} />
-                  <ToolbarAction icon={Delete02Icon} label="Delete" destructive onClick={() => setDeleteConfirmId(selectedContact.id)} />
+                  <ToolbarAction icon={PenIcon} label="Edit" onClick={() => setEditDialogOpen(true)} />
+                  <ToolbarAction icon={TrashIcon} label="Delete" destructive onClick={() => setDeleteConfirmId(selectedContact.id)} />
                 </>
               }
             />
@@ -950,7 +950,7 @@ export default function ContactsPage() {
             <TwoPanelLayout
               leftPanel={leftPanel}
               rightPanel={rightPanel}
-              emptyState={{ icon: <AnimatedIcon icon={UserMultiple02Icon} className="h-12 w-12" strokeWidth={1.5} />, text: 'Select a contact' }}
+              emptyState={{ icon: <UsersGroupIcon size={48} strokeWidth={1.5} />, text: 'Select a contact' }}
               selectedKey={selectedContact?.id}
               mobileOpen={mobileOpen}
               onMobileClose={handleClose}

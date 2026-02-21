@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Copy01Icon, Tick02Icon, Loading03Icon } from 'hugeicons-react'
-import { AnimatedIcon } from './AnimatedIcon'
+import { CopyIcon, SimpleCheckedIcon, RefreshIcon } from './icons'
 import { Button } from './ui/button'
 import { ScrollArea } from './ui/scroll-area'
 import { tokens } from '../designTokens'
@@ -26,7 +25,7 @@ export function LogViewer({ content, loading, notFound, autoScroll, maxHeight = 
   if (loading) {
     return (
       <div className="flex items-center gap-2 py-6 justify-center">
-        <Loading03Icon strokeWidth={1.5} className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+        <RefreshIcon size={14} strokeWidth={1.5} className="animate-spin text-muted-foreground" />
         <span className="text-[12px] text-muted-foreground">Loading log...</span>
       </div>
     )
@@ -59,7 +58,7 @@ export function LogViewer({ content, loading, notFound, autoScroll, maxHeight = 
             style={{ color: tokens.colors.textTertiary }}
             onClick={handleCopy}
           >
-            {copied ? <AnimatedIcon icon={Tick02Icon} strokeWidth={1.5} className="h-3.5 w-3.5" noStroke /> : <AnimatedIcon icon={Copy01Icon} strokeWidth={1.5} className="h-3.5 w-3.5" />}
+            {copied ? <SimpleCheckedIcon size={14} strokeWidth={1.5} /> : <CopyIcon size={14} strokeWidth={1.5} />}
             <span className="ml-1 text-[11px]">{copied ? 'Copied' : 'Copy'}</span>
           </Button>
         )}

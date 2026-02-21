@@ -9,8 +9,9 @@ import { tokens, styles } from '../designTokens'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '../components/ui/dialog'
-import { Loading03Icon, PlusSignIcon, Delete02Icon, Tick02Icon, Clock01Icon, Calendar01Icon, MessageMultiple01Icon, GiftIcon, Copy01Icon, LinkSquare02Icon, SparklesIcon, FavouriteIcon, PencilEdit02Icon, Cancel01Icon, ViewIcon, ViewOffSlashIcon, Mail01Icon, RotateClockwiseIcon, Car01Icon, Share01Icon, Location01Icon, ParkingAreaCircleIcon, Hotel01Icon, Search01Icon, ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, StarIcon, CookBookIcon, WorkHistoryIcon, CloudBigRainIcon, Sun01Icon, SunCloud01Icon, CloudIcon, SnowIcon, CloudLittleRainIcon, ZapIcon, WindPower01Icon, Home01Icon, Airplane01Icon, Dumbbell01Icon, SentIcon, Download02Icon, SmartPhone01Icon, UserMultiple02Icon, UserAdd01Icon, Tag01Icon, ArrowUp01Icon, Luggage01Icon } from 'hugeicons-react'
+import { PlusSignIcon, Calendar01Icon, GiftIcon, Car01Icon, Share01Icon, ParkingAreaCircleIcon, WorkHistoryIcon, CloudBigRainIcon, Sun01Icon, SunCloud01Icon, CloudIcon, SnowIcon, CloudLittleRainIcon, ZapIcon, WindPower01Icon, Dumbbell01Icon, SmartPhone01Icon, Luggage01Icon } from 'hugeicons-react'
 import { AnimatedIcon } from '../components/AnimatedIcon'
+import { RefreshIcon, TrashIcon, CopyIcon, SimpleCheckedIcon, XIcon, DownChevron, SparklesIcon, LinkIcon, PenIcon, MailFilledIcon, MapPinIcon, UsersGroupIcon, UserPlusIcon, StarIcon, ClockIcon, MessageCircleIcon, EyeIcon, EyeOffIcon, HomeIcon, AirplaneIcon, HotelIcon, DownloadIcon, BookIcon, MagnifierIcon } from '../components/icons'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Checkbox } from '../components/ui/checkbox'
@@ -262,7 +263,7 @@ function WorkoutModal({ workout, open, onClose, toast, equipment, onEquipmentCha
  {/* Loading overlay */}
  {loading ? (
  <div className="px-6 pb-6 flex items-center justify-center py-12 gap-2 text-muted-foreground">
- <Loading03Icon strokeWidth={1.5} className="h-5 w-5 animate-spin text-[var(--accent)]" />
+ <RefreshIcon size={20} strokeWidth={1.5} color="var(--accent)" className="animate-spin" />
  <span className="text-[13px]">Generating {equipmentLabel.toLowerCase()} workout...</span>
  </div>
  ) : (
@@ -282,7 +283,7 @@ function WorkoutModal({ workout, open, onClose, toast, equipment, onEquipmentCha
  rel="noopener noreferrer"
  className="inline-flex items-center gap-0.5 text-[10px] text-[var(--accent-muted)] hover:text-[var(--accent-text)] transition-colors shrink-0"
  >
- <AnimatedIcon icon={LinkSquare02Icon} strokeWidth={1.5} className="h-2.5 w-2.5" />
+ <LinkIcon size={10} strokeWidth={1.5} />
  Form
  </a>
  </div>
@@ -314,7 +315,7 @@ function WorkoutModal({ workout, open, onClose, toast, equipment, onEquipmentCha
  {/* Footer actions */}
  <DialogFooter className="p-6 pt-2 border-t border-[var(--border)] sm:justify-start">
  <Button variant="outline" size="sm" onClick={handleEmail} disabled={emailing || loading}>
- {emailing ? <Loading03Icon strokeWidth={1.5} className="h-3.5 w-3.5 animate-spin" /> : <AnimatedIcon icon={Mail01Icon} className="h-3.5 w-3.5" />}
+ {emailing ? <RefreshIcon size={14} strokeWidth={1.5} className="animate-spin" /> : <MailFilledIcon size={14} />}
  Email to me
  </Button>
  <Button variant="outline" size="sm" onClick={onClose}>
@@ -398,7 +399,7 @@ function PackingListModal({ tripId, open, onClose, toast }: {
  <div className="flex-1 overflow-y-auto p-5 space-y-4">
  {loading && (
  <div className="flex items-center justify-center py-12">
- <Loading03Icon strokeWidth={1.5} className="h-5 w-5 animate-spin text-muted-foreground" />
+ <RefreshIcon size={20} strokeWidth={1.5} className="animate-spin text-muted-foreground" />
  </div>
  )}
 
@@ -407,7 +408,7 @@ function PackingListModal({ tripId, open, onClose, toast }: {
  <AnimatedIcon icon={Luggage01Icon} strokeWidth={1.5} className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
  <p className="text-[13px] text-muted-foreground mb-4">No packing list yet</p>
  <Button variant="outline" size="sm" onClick={handleGenerate} disabled={generating}>
- {generating ? <Loading03Icon strokeWidth={1.5} className="h-3.5 w-3.5 animate-spin" /> : <AnimatedIcon icon={SparklesIcon} className="h-3.5 w-3.5" />}
+ {generating ? <RefreshIcon size={14} strokeWidth={1.5} className="animate-spin" /> : <SparklesIcon size={14} />}
  Generate with AI
  </Button>
  </div>
@@ -444,7 +445,7 @@ function PackingListModal({ tripId, open, onClose, toast }: {
  {packingList && (
  <DialogFooter className="p-4 pt-2 border-t border-[var(--border)] sm:justify-start">
  <Button variant="outline" size="sm" onClick={handleGenerate} disabled={generating}>
- {generating ? <Loading03Icon strokeWidth={1.5} className="h-3 w-3 animate-spin" /> : <AnimatedIcon icon={RotateClockwiseIcon} className="h-3 w-3" />}
+ {generating ? <RefreshIcon size={12} strokeWidth={1.5} className="animate-spin" /> : <RefreshIcon size={12} />}
  Regenerate
  </Button>
  <span className="flex-1" />
@@ -594,7 +595,7 @@ function TripHelper({ trip, toast }: { trip: UpcomingTrip; toast: (msg: string) 
  <Card className="rounded-md py-0" style={{ background: tokens.colors.surface, borderColor: tokens.colors.border }}>
  <CardHeader className="pb-0 pt-6">
   <div className="flex items-center gap-2 mb-1">
-  <AnimatedIcon icon={Airplane01Icon} strokeWidth={1.5} size={16} style={{ color: tokens.colors.textTertiary }} />
+  <AirplaneIcon size={16} strokeWidth={1.5} color={tokens.colors.textTertiary} />
   <CardTitle className="text-[20px] font-semibold leading-7" style={{ color: tokens.colors.textPrimary }}>{trip.destination}</CardTitle>
   </div>
   <div className="flex items-center gap-2">
@@ -667,11 +668,11 @@ function TripHelper({ trip, toast }: { trip: UpcomingTrip; toast: (msg: string) 
    Packing list
   </Button>
   <Button variant="ghost" size="sm" className="rounded-full text-[12px] hover:bg-[rgba(255,255,255,0.04)]" style={{ border: `1px solid ${tokens.colors.border}`, color: tokens.colors.textSecondary }} onClick={openWorkout} disabled={loadingWorkout}>
-   {loadingWorkout && <Loading03Icon strokeWidth={1.5} className="h-3 w-3 animate-spin" />}
+   {loadingWorkout && <RefreshIcon size={12} strokeWidth={1.5} className="animate-spin" />}
    Workout
   </Button>
   <Button variant="ghost" size="sm" className="rounded-full text-[12px] hover:bg-[rgba(255,255,255,0.04)]" style={{ border: `1px solid ${tokens.colors.border}`, color: tokens.colors.textSecondary }} onClick={handleNotify} disabled={notifying}>
-   {notifying && <Loading03Icon strokeWidth={1.5} className="h-3 w-3 animate-spin" />}
+   {notifying && <RefreshIcon size={12} strokeWidth={1.5} className="animate-spin" />}
    Notify Anne
   </Button>
   </div>
@@ -680,7 +681,7 @@ function TripHelper({ trip, toast }: { trip: UpcomingTrip; toast: (msg: string) 
   {unansweredQuestions.length > 0 && (
   <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${tokens.colors.borderSubtle}` }}>
    <p className="flex items-center gap-1.5 text-[12px] font-medium mb-3" style={{ color: tokens.colors.textSecondary }}>
-   <AnimatedIcon icon={SparklesIcon} strokeWidth={1.5} className="h-3 w-3" style={{ color: tokens.colors.textTertiary }} />
+   <SparklesIcon size={12} strokeWidth={1.5} color={tokens.colors.textTertiary} />
    Help River plan better
    </p>
    <div className="flex flex-col gap-2">
@@ -695,7 +696,7 @@ function TripHelper({ trip, toast }: { trip: UpcomingTrip; toast: (msg: string) 
      style={{ background: tokens.colors.surfaceHover }}
     />
     <Button variant="ghost" size="icon" className="h-8 w-8" style={{ color: tokens.colors.accent, border: `1px solid ${tokens.colors.accentSubtle}`, background: tokens.colors.accentSubtle }} onClick={() => handleAnswerSubmit(q.id)} disabled={!questionAnswers[q.id]?.trim() || savingQuestion === q.id}>
-     {savingQuestion === q.id ? <Loading03Icon strokeWidth={1.5} className="h-3 w-3 animate-spin" /> : <AnimatedIcon icon={Tick02Icon} className="h-3 w-3" />}
+     {savingQuestion === q.id ? <RefreshIcon size={12} strokeWidth={1.5} className="animate-spin" /> : <SimpleCheckedIcon size={12} />}
     </Button>
     </div>
    ))}
@@ -845,10 +846,10 @@ function HomeLocationSection({ toast }: { toast: (msg: string) => void }) {
  return (
  <div className="py-4 border-b border-white/[0.08]">
  <div className="flex items-center gap-3">
- <AnimatedIcon icon={Home01Icon} strokeWidth={1.5} className="h-4 w-4 text-[var(--text-2)]" />
+ <HomeIcon size={16} strokeWidth={1.5} color="var(--text-2)" />
  <p className="text-[11px] uppercase tracking-[0.05em] text-[var(--text-3)] shrink-0">Home</p>
  {loading ? (
- <Loading03Icon strokeWidth={1.5} className="h-3.5 w-3.5 animate-spin text-[var(--text-3)] ml-auto" />
+ <RefreshIcon size={14} strokeWidth={1.5} color="var(--text-3)" className="animate-spin ml-auto" />
  ) : (
  <>
  <Input
@@ -869,7 +870,7 @@ function HomeLocationSection({ toast }: { toast: (msg: string) => void }) {
  disabled={saving || !dirty}
  className="h-8 px-3 text-[12px] bg-[var(--accent-subtle)] border border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent-subtle)] shrink-0 disabled:opacity-30"
  >
- {saving ? <Loading03Icon strokeWidth={1.5} className="h-3 w-3 animate-spin" /> : <AnimatedIcon icon={Tick02Icon} className="h-3 w-3" />}
+ {saving ? <RefreshIcon size={12} strokeWidth={1.5} className="animate-spin" /> : <SimpleCheckedIcon size={12} />}
  </Button>
  </>
  )}
@@ -891,7 +892,7 @@ function CronJobsSection({ cronJobs, onAdd, onDelete }: {
  <div className="py-4 border-b border-white/[0.08]">
  <div className="flex items-center justify-between mb-4">
  <div className="flex items-center gap-2">
- <AnimatedIcon icon={Clock01Icon} strokeWidth={1.5} className="h-4 w-4 text-[var(--text-3)]" />
+ <ClockIcon size={16} strokeWidth={1.5} color="var(--text-3)" />
  <p className="text-[11px] uppercase tracking-[0.05em] text-[var(--text-3)]">Cron Jobs</p>
  {cronJobs.length > 0 && <span className="text-[12px]" style={{ color: 'var(--text-2, var(--text-2))' }}>{cronJobs.length}</span>}
  </div>
@@ -946,7 +947,7 @@ function CronJobsSection({ cronJobs, onAdd, onDelete }: {
  onClick={() => onDelete(job.raw)}
  className="opacity-0 group-hover:opacity-100 transition-opacity text-[var(--text-3)] hover:text-rose-400/80 shrink-0 p-0.5"
  >
- <AnimatedIcon icon={Delete02Icon} strokeWidth={1.5} className="h-3 w-3" />
+ <TrashIcon size={12} strokeWidth={1.5} />
  </button>
  )}
  </div>
@@ -1126,16 +1127,16 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
    </div>
    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
     <Button variant="ghost" size="icon" className="text-white/30 hover:text-[var(--accent)] h-7 w-7" onClick={() => setMessageModal(b)} title="Birthday message">
-    <AnimatedIcon icon={MessageMultiple01Icon} strokeWidth={1.5} className="h-3.5 w-3.5" />
+    <MessageCircleIcon size={14} strokeWidth={1.5} />
     </Button>
     <Button variant="ghost" size="icon" className="text-white/30 hover:text-[var(--accent)] h-7 w-7" onClick={() => setGiftModal(b)} title="Gift ideas">
     <AnimatedIcon icon={GiftIcon} strokeWidth={1.5} className="h-3.5 w-3.5" />
     </Button>
     <Button variant="ghost" size="icon" className={`text-white/30 hover:text-[var(--accent)] h-7 w-7 ${sendingEmailId === b.id ? '!opacity-100' : ''}`} disabled={sendingEmailId === b.id} onClick={async () => { setSendingEmailId(b.id); await onSendEmail(b); setSendingEmailId(null) }} title="Send email reminder">
-    {sendingEmailId === b.id ? <Loading03Icon strokeWidth={1.5} className="h-3.5 w-3.5 animate-spin" /> : <AnimatedIcon icon={Mail01Icon} className="h-3.5 w-3.5" />}
+    {sendingEmailId === b.id ? <RefreshIcon size={14} strokeWidth={1.5} className="animate-spin" /> : <MailFilledIcon size={14} />}
     </Button>
     <button onClick={() => hideBirthday(b.id)} className="text-white/30 hover:text-white/55 h-7 w-7 flex items-center justify-center" title="Hide">
-    <AnimatedIcon icon={Cancel01Icon} strokeWidth={1.5} className="h-3 w-3" />
+    <XIcon size={12} strokeWidth={1.5} />
     </button>
    </div>
    <span className="text-[12px] font-medium leading-4 shrink-0" style={{ color: tokens.colors.textTertiary }}>{formatBirthdayDate(b.date)}</span>
@@ -1169,7 +1170,7 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
  {hidden.length > 0 && (
  <div className="pt-3 mt-3" style={{ borderTop: `1px solid ${tokens.colors.borderSubtle}` }}>
   <button onClick={() => setShowHidden(!showHidden)} className="flex items-center gap-1.5 text-[12px] font-medium bg-transparent border-none cursor-pointer" style={{ color: tokens.colors.textTertiary }}>
-  {showHidden ? <AnimatedIcon icon={ViewOffSlashIcon} strokeWidth={1.5} className="h-3 w-3" /> : <AnimatedIcon icon={ViewIcon} className="h-3 w-3" />}
+  {showHidden ? <EyeOffIcon size={12} strokeWidth={1.5} /> : <EyeIcon size={12} />}
   {showHidden ? 'Hide' : 'Show'} hidden ({hidden.length})
   </button>
   <AnimatePresence>
@@ -1182,7 +1183,7 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
     <span className="text-[12px]" style={{ color: tokens.colors.textQuaternary }}>{formatBirthdayDate(b.date)}</span>
     </div>
     <Button variant="ghost" size="icon" className="text-[var(--text-3)] hover:text-[var(--text-2)] h-7 w-7" onClick={() => unhideBirthday(b.id)} title="Unhide">
-    <AnimatedIcon icon={ViewIcon} strokeWidth={1.5} className="h-3.5 w-3.5" />
+    <EyeIcon size={14} strokeWidth={1.5} />
     </Button>
    </div>
    ))}
@@ -1205,7 +1206,7 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
    {generateBirthdayMessage(messageModal)}
   </p>
   <Button onClick={() => copyToClipboard(generateBirthdayMessage(messageModal))} className="w-full bg-[var(--accent-subtle)] border border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent-subtle)]">
-   <AnimatedIcon icon={Copy01Icon} strokeWidth={1.5} className="h-3.5 w-3.5 mr-2" />
+   <CopyIcon size={14} strokeWidth={1.5} className="mr-2" />
    {copied ? 'Copié !' : 'Copier le message'}
   </Button>
   </div>
@@ -1221,7 +1222,7 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
  </DialogHeader>
  {giftLoading ? (
   <div className="flex items-center justify-center py-8 gap-2 text-[var(--text-2)]">
-  <Loading03Icon strokeWidth={1.5} className="h-4 w-4 animate-spin" />
+  <RefreshIcon size={16} strokeWidth={1.5} className="animate-spin" />
   <span className="text-[13px]">Génération en cours...</span>
   </div>
  ) : (
@@ -1230,7 +1231,7 @@ function BirthdaysSection({ birthdays, onUpdate, onPatchBirthday, onSendEmail, t
    <div key={i} className="flex items-center justify-between p-3 rounded-lg" style={{ background: tokens.colors.surfaceHover }}>
    <span className="text-[13px] text-[var(--text-2)]">{idea}</span>
    <a href={`https://www.google.com/search?q=${encodeURIComponent(idea.replace(/^\S+\s/, '') + ' cadeau Toulouse')}`} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:text-[var(--accent-text)] shrink-0 ml-2" title="Chercher près de Toulouse">
-    <AnimatedIcon icon={LinkSquare02Icon} strokeWidth={1.5} className="h-3.5 w-3.5" />
+    <LinkIcon size={14} strokeWidth={1.5} />
    </a>
    </div>
   ))}
@@ -1362,7 +1363,7 @@ function RemindersSection({ reminders, onUpdate, onRefresh }: {
    />
    <span className="flex-1 min-w-0 text-[13px] leading-5" style={{ color: overdue ? tokens.colors.red : tokens.colors.textSecondary }}>{r.title}</span>
    <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity text-[var(--text-3)] hover:text-[var(--accent)] h-7 w-7" onClick={() => openEdit(r)}>
-    <AnimatedIcon icon={PencilEdit02Icon} strokeWidth={1.5} className="h-3.5 w-3.5" />
+    <PenIcon size={14} strokeWidth={1.5} />
    </Button>
    </div>
   )
@@ -1375,7 +1376,7 @@ function RemindersSection({ reminders, onUpdate, onRefresh }: {
    />
    <span className="flex-1 min-w-0 text-[13px] leading-5 line-through" style={{ color: tokens.colors.textTertiary }}>{r.title}</span>
    <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity text-[var(--text-3)] hover:text-[var(--accent)] h-7 w-7" onClick={() => openEdit(r)}>
-   <AnimatedIcon icon={PencilEdit02Icon} strokeWidth={1.5} className="h-3.5 w-3.5" />
+   <PenIcon size={14} strokeWidth={1.5} />
    </Button>
   </div>
   ))}
@@ -1423,11 +1424,11 @@ function RemindersSection({ reminders, onUpdate, onRefresh }: {
  <DialogFooter className="flex justify-between">
   {!deleteConfirm ? (
   <Button variant="ghost" onClick={() => setDeleteConfirm(true)} className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10">
-   <AnimatedIcon icon={Delete02Icon} strokeWidth={1.5} className="h-3.5 w-3.5 mr-1" /> Delete
+   <TrashIcon size={14} strokeWidth={1.5} className="mr-1" /> Delete
   </Button>
   ) : (
   <Button variant="ghost" onClick={deleteReminder} className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10">
-   <AnimatedIcon icon={Delete02Icon} strokeWidth={1.5} className="h-3.5 w-3.5 mr-1" /> Confirm delete
+   <TrashIcon size={14} strokeWidth={1.5} className="mr-1" /> Confirm delete
   </Button>
   )}
   <Button onClick={saveEdit} className="bg-[var(--accent-subtle)] border border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent-subtle)]">Save</Button>
@@ -1531,7 +1532,7 @@ function DayPlannerModal({ plan, open, onClose, toast }: { plan: DayPlan; open: 
     rel="noopener noreferrer"
     className="inline-flex items-center gap-1 text-[11px] text-[var(--accent-muted)] hover:text-[var(--accent-text)] mt-1"
     >
-    <AnimatedIcon icon={Location01Icon} strokeWidth={1.5} className="h-2.5 w-2.5" /> Maps
+    <MapPinIcon size={10} strokeWidth={1.5} /> Maps
     </a>
    )}
    </div>
@@ -1543,11 +1544,11 @@ function DayPlannerModal({ plan, open, onClose, toast }: { plan: DayPlan; open: 
 
  <DialogFooter className="p-6 pt-2 border-t border-[var(--border)] flex-row gap-3 sm:justify-start">
  <Button variant="outline" size="sm" onClick={handleShare} disabled={sharing} className="bg-[var(--accent-subtle)] border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent-subtle)] text-[12px]">
-  {sharing ? <Loading03Icon strokeWidth={1.5} className="h-3.5 w-3.5 animate-spin" /> : <AnimatedIcon icon={Share01Icon} className="h-3.5 w-3.5" />}
+  {sharing ? <RefreshIcon size={14} strokeWidth={1.5} className="animate-spin" /> : <AnimatedIcon icon={Share01Icon} className="h-3.5 w-3.5" />}
   Share with Anne
  </Button>
  <Button variant="outline" size="sm" onClick={handleDownloadIcs} disabled={downloading} className="text-[var(--text-2)] text-[12px]">
-  {downloading ? <Loading03Icon strokeWidth={1.5} className="h-3.5 w-3.5 animate-spin" /> : <AnimatedIcon icon={Download02Icon} className="h-3.5 w-3.5" />}
+  {downloading ? <RefreshIcon size={14} strokeWidth={1.5} className="animate-spin" /> : <DownloadIcon size={14} />}
   Add to Calendar
  </Button>
  <Button variant="outline" size="sm" onClick={onClose} className="text-[var(--text-2)] text-[12px]">
@@ -1648,12 +1649,12 @@ function IdeaCard({ idea, type, toast, onDidThis, weather, onOpenPlan }: { idea:
  </div>
  <div className="flex items-center gap-1 shrink-0 ml-auto">
  <Button variant="ghost" size="icon-xs" onClick={handleShare} disabled={sharing} title="Share with Anne" className="text-[var(--text-3)] hover:text-[var(--text-2)]">
-  {sharing ? <Loading03Icon strokeWidth={1.5} className="h-3.5 w-3.5 animate-spin" /> : <AnimatedIcon icon={Share01Icon} className="h-3.5 w-3.5" />}
+  {sharing ? <RefreshIcon size={14} strokeWidth={1.5} className="animate-spin" /> : <AnimatedIcon icon={Share01Icon} className="h-3.5 w-3.5" />}
  </Button>
  <Button variant="ghost" size="icon-xs" onClick={handleDidThis} title="We did this!" className="text-[var(--text-3)] hover:text-emerald-400 hover:bg-emerald-500/[0.08]">
-  <AnimatedIcon icon={Tick02Icon} strokeWidth={1.5} className="h-3.5 w-3.5" />
+  <SimpleCheckedIcon size={14} strokeWidth={1.5} />
  </Button>
- <AnimatedIcon icon={ArrowDown01Icon} strokeWidth={1.5} className={`transition-transform duration-200 h-3.5 w-3.5 text-[var(--text-3)] ${expanded ? 'rotate-180' : ''}`} />
+ <DownChevron size={14} strokeWidth={1.5} color="var(--text-3)" className={`transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
  </div>
  </div>
 
@@ -1674,7 +1675,7 @@ function IdeaCard({ idea, type, toast, onDidThis, weather, onOpenPlan }: { idea:
   <div className="flex flex-wrap gap-2">
    <Button variant="outline" size="sm" asChild className="bg-[var(--accent-subtle)] border-[var(--accent-border)] text-[var(--accent)] text-[12px] h-7">
    <a href={mapsLink} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
-    <AnimatedIcon icon={Location01Icon} strokeWidth={1.5} className="h-3 w-3" /> Google Maps
+    <MapPinIcon size={12} strokeWidth={1.5} /> Google Maps
    </a>
    </Button>
    <Button variant="outline" size="sm" asChild className="text-[var(--text-2)] text-[12px] h-7">
@@ -1684,12 +1685,12 @@ function IdeaCard({ idea, type, toast, onDidThis, weather, onOpenPlan }: { idea:
    </Button>
    <Button variant="outline" size="sm" asChild className="text-[var(--text-2)] text-[12px] h-7">
    <a href={hotelLink} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
-    <AnimatedIcon icon={Hotel01Icon} strokeWidth={1.5} className="h-3 w-3" /> Hotels
+    <HotelIcon size={12} strokeWidth={1.5} /> Hotels
    </a>
    </Button>
    <Button variant="outline" size="sm" asChild className="text-[var(--text-2)] text-[12px] h-7">
    <a href={lunchLink} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
-    <AnimatedIcon icon={CookBookIcon} strokeWidth={1.5} className="h-3 w-3" /> Lunch
+    <BookIcon size={12} strokeWidth={1.5} /> Lunch
    </a>
    </Button>
   </div>
@@ -1715,18 +1716,18 @@ function IdeaCard({ idea, type, toast, onDidThis, weather, onOpenPlan }: { idea:
    </SelectContent>
    </Select>
    <Button variant="outline" size="sm" onClick={handlePlanDay} disabled={planning} className="bg-[var(--accent-subtle)] border-[var(--accent-border)] text-[var(--accent)] text-[12px]">
-   {planning ? <Loading03Icon strokeWidth={1.5} className="h-3 w-3 animate-spin" /> : <AnimatedIcon icon={Calendar01Icon} className="h-3 w-3" />}
+   {planning ? <RefreshIcon size={12} strokeWidth={1.5} className="animate-spin" /> : <AnimatedIcon icon={Calendar01Icon} className="h-3 w-3" />}
    Plan this day
    </Button>
   </div>
 
   <div className="flex items-center gap-2">
    <Button variant="ghost" size="sm" onClick={handleShare} disabled={sharing} className="text-[var(--text-2)] hover:bg-[var(--accent-subtle)] hover:text-[var(--accent)] text-[12px]">
-   {sharing ? <Loading03Icon strokeWidth={1.5} className="h-3 w-3 animate-spin" /> : <AnimatedIcon icon={Share01Icon} className="h-3 w-3" />}
+   {sharing ? <RefreshIcon size={12} strokeWidth={1.5} className="animate-spin" /> : <AnimatedIcon icon={Share01Icon} className="h-3 w-3" />}
    Share with Anne
    </Button>
    <Button variant="ghost" size="sm" onClick={handleDidThis} className="text-[var(--text-2)] hover:bg-emerald-500/10 hover:text-emerald-400 text-[12px]">
-   <AnimatedIcon icon={Tick02Icon} strokeWidth={1.5} className="h-3 w-3" /> We did this!
+   <SimpleCheckedIcon size={12} strokeWidth={1.5} /> We did this!
    </Button>
   </div>
   </div>
@@ -1827,7 +1828,7 @@ function LocalEventsSection({ events }: { events: LocalEvent[] }) {
  {event.driveTime}
  </Badge>
  )}
- <AnimatedIcon icon={LinkSquare02Icon} strokeWidth={1.5} style={{ width: 14, height: 14, color: tokens.colors.textTertiary, flexShrink: 0 }} className="group-hover:text-[var(--text-2)]" />
+ <LinkIcon size={14} strokeWidth={1.5} color={tokens.colors.textTertiary} className="shrink-0 group-hover:text-[var(--text-2)]" />
  </div>
  </a>
  ))}
@@ -1856,7 +1857,7 @@ function TripHistorySection({ trips, expanded, onToggle }: { trips: Trip[]; expa
  {trips.length > 0 && (
  <span className="text-[12px]" style={{ color: 'var(--text-2, var(--text-2))' }}>{trips.length}</span>
  )}
- <AnimatedIcon icon={ArrowDown01Icon} strokeWidth={1.5} className={`h-3 w-3 text-[var(--text-3)] transition-transform duration-200 ml-auto ${expanded ? 'rotate-180' : ''}`} />
+ <DownChevron size={12} strokeWidth={1.5} color="var(--text-3)" className={`transition-transform duration-200 ml-auto ${expanded ? 'rotate-180' : ''}`} />
  </button>
  <AnimatePresence>
  {(expanded || trips.length > 0) && (
@@ -1873,7 +1874,7 @@ function TripHistorySection({ trips, expanded, onToggle }: { trips: Trip[]; expa
  {trip.rating && (
  <div className="flex items-center gap-0.5 shrink-0">
  {Array.from({ length: trip.rating }).map((_, j) => (
- <AnimatedIcon key={j} icon={StarIcon} strokeWidth={1.5} className="h-2.5 w-2.5 fill-amber-400/60 text-amber-400/60" noStroke />
+ <StarIcon key={j} size={10} strokeWidth={1.5} color="rgba(251, 191, 36, 0.6)" className="fill-amber-400/60" />
  ))}
  </div>
  )}
@@ -1945,7 +1946,7 @@ function IdeasSection({ type, ideas, content, lastUpdated, refreshing, refreshDi
  <div className="flex items-center justify-between mb-4">
   <span style={{ ...tokens.typography.title, color: tokens.colors.textPrimary }}>{label}</span>
   <Button variant="ghost" size="sm" onClick={onRefresh} disabled={refreshDisabled} className="text-[var(--text-3)] hover:text-[var(--text-2)] h-7 gap-1.5">
-  {refreshing ? <Loading03Icon strokeWidth={1.5} className="h-3.5 w-3.5 animate-spin" /> : <AnimatedIcon icon={RotateClockwiseIcon} className="h-3.5 w-3.5" />}
+  {refreshing ? <RefreshIcon size={14} strokeWidth={1.5} className="animate-spin" /> : <RefreshIcon size={14} />}
   <span className="hidden sm:inline">Refresh</span>
   </Button>
  </div>
@@ -1964,7 +1965,7 @@ function IdeasSection({ type, ideas, content, lastUpdated, refreshing, refreshDi
   <div className="text-center py-8 space-y-3">
    <p className="text-[13px] text-[var(--text-3)]">Data is corrupted or incomplete.</p>
    <Button variant="outline" size="sm" onClick={onRefresh} disabled={refreshDisabled} className="bg-[var(--accent-subtle)] border-[var(--accent-border)] text-[var(--accent)]">
-   <AnimatedIcon icon={RotateClockwiseIcon} strokeWidth={1.5} className="h-3 w-3" />
+   <RefreshIcon size={12} strokeWidth={1.5} />
    Regenerate
    </Button>
   </div>
@@ -2080,9 +2081,9 @@ function EmailNotificationsSection({ toast }: { toast: (msg: string) => void }) 
  return (
  <div className="py-4 border-b border-white/[0.08]">
  <div className="flex items-center gap-2 mb-4">
- <AnimatedIcon icon={Mail01Icon} strokeWidth={1.5} className="h-4 w-4 text-[var(--text-3)]" />
+ <MailFilledIcon size={16} strokeWidth={1.5} color="var(--text-3)" />
  <p className="text-[11px] uppercase tracking-[0.05em] text-[var(--text-3)]">Email Notifications</p>
- {saving && <Loading03Icon strokeWidth={1.5} className="h-3 w-3 animate-spin text-[var(--accent)] ml-auto" />}
+ {saving && <RefreshIcon size={12} strokeWidth={1.5} color="var(--accent)" className="animate-spin ml-auto" />}
  </div>
  <div className="space-y-1">
  {EMAIL_TYPES.map(({ id, label, testId }) => {
@@ -2099,7 +2100,7 @@ function EmailNotificationsSection({ toast }: { toast: (msg: string) => void }) 
  disabled={tState !== 'idle' || (cooldown[testId] || 0) > 0}
  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] transition-all border border-[var(--border)] hover:bg-[var(--bg-surface)] text-[var(--text-3)] hover:text-[var(--text-2)] disabled:opacity-50 shrink-0"
  >
- {tState === 'sending' ? <Loading03Icon strokeWidth={1.5} className="h-2.5 w-2.5 animate-spin" /> : (cooldown[testId] || 0) > 0 ? <AnimatedIcon icon={Tick02Icon} className="h-2.5 w-2.5 text-emerald-400" noStroke /> : <AnimatedIcon icon={Mail01Icon} className="h-2.5 w-2.5" />}
+ {tState === 'sending' ? <RefreshIcon size={10} strokeWidth={1.5} className="animate-spin" /> : (cooldown[testId] || 0) > 0 ? <SimpleCheckedIcon size={10} color="#34d399" /> : <MailFilledIcon size={10} />}
  {tState === 'sending' ? 'Test' : (cooldown[testId] || 0) > 0 ? `${cooldown[testId]}s` : 'Test'}
  </button>
  )}
@@ -2109,7 +2110,7 @@ function EmailNotificationsSection({ toast }: { toast: (msg: string) => void }) 
  <span key={email} className="inline-flex items-center gap-1 text-[12px]" style={{ color: 'var(--text-2, var(--text-2))' }}>
  {email}
  <button onClick={() => removeRecipient(id, email)} className="text-[var(--text-3)] hover:text-rose-400 transition-colors">
- <AnimatedIcon icon={Cancel01Icon} strokeWidth={1.5} className="h-2.5 w-2.5" />
+ <XIcon size={10} strokeWidth={1.5} />
  </button>
  </span>
  ))}
@@ -2129,7 +2130,7 @@ function EmailNotificationsSection({ toast }: { toast: (msg: string) => void }) 
 style={{ background: tokens.colors.surfaceHover }}
  />
  <button onClick={() => addRecipient(id)} className="text-[var(--text-3)] hover:text-[var(--accent)]">
- <AnimatedIcon icon={Tick02Icon} strokeWidth={1.5} className="h-3 w-3" />
+ <SimpleCheckedIcon size={12} strokeWidth={1.5} />
  </button>
  </div>
  ) : (
@@ -2268,13 +2269,13 @@ function ContactDetailPanel({ contact, onSave, onDelete, saving, toast, onBack }
     actions={
      <>
       {!editing && (
-       <ToolbarAction icon={PencilEdit02Icon} label="Edit" onClick={enterEdit} />
+       <ToolbarAction icon={PenIcon} label="Edit" onClick={enterEdit} />
       )}
       {editing && (
        <>
-        <ToolbarAction icon={Tick02Icon} label="Save" onClick={saveEdit} disabled={saving === contact.id || !editFirstName.trim()} />
-        <ToolbarAction icon={Cancel01Icon} label="Cancel" onClick={() => setEditing(false)} />
-        <ToolbarAction icon={Delete02Icon} label="Delete" onClick={() => setDeleteOpen(true)} destructive />
+        <ToolbarAction icon={SimpleCheckedIcon} label="Save" onClick={saveEdit} disabled={saving === contact.id || !editFirstName.trim()} />
+        <ToolbarAction icon={XIcon} label="Cancel" onClick={() => setEditing(false)} />
+        <ToolbarAction icon={TrashIcon} label="Delete" onClick={() => setDeleteOpen(true)} destructive />
        </>
       )}
      </>
@@ -2404,7 +2405,7 @@ function ContactDetailPanel({ contact, onSave, onDelete, saving, toast, onBack }
         <div className="space-y-1">
          <span className="text-[11px] font-medium uppercase tracking-wider" style={{ color: tokens.colors.textTertiary }}>Email</span>
          <a href={`mailto:${contact.email}`} className="flex items-center gap-2 text-[13px] hover:underline" style={{ color: tokens.colors.accent }}>
-          <AnimatedIcon icon={Mail01Icon} strokeWidth={1.5} className="h-3.5 w-3.5" />
+          <MailFilledIcon size={14} strokeWidth={1.5} />
           {contact.email}
          </a>
         </div>
@@ -2436,7 +2437,7 @@ function ContactDetailPanel({ contact, onSave, onDelete, saving, toast, onBack }
      <AlertDialogFooter className="gap-2 sm:gap-0">
       <AlertDialogCancel className="text-[var(--text-2)]">Cancel</AlertDialogCancel>
       <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-red-500 hover:bg-red-600 text-white">
-       {deleting ? <Loading03Icon strokeWidth={1.5} className="h-3.5 w-3.5 animate-spin" /> : <AnimatedIcon icon={Delete02Icon} className="h-3.5 w-3.5" />}
+       {deleting ? <RefreshIcon size={14} strokeWidth={1.5} className="animate-spin" /> : <TrashIcon size={14} />}
        Delete
       </AlertDialogAction>
      </AlertDialogFooter>
@@ -2565,7 +2566,7 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
    {/* Search bar */}
    <div className="shrink-0 p-3 flex items-center gap-2" style={{ borderBottom: '1px solid ' + tokens.colors.borderSubtle }}>
     <div className="flex-1 relative">
-     <Search01Icon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5" style={{ color: tokens.colors.textTertiary }} />
+     <MagnifierIcon size={14} color={tokens.colors.textTertiary} className="absolute left-2.5 top-1/2 -translate-y-1/2" />
      <Input
       value={search}
       onChange={e => setSearch(e.target.value)}
@@ -2574,7 +2575,7 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
      />
     </div>
     <Button variant="ghost" size="icon-sm" onClick={() => setAddOpen(true)} className="text-[var(--accent)] shrink-0" title="Add contact">
-     <AnimatedIcon icon={UserAdd01Icon} strokeWidth={1.5} className="h-3.5 w-3.5" />
+     <UserPlusIcon size={14} strokeWidth={1.5} />
     </Button>
    </div>
 
@@ -2586,10 +2587,10 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
    {/* Scrollable list */}
    <div className="flex-1 overflow-y-auto">
     {loading ? (
-     <div className="flex justify-center py-12"><Loading03Icon strokeWidth={1.5} className="h-5 w-5 animate-spin" style={{ color: tokens.colors.textTertiary }} /></div>
+     <div className="flex justify-center py-12"><RefreshIcon size={20} strokeWidth={1.5} color={tokens.colors.textTertiary} className="animate-spin" /></div>
     ) : sorted.length === 0 ? (
      <div className="flex flex-col items-center justify-center py-12 text-center px-4">
-      <AnimatedIcon icon={UserMultiple02Icon} strokeWidth={1.5} className="h-6 w-6 mb-3" style={{ color: tokens.colors.textQuaternary }} />
+      <UsersGroupIcon size={24} strokeWidth={1.5} color={tokens.colors.textQuaternary} className="mb-3" />
       <p className="text-[13px]" style={{ color: tokens.colors.textTertiary }}>{search ? 'No matches' : 'No contacts yet'}</p>
      </div>
     ) : (
@@ -2654,7 +2655,7 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
    <TwoPanelLayout
     leftPanel={leftPanel}
     rightPanel={rightPanel}
-    emptyState={{ icon: <UserMultiple02Icon className="h-8 w-8" />, text: 'Select a contact' }}
+    emptyState={{ icon: <UsersGroupIcon size={32} />, text: 'Select a contact' }}
     selectedKey={selectedId}
     mobileOpen={mobileDetailOpen}
     onMobileClose={() => setMobileDetailOpen(false)}
@@ -2738,7 +2739,7 @@ function ContactsSection({ toast }: { toast: (msg: string) => void }) {
      <DialogFooter>
       <Button variant="outline" onClick={() => { resetAddForm(); setAddOpen(false) }} className="text-[var(--text-2)]">Cancel</Button>
       <Button onClick={addContact} disabled={!newFirstName.trim()} className="bg-[var(--accent-subtle)] border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent-subtle)]">
-       <AnimatedIcon icon={UserAdd01Icon} strokeWidth={1.5} className="h-3.5 w-3.5" /> Add Contact
+       <UserPlusIcon size={14} strokeWidth={1.5} /> Add Contact
       </Button>
      </DialogFooter>
     </DialogContent>
@@ -2841,7 +2842,7 @@ export default function LifePage() {
  if (loading) {
  return (
  <div className="flex items-center justify-center py-20">
- <Loading03Icon strokeWidth={1.5} className="h-6 w-6 animate-spin text-[var(--text-3)]" />
+ <RefreshIcon size={24} strokeWidth={1.5} color="var(--text-3)" className="animate-spin" />
  </div>
  )
  }
@@ -3004,7 +3005,7 @@ export default function LifePage() {
     onMouseLeave={(e) => { e.currentTarget.style.color = tokens.colors.textQuaternary }}
     title="Regenerate briefing"
    >
-    <AnimatedIcon icon={RotateClockwiseIcon} strokeWidth={1.5} size={14} className={regeneratingBriefing ? 'animate-spin' : ''} />
+    <RefreshIcon size={14} strokeWidth={1.5} className={regeneratingBriefing ? 'animate-spin' : ''} />
    </button>
   </div>
  </div>
