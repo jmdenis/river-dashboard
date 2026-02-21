@@ -98,7 +98,7 @@
   --destructive: 0 87% 72%;
 
   /* Borders */
-  --border: 0 0% 100% / 0.08;
+  --border: 0 0% 100% / 0.02;
   --border-hover: rgba(255, 255, 255, 0.12);
   --divider: rgba(255, 255, 255, 0.05);
 
@@ -118,7 +118,7 @@
   --accent-foreground: 0 0% 100%;
   --destructive: 0 87% 72%;
   --destructive-foreground: 0 0% 100%;
-  --input: 0 0% 100% / 0.08;
+  --input: 0 0% 100% / 0.02;
   --ring: 211 100% 50%;
   --radius: 0.5rem;
   --chart-1: 211 100% 50%;
@@ -142,7 +142,7 @@
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent: 0 0% 17%;
   --sidebar-accent-foreground: 0 0% 90%;
-  --sidebar-border: 0 0% 100% / 0.08;
+  --sidebar-border: 0 0% 100% / 0.02;
   --sidebar-ring: 211 100% 50%;
   --invert: var(--color-zinc-900);
   --invert-foreground: var(--color-zinc-50);
@@ -165,8 +165,8 @@
   --accent-foreground: 0 0% 100%;
   --destructive: 0 87% 72%;
   --destructive-foreground: 0 0% 100%;
-  --border: 0 0% 100% / 0.08;
-  --input: 0 0% 100% / 0.08;
+  --border: 0 0% 100% / 0.02;
+  --input: 0 0% 100% / 0.02;
   --ring: 211 100% 50%;
   --chart-1: 211 100% 50%;
   --chart-2: 0 0% 44%;
