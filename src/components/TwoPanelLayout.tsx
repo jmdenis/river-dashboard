@@ -41,9 +41,9 @@ export function TwoPanelLayout({
     <>
       {/* iPadOS Mail-style card container */}
       <div
-        className="flex-1 min-h-0 flex flex-col md:flex-row md:border md:border-[rgba(255,255,255,0.08)] md:rounded-lg overflow-hidden relative"
+        className="flex-1 min-h-0 flex flex-col md:flex-row md:rounded-lg overflow-hidden relative"
         style={{
-          background: tokens.colors.bg,
+          background: tokens.colors.surface,
           marginTop: 12,
         }}
       >

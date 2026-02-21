@@ -220,18 +220,57 @@ function TaskRow({
           >
             {task.title}
           </p>
-          <p
-            className="truncate"
-            style={{ fontSize: 12, lineHeight: '16px', color: tokens.colors.textTertiary, marginTop: 1 }}
-          >
-            {task.summary || modelNames.map(n => n === 'jm-direct' ? 'manual' : n).join(', ') || task.status}
-          </p>
+          <div className="flex items-center gap-1.5 mt-1 overflow-hidden">
+            {/* Model pills */}
+            {modelNames.length > 0 && modelNames.map(name => (
+              <span
+                key={name}
+                className="shrink-0 inline-flex items-center rounded px-1.5 py-0 text-[10px] font-medium"
+                style={{
+                  background: 'rgba(255,255,255,0.06)',
+                  color: tokens.colors.textTertiary,
+                  lineHeight: '16px',
+                }}
+              >
+                {name === 'jm-direct' ? 'manual' : name}
+              </span>
+            ))}
+            {/* Duration pill */}
+            {duration && (
+              <span
+                className="shrink-0 inline-flex items-center rounded px-1.5 py-0 text-[10px] tabular-nums font-medium"
+                style={{
+                  background: 'rgba(255,255,255,0.06)',
+                  color: tokens.colors.textTertiary,
+                  lineHeight: '16px',
+                }}
+              >
+                {duration}
+              </span>
+            )}
+            {/* Summary fallback (if no model pills) */}
+            {modelNames.length === 0 && task.summary && (
+              <span
+                className="truncate text-[11px]"
+                style={{ color: tokens.colors.textTertiary }}
+              >
+                {task.summary}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Timestamp (right) */}
-        <span className="shrink-0 text-[11px] tabular-nums" style={{ color: tokens.colors.textQuaternary }}>
-          {formatTime(task.created)}
-        </span>
+        <div className="shrink-0 flex flex-col items-end gap-0.5">
+          <span className="text-[11px] tabular-nums" style={{ color: tokens.colors.textQuaternary }}>
+            {formatTime(task.created)}
+          </span>
+          {task.status !== 'done' && task.status !== 'failed' && task.status !== 'cancelled' && (
+            <span className="text-[10px]" style={{ color: tokens.colors.textQuaternary }}>
+              {task.status}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Indented divider */}
@@ -1096,9 +1135,8 @@ export default function OpsPage() {
           <div
             className={`composer-container flex items-center rounded-xl px-4 py-3${isComposerLoading ? ' composer-loading-border' : ''}`}
             style={{
-              background: '#1a1a1a',
-              border: `1px solid ${inputFocused && !isComposerLoading ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.10)'}`,
-              boxShadow: '0 0 0 1px rgba(255,255,255,0.06), 0 4px 24px rgba(0,0,0,0.4)',
+              background: tokens.colors.surface,
+              border: `1px solid ${inputFocused && !isComposerLoading ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.08)'}`,
               transition: 'border-color 0.2s ease',
             }}
           >
